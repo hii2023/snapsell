@@ -217,7 +217,6 @@ function productMessage(p: Product): string {
     `Price: ${rupees(p.price)}` + (p.mrp > p.price ? `  (MRP ${rupees(p.mrp)})` : "")
   );
   lines.push(`${origin}/p/${p.code}`);
-  if (p.image_url) lines.push(p.image_url);
   return `${shopName}\n${lines.join("\n")}`;
 }
 

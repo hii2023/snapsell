@@ -208,7 +208,8 @@ function Checkout({
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">("delivery");
-  const [mode, setMode] = useState<"online" | "cod">("cod");
+  // Pay online is the primary option; default to it when Razorpay is configured.
+  const [mode, setMode] = useState<"online" | "cod">(razorpayKeyId ? "online" : "cod");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -376,17 +377,17 @@ function Checkout({
           <div className="flex gap-2">
             <button
               type="button"
-              className={`chip flex-1 ${mode === "cod" ? "chip-on" : "chip-off"}`}
-              onClick={() => setMode("cod")}
-            >
-              {fulfillment === "pickup" ? "Cash on pickup" : "Cash on delivery"}
-            </button>
-            <button
-              type="button"
               className={`chip flex-1 ${mode === "online" ? "chip-on" : "chip-off"}`}
               onClick={() => setMode("online")}
             >
               Pay online
+            </button>
+            <button
+              type="button"
+              className={`chip flex-1 ${mode === "cod" ? "chip-on" : "chip-off"}`}
+              onClick={() => setMode("cod")}
+            >
+              {fulfillment === "pickup" ? "Cash on pickup" : "Cash on delivery"}
             </button>
           </div>
         </div>
