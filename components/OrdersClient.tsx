@@ -226,35 +226,67 @@ function Overview({
 
 /* ---------------- Products ---------------- */
 
-function productMessage(p: Product): string {
+function itemDetails(p: Product): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const lines = [`*${p.name}* (${p.code})`];
   lines.push(
     `Price: ${rupees(p.price)}` + (p.mrp > p.price ? `  (MRP ${rupees(p.mrp)})` : "")
   );
   lines.push(`${origin}/p/${p.code}`);
-  return `${shopName}\n${lines.join("\n")}`;
+  return lines.join("\n");
 }
 
-// Shares the actual product image (visible photo) + details via the device share
-// sheet (WhatsApp included). Falls back to a WhatsApp text link if image sharing
-// is not supported (e.g. desktop), where the link preview shows the image.
+function productMessage(p: Product): string {
+  return `${shopName}\n${itemDetails(p)}`;
+}
+
+async function fetchImageFile(p: Product): Promise<File | null> {
+  if (!p.image_url) return null;
+  try {
+    const blob = await (await fetch(p.image_url)).blob();
+    return new File([blob], `${p.code || "product"}.jpg`, {
+      type: blob.type || "image/jpeg",
+    });
+  } catch {
+    return null;
+  }
+}
+
+// One product, its own message, with the actual photo attached.
 async function sendOne(p: Product) {
   const text = productMessage(p);
-  if (p.image_url && typeof navigator !== "undefined" && navigator.canShare) {
-    try {
-      const resp = await fetch(p.image_url);
-      const blob = await resp.blob();
-      const file = new File([blob], `${p.code || "product"}.jpg`, {
-        type: blob.type || "image/jpeg",
-      });
-      if (navigator.canShare({ files: [file] })) {
+  if (typeof navigator !== "undefined" && navigator.canShare) {
+    const file = await fetchImageFile(p);
+    if (file && navigator.canShare({ files: [file] })) {
+      try {
         await navigator.share({ files: [file], text });
         return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
       }
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return; // cancelled
-      // otherwise fall through to the link
+    }
+  }
+  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+}
+
+// All selected products in a single message, every photo attached. Browsers only
+// allow one image-share per tap, so multiple separate image messages can't be
+// auto-fired; sharing them together keeps every image.
+async function sendAll(items: Product[]) {
+  const text = `${shopName}\n\n` + items.map(itemDetails).join("\n\n");
+  if (typeof navigator !== "undefined" && navigator.canShare) {
+    const files: File[] = [];
+    for (const p of items) {
+      const f = await fetchImageFile(p);
+      if (f) files.push(f);
+    }
+    if (files.length > 0 && navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files, text });
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+      }
     }
   }
   window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
@@ -454,8 +486,9 @@ function ProductsTab({
               </button>
             </div>
             <p className="mb-3 text-sm text-neutral-500">
-              Each product sends as its own message with the photo attached. Pick
-              WhatsApp (and the contact) when the share sheet opens. Send one by one or all.
+              Tap <b>Send</b> on a product for its own message with the photo. Or use
+              <b> Send all together</b> to share every photo in one message. Pick WhatsApp
+              and the contact when the share sheet opens.
             </p>
             <div className="space-y-2">
               {chosen.map((p) => (
@@ -483,12 +516,10 @@ function ProductsTab({
               ))}
             </div>
             <button
-              onClick={async () => {
-                for (const p of chosen) await sendOne(p);
-              }}
+              onClick={() => sendAll(chosen)}
               className="mt-4 w-full rounded-2xl border border-green-600 py-3 text-base font-semibold text-green-700"
             >
-              Send all {chosen.length}
+              Send all {chosen.length} together (one message)
             </button>
           </motion.div>
         </motion.div>
