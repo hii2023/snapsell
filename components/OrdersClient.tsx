@@ -242,14 +242,21 @@ function productMessage(p: Product): string {
 
 async function fetchImageFile(p: Product): Promise<File | null> {
   if (!p.image_url) return null;
-  try {
-    const blob = await (await fetch(p.image_url)).blob();
-    return new File([blob], `${p.code || "product"}.jpg`, {
-      type: blob.type || "image/jpeg",
-    });
-  } catch {
-    return null;
+  // Same-origin proxy avoids cross-origin fetch failures when grabbing the blob.
+  const proxied = `/api/image?url=${encodeURIComponent(p.image_url)}`;
+  for (const src of [proxied, p.image_url]) {
+    try {
+      const blob = await (await fetch(src)).blob();
+      if (blob.size > 0) {
+        return new File([blob], `${p.code || "product"}.jpg`, {
+          type: blob.type || "image/jpeg",
+        });
+      }
+    } catch {
+      // try next source
+    }
   }
+  return null;
 }
 
 // One product, its own message, with the actual photo attached.

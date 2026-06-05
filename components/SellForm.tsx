@@ -37,6 +37,8 @@ export default function SellForm({
   onSaved,
   onAdvance,
   addedTotal,
+  batch = false,
+  onBatchChange,
 }: {
   pricePresets: number[];
   initialFile: File;
@@ -45,6 +47,8 @@ export default function SellForm({
   onSaved?: () => void;
   onAdvance?: () => boolean;
   addedTotal?: number;
+  batch?: boolean;
+  onBatchChange?: (b: boolean) => void;
 }) {
   const reduce = useReducedMotion();
   const [screen, setScreen] = useState<Screen>("wizard");
@@ -65,7 +69,6 @@ export default function SellForm({
   const [units, setUnits] = useState(1);
   const [price, setPrice] = useState(0);
   const [mrp, setMrp] = useState(0);
-  const [batch, setBatch] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
@@ -471,7 +474,7 @@ export default function SellForm({
                   <input
                     type="checkbox"
                     checked={batch}
-                    onChange={(e) => setBatch(e.target.checked)}
+                    onChange={(e) => onBatchChange?.(e.target.checked)}
                     className="h-6 w-6 rounded"
                     style={{ accentColor: accentHex }}
                   />

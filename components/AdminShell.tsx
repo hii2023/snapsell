@@ -28,6 +28,7 @@ export default function AdminShell({
   const [qIndex, setQIndex] = useState(0);
   const [added, setAdded] = useState(0);
   const [shot, setShot] = useState(0);
+  const [batch, setBatch] = useState(false); // persists until the seller unticks it
 
   function startAdd() {
     setAdded(0);
@@ -140,6 +141,8 @@ export default function AdminShell({
                 onSaved={() => setAdded((n) => n + 1)}
                 onAdvance={advance}
                 addedTotal={added}
+                batch={batch}
+                onBatchChange={setBatch}
               />
             </motion.div>
           </motion.div>
