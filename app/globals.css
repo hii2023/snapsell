@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: #fafaf9;
+  color: #1a1a1a;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Big, finger-friendly defaults for the seller flow. */
+.btn {
+  @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-medium transition active:scale-[0.98];
+}
+.btn-primary {
+  @apply btn bg-brand text-white hover:bg-brand-dark;
+}
+.btn-ghost {
+  @apply btn border border-neutral-300 bg-white text-ink hover:bg-neutral-50;
+}
+.chip {
+  @apply inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition active:scale-95;
+}
+.chip-on {
+  @apply border-brand bg-brand text-white;
+}
+.chip-off {
+  @apply border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400;
+}
+.card {
+  @apply rounded-2xl border border-neutral-200 bg-white;
+}
+.input {
+  @apply w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-base outline-none focus:border-brand;
+}
+.label {
+  @apply mb-1 block text-sm font-medium text-neutral-600;
+}
