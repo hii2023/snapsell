@@ -37,14 +37,14 @@ export async function readProductPhoto(
         },
         category: {
           type: "string",
-          enum: ["apparel", "food", "electronics", "furniture"],
+          enum: ["apparel", "food", "electronics", "furniture", "cleaning"],
           description:
-            "apparel = clothing/wearables, food = edible/grocery, electronics = gadgets/devices, furniture = chairs/tables/home furniture.",
+            "apparel = clothing/wearables, food = edible/grocery, electronics = gadgets/devices, furniture = chairs/tables/home furniture, cleaning = cleaning supplies/chemicals/detergents.",
         },
         suggested_size: {
           type: "string",
           description:
-            "Best guess size. Apparel: S/M/L/XL/XXL/Free. Food: weight like 250g/1kg. Electronics/Furniture: Small/Medium/Large.",
+            "Best guess. Apparel: S/M/L/XL/XXL/Free. Food: weight like 250g/1kg. Electronics: Laptop/Mobile/Other. Furniture: Small/Medium/Large. Cleaning: volume like 500ml/1L.",
         },
         suggested_color: {
           type: "string",
@@ -99,7 +99,13 @@ export async function readProductPhoto(
     suggested_size?: string;
     suggested_color?: string;
   };
-  const valid: Category[] = ["apparel", "food", "electronics", "furniture"];
+  const valid: Category[] = [
+    "apparel",
+    "food",
+    "electronics",
+    "furniture",
+    "cleaning",
+  ];
   const category: Category = valid.includes(input.category as Category)
     ? (input.category as Category)
     : "apparel";

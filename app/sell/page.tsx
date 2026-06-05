@@ -14,14 +14,13 @@ export default async function SellPage() {
   const seller = await currentSeller();
   if (!seller) redirect("/login");
 
-  // Load the seller's price presets.
+  // Load the seller's price presets and total product count.
   let presets = DEFAULT_PRICE_PRESETS;
   const supabase = await supabaseServer();
-  const { data } = await supabase
-    .from(T.settings)
-    .select("price_presets")
-    .eq("id", 1)
-    .single();
+  const [{ data }, { count }] = await Promise.all([
+    supabase.from(T.settings).select("price_presets").eq("id", 1).single(),
+    supabase.from(T.products).select("id", { count: "exact", head: true }),
+  ]);
   if (data?.price_presets && Array.isArray(data.price_presets)) {
     presets = data.price_presets as number[];
   }
@@ -29,7 +28,7 @@ export default async function SellPage() {
   return (
     <>
       <SellerNav active="sell" />
-      <SellForm pricePresets={presets} />
+      <SellForm pricePresets={presets} productCount={count ?? 0} />
     </>
   );
 }

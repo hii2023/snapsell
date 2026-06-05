@@ -1,4 +1,9 @@
-export type Category = "apparel" | "food" | "electronics" | "furniture";
+export type Category =
+  | "apparel"
+  | "food"
+  | "electronics"
+  | "furniture"
+  | "cleaning";
 
 export type Product = {
   id: string;

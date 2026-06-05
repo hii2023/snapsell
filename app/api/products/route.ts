@@ -24,7 +24,13 @@ export async function POST(req: NextRequest) {
   };
 
   const name = (body.name || "").trim();
-  const valid: Category[] = ["apparel", "food", "electronics", "furniture"];
+  const valid: Category[] = [
+    "apparel",
+    "food",
+    "electronics",
+    "furniture",
+    "cleaning",
+  ];
   const category: Category = valid.includes(body.category as Category)
     ? (body.category as Category)
     : "apparel";

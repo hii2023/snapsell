@@ -1,19 +1,21 @@
 import type { Category } from "./types";
 
-// The primary "size" attribute differs per category. The label tells the seller
-// what they are choosing (Size vs Weight vs Storage vs Dimensions).
+// The primary attribute differs per category. For electronics it is the device
+// type (Laptop/Mobile/Other), which replaces a size choice.
 export const SIZE_OPTIONS: Record<Category, string[]> = {
   apparel: ["S", "M", "L", "XL", "XXL", "Free"],
   food: ["100g", "250g", "500g", "1kg", "1 pc", "1 pack"],
-  electronics: ["Small", "Medium", "Large", "32GB", "64GB", "128GB", "256GB"],
+  electronics: ["Laptop", "Mobile", "Other"],
   furniture: ["Small", "Medium", "Large", "Single", "Double", "Queen", "King"],
+  cleaning: ["250ml", "500ml", "1L", "2L", "5L", "1 pc"],
 };
 
 export const SIZE_LABEL: Record<Category, string> = {
   apparel: "Size",
   food: "Weight",
-  electronics: "Storage / size",
+  electronics: "Type",
   furniture: "Size",
+  cleaning: "Size",
 };
 
 // Whether a colour choice makes sense for this category.
@@ -22,6 +24,7 @@ export const HAS_COLOR: Record<Category, boolean> = {
   food: false,
   electronics: true,
   furniture: true,
+  cleaning: false,
 };
 
 export const COLORS: { name: string; hex: string }[] = [
@@ -37,14 +40,69 @@ export const COLORS: { name: string; hex: string }[] = [
   { name: "Beige", hex: "#e7d8c0" },
 ];
 
+// Per-category accent so the category screen is colourful and the chosen colour
+// carries through the rest of the flow. Classes are static so Tailwind keeps them.
+export type Accent = {
+  text: string;
+  bg: string;
+  ring: string;
+  border: string;
+  solid: string;
+  solidText: string;
+};
+
+export const ACCENT: Record<Category, Accent> = {
+  apparel: {
+    text: "text-blue-600",
+    bg: "bg-blue-50",
+    ring: "ring-blue-400",
+    border: "border-blue-500",
+    solid: "bg-blue-600",
+    solidText: "text-white",
+  },
+  food: {
+    text: "text-orange-600",
+    bg: "bg-orange-50",
+    ring: "ring-orange-400",
+    border: "border-orange-500",
+    solid: "bg-orange-600",
+    solidText: "text-white",
+  },
+  electronics: {
+    text: "text-violet-600",
+    bg: "bg-violet-50",
+    ring: "ring-violet-400",
+    border: "border-violet-500",
+    solid: "bg-violet-600",
+    solidText: "text-white",
+  },
+  furniture: {
+    text: "text-amber-700",
+    bg: "bg-amber-50",
+    ring: "ring-amber-400",
+    border: "border-amber-500",
+    solid: "bg-amber-600",
+    solidText: "text-white",
+  },
+  cleaning: {
+    text: "text-emerald-600",
+    bg: "bg-emerald-50",
+    ring: "ring-emerald-400",
+    border: "border-emerald-500",
+    solid: "bg-emerald-600",
+    solidText: "text-white",
+  },
+};
+
 export const CATEGORY_META: { id: Category; label: string }[] = [
   { id: "apparel", label: "Clothing" },
   { id: "food", label: "Food" },
   { id: "electronics", label: "Electronics" },
   { id: "furniture", label: "Furniture" },
+  { id: "cleaning", label: "Cleaning" },
 ];
 
-export const DEFAULT_PRICE_PRESETS = [99, 199, 299, 499, 999];
+export const DEFAULT_PRICE_PRESETS = [49, 99, 199, 299, 499, 999];
 
 export function rupees(n: number): string {
   return "₹" + n.toLocaleString("en-IN");
