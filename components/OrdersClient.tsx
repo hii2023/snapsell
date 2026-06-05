@@ -225,8 +225,28 @@ function productMessage(p: Product): string {
   return `${shopName}\n${lines.join("\n")}`;
 }
 
-function sendOne(p: Product) {
-  window.open("https://wa.me/?text=" + encodeURIComponent(productMessage(p)), "_blank");
+// Shares the actual product image (visible photo) + details via the device share
+// sheet (WhatsApp included). Falls back to a WhatsApp text link if image sharing
+// is not supported (e.g. desktop), where the link preview shows the image.
+async function sendOne(p: Product) {
+  const text = productMessage(p);
+  if (p.image_url && typeof navigator !== "undefined" && navigator.canShare) {
+    try {
+      const resp = await fetch(p.image_url);
+      const blob = await resp.blob();
+      const file = new File([blob], `${p.code || "product"}.jpg`, {
+        type: blob.type || "image/jpeg",
+      });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+        return;
+      }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return; // cancelled
+      // otherwise fall through to the link
+    }
+  }
+  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
 }
 
 function ProductsTab({
@@ -411,8 +431,8 @@ function ProductsTab({
               </button>
             </div>
             <p className="mb-3 text-sm text-neutral-500">
-              Each product is its own message (so every item shows its own image). Send
-              them one by one, or open all.
+              Each product sends as its own message with the photo attached. Pick
+              WhatsApp (and the contact) when the share sheet opens. Send one by one or all.
             </p>
             <div className="space-y-2">
               {chosen.map((p) => (
@@ -440,10 +460,12 @@ function ProductsTab({
               ))}
             </div>
             <button
-              onClick={() => chosen.forEach((p, i) => setTimeout(() => sendOne(p), i * 700))}
+              onClick={async () => {
+                for (const p of chosen) await sendOne(p);
+              }}
               className="mt-4 w-full rounded-2xl border border-green-600 py-3 text-base font-semibold text-green-700"
             >
-              Open all {chosen.length} messages
+              Send all {chosen.length}
             </button>
           </div>
         </div>
