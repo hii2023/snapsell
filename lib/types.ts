@@ -17,6 +17,7 @@ export type Product = {
   color: string;
   price: number;
   mrp: number;
+  giveaway: boolean;
   stock: number;
   is_active: boolean;
   created_at: string;

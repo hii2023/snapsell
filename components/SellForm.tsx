@@ -69,6 +69,7 @@ export default function SellForm({
   const [units, setUnits] = useState(1);
   const [price, setPrice] = useState(0);
   const [mrp, setMrp] = useState(0);
+  const [giveaway, setGiveaway] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
@@ -146,7 +147,7 @@ export default function SellForm({
       go(1);
       return setError("Add a product name");
     }
-    if (price <= 0) return setError("Pick a price");
+    if (!giveaway && price <= 0) return setError("Pick a price");
     setSaving(true);
     try {
       if (uploadRef.current) await uploadRef.current;
@@ -159,8 +160,9 @@ export default function SellForm({
           image_url: imageUrl,
           size,
           color,
-          price,
-          mrp,
+          price: giveaway ? 0 : price,
+          mrp: giveaway ? 0 : mrp,
+          giveaway,
           stock: units,
         }),
       });
@@ -375,6 +377,33 @@ export default function SellForm({
 
             {step === 2 && (
               <div className="space-y-6">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGiveaway(false)}
+                    className={`flex-1 rounded-full border-2 py-2.5 text-base font-medium transition ${
+                      !giveaway ? `${accent.solid} ${accent.solidText} border-transparent` : "border-neutral-300 bg-white"
+                    }`}
+                  >
+                    For sale
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGiveaway(true)}
+                    className={`flex-1 rounded-full border-2 py-2.5 text-base font-medium transition ${
+                      giveaway ? "border-transparent bg-emerald-600 text-white" : "border-neutral-300 bg-white"
+                    }`}
+                  >
+                    Give away (free)
+                  </button>
+                </div>
+
+                {giveaway ? (
+                  <div className="rounded-2xl bg-emerald-50 p-4 text-base text-emerald-800">
+                    Given away for free. The buyer arranges transport / pickup.
+                  </div>
+                ) : (
+                  <>
                 <div>
                   <label className="mb-3 block text-lg font-semibold">Pick a price</label>
                   <div className="grid grid-cols-3 gap-3">
@@ -451,6 +480,8 @@ export default function SellForm({
                     </p>
                   )}
                 </div>
+                  </>
+                )}
 
                 <div className="rounded-2xl bg-neutral-50 p-4 text-base text-neutral-600">
                   <span className="font-semibold text-ink">{name || "Product"}</span>

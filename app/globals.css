@@ -33,7 +33,23 @@ body {
   @apply border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400;
 }
 .card {
-  @apply rounded-2xl border border-neutral-200 bg-white;
+  @apply rounded-2xl border border-neutral-200 bg-white transition-shadow duration-200;
+}
+@media (hover: hover) {
+  .card:hover {
+    @apply shadow-md;
+  }
+}
+/* Buttery: consistent easing for interactive elements, smooth momentum scroll */
+button,
+a {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+* {
+  -webkit-overflow-scrolling: touch;
+}
+html {
+  scroll-behavior: smooth;
 }
 .input {
   @apply w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-base outline-none focus:border-brand;

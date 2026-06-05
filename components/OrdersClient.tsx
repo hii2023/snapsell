@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon, CheckIcon } from "./icons";
+import ProductEdit from "./ProductEdit";
 import type { Category, Order, Product } from "@/lib/types";
 
 type Tab = "overview" | "products" | "orders";
@@ -181,6 +182,23 @@ function Overview({
         <StatCard label="Total orders" value={orders.length} onClick={() => openOrders("all")} />
       </div>
 
+      {oos > 0 && (
+        <button
+          onClick={() => openProducts("oos")}
+          className="flex w-full items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-left active:scale-[0.99]"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+            </svg>
+          </span>
+          <span className="flex-1 text-sm font-medium text-red-700">
+            {oos} item{oos > 1 ? "s" : ""} out of stock — tap to view and restock
+          </span>
+          <span className="text-red-300">›</span>
+        </button>
+      )}
+
       <div>
         <p className="mb-2 text-sm font-semibold text-neutral-500">Payments</p>
         <div className="grid grid-cols-2 gap-3">
@@ -319,6 +337,7 @@ function ProductsTab({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [shareOpen, setShareOpen] = useState(false);
   const [sendIndex, setSendIndex] = useState(0);
+  const [editing, setEditing] = useState<Product | null>(null);
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -419,16 +438,28 @@ function ProductsTab({
                   <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
                 ) : null}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{p.name}</p>
+              <button onClick={() => setEditing(p)} className="min-w-0 flex-1 text-left">
+                <p className="flex items-center gap-1 truncate font-medium">
+                  <span className="truncate">{p.name}</span>
+                  <svg className="h-3.5 w-3.5 shrink-0 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </p>
                 <p className="text-xs text-neutral-500">
                   <span className="font-medium text-neutral-600">{p.code}</span>
-                  {p.size ? " · " + p.size : ""} · {rupees(p.price)}
-                  {p.mrp > p.price ? (
-                    <span className="ml-1 text-neutral-400 line-through">{rupees(p.mrp)}</span>
-                  ) : null}
+                  {p.size ? " · " + p.size : ""} ·{" "}
+                  {p.giveaway ? (
+                    <span className="font-medium text-emerald-700">Free</span>
+                  ) : (
+                    <>
+                      {rupees(p.price)}
+                      {p.mrp > p.price ? (
+                        <span className="ml-1 text-neutral-400 line-through">{rupees(p.mrp)}</span>
+                      ) : null}
+                    </>
+                  )}
                 </p>
-              </div>
+              </button>
               <div className="flex items-center gap-1.5">
                 <span className={`min-w-7 text-center font-semibold tabular-nums ${p.stock === 0 ? "text-red-600" : ""}`}>
                   {p.stock}
@@ -570,6 +601,17 @@ function ProductsTab({
         </motion.div>
         )}
       </AnimatePresence>
+
+      {editing && (
+        <ProductEdit
+          product={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(p) => {
+            setProducts(products.map((x) => (x.id === p.id ? p : x)));
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }

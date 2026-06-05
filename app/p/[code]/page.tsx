@@ -30,7 +30,7 @@ export async function generateMetadata({
   const { code } = await params;
   const p = await getProduct(code);
   if (!p) return { title: `${shopName}` };
-  const desc = `${p.code} · ${rupees(p.price)} · ${categoryLabel(p.category)}`;
+  const desc = `${p.code} · ${p.giveaway ? "Give away (Free)" : rupees(p.price)} · ${categoryLabel(p.category)}`;
   return {
     title: `${p.name} · ${shopName}`,
     description: desc,
@@ -83,10 +83,14 @@ export default async function ProductPage({
           <h1 className="mt-4 text-2xl font-semibold">{p.name}</h1>
           <p className="mt-1 text-neutral-500">
             {[p.size, p.color].filter(Boolean).join(" · ")} ·{" "}
-            <span className="font-semibold text-ink">{rupees(p.price)}</span>
-            {p.mrp > p.price ? (
-              <span className="ml-1 line-through">{rupees(p.mrp)}</span>
-            ) : null}
+            {p.giveaway ? (
+              <span className="font-semibold text-emerald-700">Give away · Free</span>
+            ) : (
+              <>
+                <span className="font-semibold text-ink">{rupees(p.price)}</span>
+                {p.mrp > p.price ? <span className="ml-1 line-through">{rupees(p.mrp)}</span> : null}
+              </>
+            )}
           </p>
           <p className="mt-5 rounded-xl bg-red-50 p-4 text-center font-medium text-red-700">
             Sold out

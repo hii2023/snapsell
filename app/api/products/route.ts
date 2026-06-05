@@ -6,6 +6,16 @@ import type { Category } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+const VALID: Category[] = [
+  "apparel",
+  "food",
+  "electronics",
+  "furniture",
+  "cleaning",
+  "jewellery",
+  "cosmetics",
+];
+
 // Create a product (seller-only, via authenticated session + RLS).
 export async function POST(req: NextRequest) {
   const seller = await requireSeller();
@@ -21,27 +31,21 @@ export async function POST(req: NextRequest) {
     color?: string;
     price?: number;
     mrp?: number;
+    giveaway?: boolean;
     stock?: number;
   };
 
   const name = (body.name || "").trim();
-  const valid: Category[] = [
-    "apparel",
-    "food",
-    "electronics",
-    "furniture",
-    "cleaning",
-    "jewellery",
-    "cosmetics",
-  ];
-  const category: Category = valid.includes(body.category as Category)
+  const category: Category = VALID.includes(body.category as Category)
     ? (body.category as Category)
     : "apparel";
-  const price = Math.round(Number(body.price) || 0);
+  const giveaway = Boolean(body.giveaway);
+  const price = giveaway ? 0 : Math.round(Number(body.price) || 0);
   const stock = Math.round(Number(body.stock) || 0);
 
   if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
-  if (price <= 0) return NextResponse.json({ error: "Price required" }, { status: 400 });
+  if (!giveaway && price <= 0)
+    return NextResponse.json({ error: "Price required" }, { status: 400 });
   if (stock <= 0) return NextResponse.json({ error: "Units required" }, { status: 400 });
 
   const supabase = await supabaseServer();
@@ -54,7 +58,8 @@ export async function POST(req: NextRequest) {
       size: (body.size || "").trim(),
       color: (body.color || "").trim(),
       price,
-      mrp: Math.max(0, Math.round(Number(body.mrp) || 0)),
+      mrp: giveaway ? 0 : Math.max(0, Math.round(Number(body.mrp) || 0)),
+      giveaway,
       stock,
     })
     .select()
@@ -64,7 +69,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ product: data });
 }
 
-// Restock or toggle a product (seller-only).
+// Edit / restock / toggle a product (seller-only). All fields optional.
 export async function PATCH(req: NextRequest) {
   const seller = await requireSeller();
   if (!seller.ok) {
@@ -73,14 +78,43 @@ export async function PATCH(req: NextRequest) {
 
   const body = (await req.json()) as {
     id?: string;
+    name?: string;
+    category?: Category;
+    size?: string;
+    color?: string;
+    price?: number;
+    mrp?: number;
+    giveaway?: boolean;
     stock?: number;
     is_active?: boolean;
   };
   if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   const patch: Record<string, unknown> = {};
+  if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
+  if (body.category && VALID.includes(body.category)) patch.category = body.category;
+  if (typeof body.size === "string") patch.size = body.size.trim();
+  if (typeof body.color === "string") patch.color = body.color.trim();
   if (typeof body.stock === "number") patch.stock = Math.max(0, Math.round(body.stock));
   if (typeof body.is_active === "boolean") patch.is_active = body.is_active;
+
+  if (typeof body.giveaway === "boolean") {
+    patch.giveaway = body.giveaway;
+    if (body.giveaway) {
+      patch.price = 0;
+      patch.mrp = 0;
+    }
+  }
+  if (!patch.giveaway && typeof body.price === "number") {
+    patch.price = Math.max(0, Math.round(body.price));
+  }
+  if (patch.giveaway !== true && typeof body.mrp === "number") {
+    patch.mrp = Math.max(0, Math.round(body.mrp));
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
 
   const supabase = await supabaseServer();
   const { data, error } = await supabase

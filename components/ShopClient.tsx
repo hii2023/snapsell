@@ -24,7 +24,7 @@ export default function ShopClient({
 }) {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
-  const [catFilter, setCatFilter] = useState<Category | "all">("all");
+  const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
   const [hydrated, setHydrated] = useState(false);
 
   // Persist the cart so it survives page switches (shop <-> product pages).
@@ -49,8 +49,13 @@ export default function ShopClient({
   const categoriesPresent = CATEGORY_META.filter((c) =>
     products.some((p) => p.category === c.id)
   );
+  const hasGiveaway = products.some((p) => p.giveaway);
   const visible =
-    catFilter === "all" ? products : products.filter((p) => p.category === catFilter);
+    catFilter === "all"
+      ? products
+      : catFilter === "giveaway"
+        ? products.filter((p) => p.giveaway)
+        : products.filter((p) => p.category === catFilter);
 
   const total = useMemo(
     () => cart.reduce((s, l) => s + l.price * l.qty, 0),
@@ -132,14 +137,26 @@ export default function ShopClient({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 pb-28">
-      {categoriesPresent.length > 1 && (
-        <div className="mb-5 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      {(categoriesPresent.length > 1 || hasGiveaway) && (
+        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           <button
             onClick={() => setCatFilter("all")}
             className={`chip shrink-0 ${catFilter === "all" ? "chip-on" : "chip-off"}`}
           >
             All
           </button>
+          {hasGiveaway && (
+            <button
+              onClick={() => setCatFilter("giveaway")}
+              className={`chip shrink-0 ${
+                catFilter === "giveaway"
+                  ? "border-emerald-600 bg-emerald-600 text-white"
+                  : "border-emerald-300 bg-white text-emerald-700"
+              }`}
+            >
+              Give away
+            </button>
+          )}
           {categoriesPresent.map((c) => (
             <button
               key={c.id}
@@ -150,6 +167,12 @@ export default function ShopClient({
             </button>
           ))}
         </div>
+      )}
+
+      {catFilter === "giveaway" && (
+        <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
+          These items are free. Transportation should be arranged by the buyer.
+        </p>
       )}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {visible.map((p) => {
@@ -182,10 +205,16 @@ export default function ShopClient({
                 <p className="text-sm text-neutral-500">
                   {[p.size, p.color].filter(Boolean).join(" · ")}
                   {(p.size || p.color) ? " · " : ""}
-                  <span className="font-semibold text-ink">{rupees(p.price)}</span>
-                  {p.mrp > p.price ? (
-                    <span className="ml-1 text-neutral-400 line-through">{rupees(p.mrp)}</span>
-                  ) : null}
+                  {p.giveaway ? (
+                    <span className="font-semibold text-emerald-700">Give away · Free</span>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-ink">{rupees(p.price)}</span>
+                      {p.mrp > p.price ? (
+                        <span className="ml-1 text-neutral-400 line-through">{rupees(p.mrp)}</span>
+                      ) : null}
+                    </>
+                  )}
                 </p>
                 {line ? (
                   <div className="mt-2 flex items-center justify-between">
@@ -338,7 +367,7 @@ function Checkout({
     if (!validate()) return;
     setLoading(true);
     try {
-      if (mode === "cod") await placeCod();
+      if (mode === "cod" || total === 0) await placeCod();
       else await placeOnline();
       onDone();
     } catch (e) {
@@ -418,25 +447,31 @@ function Checkout({
             You will collect this order from the store. No address needed.
           </p>
         )}
-        <div>
-          <label className="label">Payment</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={`chip flex-1 ${mode === "online" ? "chip-on" : "chip-off"}`}
-              onClick={() => setMode("online")}
-            >
-              Pay online
-            </button>
-            <button
-              type="button"
-              className={`chip flex-1 ${mode === "cod" ? "chip-on" : "chip-off"}`}
-              onClick={() => setMode("cod")}
-            >
-              {fulfillment === "pickup" ? "Cash on pickup" : "Cash on delivery"}
-            </button>
+        {total === 0 ? (
+          <p className="rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
+            Free item. No payment needed. Please arrange transport / pickup yourself.
+          </p>
+        ) : (
+          <div>
+            <label className="label">Payment</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`chip flex-1 ${mode === "online" ? "chip-on" : "chip-off"}`}
+                onClick={() => setMode("online")}
+              >
+                Pay online
+              </button>
+              <button
+                type="button"
+                className={`chip flex-1 ${mode === "cod" ? "chip-on" : "chip-off"}`}
+                onClick={() => setMode("cod")}
+              >
+                {fulfillment === "pickup" ? "Cash on pickup" : "Cash on delivery"}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
@@ -450,9 +485,11 @@ function Checkout({
           >
             {loading
               ? "Please wait..."
-              : mode === "cod"
-                ? `Place order · ${rupees(total)}`
-                : `Pay ${rupees(total)}`}
+              : total === 0
+                ? "Place order (Free)"
+                : mode === "cod"
+                  ? `Place order · ${rupees(total)}`
+                  : `Pay ${rupees(total)}`}
           </button>
         </div>
       </div>
