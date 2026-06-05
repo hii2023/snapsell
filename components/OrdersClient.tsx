@@ -182,23 +182,6 @@ function Overview({
         <StatCard label="Total orders" value={orders.length} onClick={() => openOrders("all")} />
       </div>
 
-      {oos > 0 && (
-        <button
-          onClick={() => openProducts("oos")}
-          className="flex w-full items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-left active:scale-[0.99]"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-            </svg>
-          </span>
-          <span className="flex-1 text-sm font-medium text-red-700">
-            {oos} item{oos > 1 ? "s" : ""} out of stock — tap to view and restock
-          </span>
-          <span className="text-red-300">›</span>
-        </button>
-      )}
-
       <div>
         <p className="mb-2 text-sm font-semibold text-neutral-500">Payments</p>
         <div className="grid grid-cols-2 gap-3">
