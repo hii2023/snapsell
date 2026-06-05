@@ -6,6 +6,7 @@ import { T, ORDER_WITH_ITEMS } from "@/lib/db";
 import type { Order, Product } from "@/lib/types";
 import SellerNav from "@/components/SellerNav";
 import OrdersClient from "@/components/OrdersClient";
+import AddFab from "@/components/AddFab";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function OrdersPage() {
         initialOrders={(orders as unknown as Order[]) || []}
         initialProducts={(products as Product[]) || []}
       />
+      <AddFab />
     </>
   );
 }

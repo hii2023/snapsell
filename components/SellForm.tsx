@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Stepper } from "./ui";
@@ -59,7 +59,17 @@ export default function SellForm({
   const [batch, setBatch] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
+
+  // When the details card appears, put the cursor in the product name field.
+  useEffect(() => {
+    if (screen === "wizard" && step === 1) {
+      const t = setTimeout(() => nameRef.current?.focus(), 350);
+      return () => clearTimeout(t);
+    }
+  }, [screen, step]);
 
   const total = productCount + added;
   const accent = category ? ACCENT[category] : ACCENT.apparel;
@@ -69,6 +79,12 @@ export default function SellForm({
     setError("");
     if (fileRef.current) fileRef.current.value = "";
     fileRef.current?.click();
+  }
+
+  function openGallery() {
+    setError("");
+    if (galleryRef.current) galleryRef.current.value = "";
+    galleryRef.current?.click();
   }
 
   function resetProduct() {
@@ -188,16 +204,26 @@ export default function SellForm({
     exit: (d: number) => ({ x: reduce ? 0 : d * -60, opacity: 0 }),
   };
 
-  // Hidden camera input shared by every entry point.
+  // Hidden inputs shared by every entry point: one opens the camera, one opens
+  // the photo gallery / files.
   const cameraInput = (
-    <input
-      ref={fileRef}
-      type="file"
-      accept="image/*"
-      capture="environment"
-      className="hidden"
-      onChange={onPhoto}
-    />
+    <>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={onPhoto}
+      />
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onPhoto}
+      />
+    </>
   );
 
   // ---- Home ----
@@ -220,8 +246,14 @@ export default function SellForm({
           <CameraIcon className="h-7 w-7" />
           Add product
         </button>
+        <button
+          onClick={openGallery}
+          className="mt-3 w-full rounded-2xl border border-neutral-300 bg-white py-3 text-base font-medium text-neutral-700 active:scale-[0.98]"
+        >
+          Choose from gallery
+        </button>
         <p className="mt-3 text-center text-sm text-neutral-500">
-          Tap to open the camera and snap your item.
+          Snap a photo or pick an existing image.
         </p>
 
         <div className="mt-8 flex justify-center gap-6 text-sm">
@@ -254,6 +286,9 @@ export default function SellForm({
         <div className="mt-8 flex flex-col gap-3">
           <button onClick={openCamera} className="btn-primary w-full py-4 text-lg">
             Add another product
+          </button>
+          <button onClick={openGallery} className="btn-ghost w-full py-4 text-lg">
+            Choose from gallery
           </button>
           <Link href="/" className="btn-ghost w-full py-4 text-lg">
             View shop
@@ -288,6 +323,12 @@ export default function SellForm({
         >
           <CameraIcon className="h-7 w-7" />
           Take next photo
+        </button>
+        <button
+          onClick={openGallery}
+          className="mx-auto mt-3 block text-base font-medium text-neutral-600 underline"
+        >
+          Choose from gallery
         </button>
         <button
           onClick={() => {
@@ -393,9 +434,19 @@ export default function SellForm({
                 <div>
                   <label className="mb-2 block text-lg font-semibold">Product name</label>
                   <input
+                    ref={nameRef}
+                    autoFocus
+                    enterKeyHint="next"
                     className="input text-xl"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (name.trim()) go(2);
+                        else setError("Add a product name");
+                      }
+                    }}
                     placeholder="e.g. Cotton T-shirt"
                   />
                 </div>
