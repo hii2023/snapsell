@@ -26,7 +26,7 @@ export default async function ShopPage() {
   return (
     <main className="min-h-screen">
       <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-2xl items-center justify-center px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-4">
           <h1 className="text-xl font-semibold">{shopName}</h1>
         </div>
       </header>

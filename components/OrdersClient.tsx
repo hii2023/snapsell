@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon } from "./icons";
 import type { Category, Order, Product } from "@/lib/types";
@@ -25,6 +25,11 @@ export default function OrdersClient({
   const [tab, setTab] = useState<Tab>("overview");
   const [orders, setOrders] = useState(initialOrders);
   const [products, setProducts] = useState(initialProducts);
+
+  // Refresh local state when the server data changes (e.g. after adding a product).
+  useEffect(() => setOrders(initialOrders), [initialOrders]);
+  useEffect(() => setProducts(initialProducts), [initialProducts]);
+
   const [prodFilter, setProdFilter] = useState<ProdFilter>("instock");
   const [catFilter, setCatFilter] = useState<CatFilter>("all");
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
@@ -51,7 +56,7 @@ export default function OrdersClient({
   ];
 
   return (
-    <div className="mx-auto max-w-md px-4 py-6">
+    <div className="mx-auto max-w-3xl px-4 py-6">
       <div className="mb-5 grid grid-cols-3 gap-2">
         {tabs.map((t) => (
           <button
@@ -158,7 +163,7 @@ function Overview({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="In stock" value={inStock} tone="green" onClick={() => openProducts("instock")} />
         <StatCard label="Out of stock" value={oos} tone="red" onClick={() => openProducts("oos")} />
         <StatCard label="Ready to ship" value={readyToShip} tone="amber" onClick={() => openOrders("dispatch")} />

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Stepper } from "./ui";
 import { CameraIcon, CheckIcon, ArrowLeftIcon, CategoryIcon } from "./icons";
@@ -16,7 +15,7 @@ import {
 } from "@/lib/constants";
 import type { Category, VisionResult } from "@/lib/types";
 
-type Screen = "home" | "wizard" | "saved" | "batch";
+type Screen = "capture" | "wizard" | "saved" | "batch";
 type Step = 0 | 1 | 2; // category, details, price
 const TITLES = ["What is it?", "Details", "Set a price"];
 
@@ -32,13 +31,17 @@ const ACCENT_HEX: Record<Category, string> = {
 
 export default function SellForm({
   pricePresets,
-  productCount,
+  initialFile = null,
+  onClose,
+  onSaved,
 }: {
   pricePresets: number[];
-  productCount: number;
+  initialFile?: File | null;
+  onClose?: () => void;
+  onSaved?: () => void;
 }) {
   const reduce = useReducedMotion();
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>(initialFile ? "wizard" : "capture");
   const [[step, dir], setStep] = useState<[Step, number]>([0, 1]);
   const [reading, setReading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -62,6 +65,12 @@ export default function SellForm({
   const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
 
+  // Process the photo passed in when the modal opened (first product).
+  useEffect(() => {
+    if (initialFile) processFile(initialFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // When the details card appears, put the cursor in the product name field.
   useEffect(() => {
     if (screen === "wizard" && step === 1) {
@@ -70,11 +79,9 @@ export default function SellForm({
     }
   }, [screen, step]);
 
-  const total = productCount + added;
   const accent = category ? ACCENT[category] : ACCENT.apparel;
   const accentHex = category ? ACCENT_HEX[category] : "#0f766e";
 
-  // One picker that lets the seller either take a photo or pick from gallery.
   function openCamera() {
     setError("");
     if (fileRef.current) fileRef.current.value = "";
@@ -95,9 +102,7 @@ export default function SellForm({
     uploadRef.current = null;
   }
 
-  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function processFile(file: File) {
     resetProduct();
     setPreview(URL.createObjectURL(file));
     setScreen("wizard");
@@ -136,6 +141,11 @@ export default function SellForm({
     } finally {
       setReading(false);
     }
+  }
+
+  function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
   }
 
   function go(next: Step) {
@@ -177,10 +187,10 @@ export default function SellForm({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Save failed");
       setAdded((n) => n + 1);
+      onSaved?.();
       if (batch) {
         resetProduct();
         setScreen("batch");
-        // Best effort auto-open; the big button is the reliable fallback on mobile.
         setTimeout(() => fileRef.current?.click(), 150);
       } else {
         setScreen("saved");
@@ -198,58 +208,37 @@ export default function SellForm({
     exit: (d: number) => ({ x: reduce ? 0 : d * -60, opacity: 0 }),
   };
 
-  // Hidden inputs shared by every entry point: one opens the camera, one opens
-  // the photo gallery / files.
   const cameraInput = (
-    <input
-      ref={fileRef}
-      type="file"
-      accept="image/*"
-      className="hidden"
-      onChange={onPhoto}
-    />
+    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhoto} />
   );
 
-  // ---- Home ----
-  if (screen === "home") {
+  // ---- Capture (no photo yet) ----
+  if (screen === "capture") {
     return (
-      <div className="mx-auto flex min-h-[calc(100dvh-57px)] max-w-md flex-col justify-center px-5 py-10">
+      <div className="mx-auto flex max-w-md flex-col px-5 py-12 text-center">
         {cameraInput}
-        <div className="rounded-3xl bg-gradient-to-br from-brand to-brand-dark p-7 text-white">
-          <p className="text-sm/relaxed opacity-80">Your shop</p>
-          <p className="mt-1 text-5xl font-bold tabular-nums">{total}</p>
-          <p className="mt-1 text-lg opacity-90">
-            product{total === 1 ? "" : "s"} listed
-          </p>
-        </div>
-
+        <h2 className="text-2xl font-semibold">Add a product</h2>
+        <p className="mt-1 text-neutral-500">Take a photo or pick one from your gallery.</p>
         <button
           onClick={openCamera}
-          className="mt-6 flex w-full items-center justify-center gap-3 rounded-3xl bg-brand py-6 text-xl font-semibold text-white shadow-lg shadow-brand/20 transition active:scale-[0.98]"
+          className="mx-auto mt-8 flex w-full items-center justify-center gap-3 rounded-3xl bg-brand py-6 text-xl font-semibold text-white shadow-lg shadow-brand/20 active:scale-[0.98]"
         >
           <CameraIcon className="h-7 w-7" />
-          Add product
+          Take / choose photo
         </button>
-        <p className="mt-3 text-center text-sm text-neutral-500">
-          Take a photo or pick one from your gallery.
-        </p>
-
-        <div className="mt-8 flex justify-center gap-6 text-sm">
-          <Link href="/" className="text-brand underline">
-            View shop
-          </Link>
-          <Link href="/orders" className="text-brand underline">
-            Orders &amp; stock
-          </Link>
-        </div>
+        {onClose && (
+          <button onClick={onClose} className="mt-4 text-sm text-neutral-500 underline">
+            Cancel
+          </button>
+        )}
       </div>
     );
   }
 
-  // ---- Saved (single) ----
+  // ---- Saved ----
   if (screen === "saved") {
     return (
-      <div className="mx-auto max-w-md px-5 py-16 text-center">
+      <div className="mx-auto max-w-md px-5 py-14 text-center">
         {cameraInput}
         <motion.div
           initial={{ scale: 0.6, opacity: 0 }}
@@ -260,26 +249,27 @@ export default function SellForm({
           <CheckIcon className="h-10 w-10" />
         </motion.div>
         <h2 className="text-2xl font-semibold">Listed!</h2>
-        <p className="mt-2 text-neutral-600">{total} products in your shop now.</p>
+        <p className="mt-2 text-neutral-600">
+          {added} product{added === 1 ? "" : "s"} added.
+        </p>
         <div className="mt-8 flex flex-col gap-3">
           <button onClick={openCamera} className="btn-primary w-full py-4 text-lg">
             Add another product
           </button>
-          <Link href="/" className="btn-ghost w-full py-4 text-lg">
-            View shop
-          </Link>
-          <Link href="/orders" className="text-sm text-brand underline">
-            Check store &amp; orders
-          </Link>
+          {onClose && (
+            <button onClick={onClose} className="btn-ghost w-full py-4 text-lg">
+              Done
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  // ---- Batch: saved + reopen camera ----
+  // ---- Batch ----
   if (screen === "batch") {
     return (
-      <div className="mx-auto max-w-md px-5 py-16 text-center">
+      <div className="mx-auto max-w-md px-5 py-14 text-center">
         {cameraInput}
         <motion.div
           key={added}
@@ -315,11 +305,11 @@ export default function SellForm({
   // ---- Wizard ----
   const lastIdx = CATEGORY_META.length - 1;
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-57px)] max-w-md flex-col px-4 pb-6 pt-4">
+    <div className="mx-auto flex max-w-md flex-col px-4 pb-6 pt-4">
       {cameraInput}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => (step === 0 ? setScreen("home") : go((step - 1) as Step))}
+          onClick={() => (step === 0 ? setScreen("capture") : go((step - 1) as Step))}
           aria-label="Back"
           className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-500"
         >
@@ -339,7 +329,7 @@ export default function SellForm({
 
       <h1 className="mt-5 text-3xl font-bold">{TITLES[step]}</h1>
 
-      <div className="relative mt-5 flex-1">
+      <div className="relative mt-5">
         <AnimatePresence mode="wait" custom={dir}>
           <motion.div
             key={step}
@@ -352,7 +342,6 @@ export default function SellForm({
               reduce ? { duration: 0.15 } : { type: "spring", stiffness: 320, damping: 32 }
             }
           >
-            {/* Step 0: category (colourful) */}
             {step === 0 && (
               <div>
                 <div className="mb-4 flex items-center gap-3">
@@ -382,9 +371,7 @@ export default function SellForm({
                         <span className={a.text}>
                           <CategoryIcon id={c.id} className="h-9 w-9" />
                         </span>
-                        <span className="text-base font-semibold text-neutral-800">
-                          {c.label}
-                        </span>
+                        <span className="text-base font-semibold text-neutral-800">{c.label}</span>
                         {suggested && (
                           <span className={`absolute right-2 top-2 rounded-full ${a.solid} px-2 py-0.5 text-[10px] font-semibold text-white`}>
                             AI pick
@@ -397,7 +384,6 @@ export default function SellForm({
               </div>
             )}
 
-            {/* Step 1: details */}
             {step === 1 && category && (
               <div className="space-y-6">
                 <div>
@@ -453,10 +439,7 @@ export default function SellForm({
                               : "border-neutral-300 bg-white"
                           }`}
                         >
-                          <span
-                            className="h-5 w-5 rounded-full border border-black/10"
-                            style={{ backgroundColor: c.hex }}
-                          />
+                          <span className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: c.hex }} />
                           {c.name}
                         </button>
                       ))}
@@ -478,7 +461,6 @@ export default function SellForm({
               </div>
             )}
 
-            {/* Step 2: price */}
             {step === 2 && (
               <div className="space-y-6">
                 <div>
@@ -501,9 +483,7 @@ export default function SellForm({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-lg font-semibold">
-                    Or slide to set a price
-                  </label>
+                  <label className="mb-2 block text-lg font-semibold">Or slide to set a price</label>
                   <div className="rounded-2xl border-2 border-neutral-200 bg-white p-5">
                     <div className="text-center text-5xl font-bold tabular-nums">
                       {price > 0 ? rupees(price) : "₹0"}
@@ -578,7 +558,6 @@ export default function SellForm({
                   {saving ? "Saving..." : uploading ? "Finishing photo..." : "Save to the list"}
                 </button>
 
-                {/* Batch toggle below the save button */}
                 <label className="flex items-center justify-center gap-3 text-base text-neutral-700">
                   <input
                     type="checkbox"

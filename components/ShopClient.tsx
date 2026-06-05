@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { rupees } from "@/lib/constants";
+import { useEffect, useMemo, useState } from "react";
+import { rupees, CATEGORY_META } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
-import type { CartLine, Product } from "@/lib/types";
+import type { Category, CartLine, Product } from "@/lib/types";
 
 type Step = "shop" | "checkout" | "done";
 
@@ -24,6 +24,33 @@ export default function ShopClient({
 }) {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
+  const [catFilter, setCatFilter] = useState<Category | "all">("all");
+  const [hydrated, setHydrated] = useState(false);
+
+  // Persist the cart so it survives page switches (shop <-> product pages).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("ir_cart");
+      if (raw) setCart(JSON.parse(raw));
+    } catch {
+      // ignore
+    }
+    setHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem("ir_cart", JSON.stringify(cart));
+    } catch {
+      // ignore
+    }
+  }, [cart, hydrated]);
+
+  const categoriesPresent = CATEGORY_META.filter((c) =>
+    products.some((p) => p.category === c.id)
+  );
+  const visible =
+    catFilter === "all" ? products : products.filter((p) => p.category === catFilter);
 
   const total = useMemo(
     () => cart.reduce((s, l) => s + l.price * l.qty, 0),
@@ -104,9 +131,28 @@ export default function ShopClient({
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 pb-28">
-      <div className="grid grid-cols-2 gap-4">
-        {products.map((p) => {
+    <div className="mx-auto max-w-6xl px-4 py-6 pb-28">
+      {categoriesPresent.length > 1 && (
+        <div className="mb-5 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <button
+            onClick={() => setCatFilter("all")}
+            className={`chip shrink-0 ${catFilter === "all" ? "chip-on" : "chip-off"}`}
+          >
+            All
+          </button>
+          {categoriesPresent.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setCatFilter(c.id)}
+              className={`chip shrink-0 ${catFilter === c.id ? "chip-on" : "chip-off"}`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {visible.map((p) => {
           const line = cart.find((l) => l.product_id === p.id);
           return (
             <div key={p.id} className="card overflow-hidden">
@@ -174,7 +220,7 @@ export default function ShopClient({
 
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
-          <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
             <div>
               <p className="text-sm text-neutral-500">{count} item(s)</p>
               <p className="text-lg font-semibold">{rupees(total)}</p>
