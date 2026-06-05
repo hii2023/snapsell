@@ -136,7 +136,10 @@ export default function ShopClient({
                 <p className="text-sm text-neutral-500">
                   {[p.size, p.color].filter(Boolean).join(" · ")}
                   {(p.size || p.color) ? " · " : ""}
-                  {rupees(p.price)}
+                  <span className="font-semibold text-ink">{rupees(p.price)}</span>
+                  {p.mrp > p.price ? (
+                    <span className="ml-1 text-neutral-400 line-through">{rupees(p.mrp)}</span>
+                  ) : null}
                 </p>
                 {line ? (
                   <div className="mt-2 flex items-center justify-between">

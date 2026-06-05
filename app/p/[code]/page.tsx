@@ -9,7 +9,7 @@ import ShopClient from "@/components/ShopClient";
 
 export const dynamic = "force-dynamic";
 
-const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "SnapSell";
+const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
 async function getProduct(code: string): Promise<Product | null> {
   if (!supabaseConfigured()) return null;
@@ -82,7 +82,11 @@ export default async function ProductPage({
           </div>
           <h1 className="mt-4 text-2xl font-semibold">{p.name}</h1>
           <p className="mt-1 text-neutral-500">
-            {[p.size, p.color].filter(Boolean).join(" · ")} · {rupees(p.price)}
+            {[p.size, p.color].filter(Boolean).join(" · ")} ·{" "}
+            <span className="font-semibold text-ink">{rupees(p.price)}</span>
+            {p.mrp > p.price ? (
+              <span className="ml-1 line-through">{rupees(p.mrp)}</span>
+            ) : null}
           </p>
           <p className="mt-5 rounded-xl bg-red-50 p-4 text-center font-medium text-red-700">
             Sold out

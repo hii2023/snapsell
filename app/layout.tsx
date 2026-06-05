@@ -8,7 +8,7 @@ const plex = IBM_Plex_Sans({
   variable: "--font-plex",
 });
 
-const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "SnapSell";
+const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
 export const metadata: Metadata = {
   title: shopName,

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "SnapSell";
+const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
 export default function SellerNav({ active }: { active: "sell" | "orders" }) {
   return (

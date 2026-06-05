@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { supabaseConfigured } from "@/lib/supabase";
 import { supabaseServer } from "@/lib/supabase-server";
 import { T } from "@/lib/db";
@@ -7,7 +6,7 @@ import ShopClient from "@/components/ShopClient";
 
 export const dynamic = "force-dynamic";
 
-const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "SnapSell";
+const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
 export default async function ShopPage() {
   let products: Product[] = [];
@@ -27,11 +26,8 @@ export default async function ShopPage() {
   return (
     <main className="min-h-screen">
       <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-2xl items-center justify-center px-4 py-4">
           <h1 className="text-xl font-semibold">{shopName}</h1>
-          <Link href="/sell" className="text-sm text-neutral-500 hover:text-brand">
-            Seller
-          </Link>
         </div>
       </header>
 

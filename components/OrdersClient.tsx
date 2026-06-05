@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon } from "./icons";
-import type { Order, Product } from "@/lib/types";
+import type { Category, Order, Product } from "@/lib/types";
 
 type Tab = "overview" | "products" | "orders";
 type ProdFilter = "instock" | "oos";
+type CatFilter = Category | "all";
 type OrderFilter = "all" | "dispatch" | "paid" | "unpaid";
 
-const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "SnapSell";
+const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
 const isPendingDispatch = (o: Order) =>
   o.delivery_status === "unbooked" || o.delivery_status === "booked";
@@ -25,10 +26,17 @@ export default function OrdersClient({
   const [orders, setOrders] = useState(initialOrders);
   const [products, setProducts] = useState(initialProducts);
   const [prodFilter, setProdFilter] = useState<ProdFilter>("instock");
+  const [catFilter, setCatFilter] = useState<CatFilter>("all");
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
 
   function openProducts(f: ProdFilter) {
     setProdFilter(f);
+    setCatFilter("all");
+    setTab("products");
+  }
+  function openCategory(cat: Category) {
+    setCatFilter(cat);
+    setProdFilter("instock");
     setTab("products");
   }
   function openOrders(f: OrderFilter) {
@@ -63,6 +71,7 @@ export default function OrdersClient({
           products={products}
           orders={orders}
           openProducts={openProducts}
+          openCategory={openCategory}
           openOrders={openOrders}
         />
       )}
@@ -72,6 +81,8 @@ export default function OrdersClient({
           setProducts={setProducts}
           filter={prodFilter}
           setFilter={setProdFilter}
+          catFilter={catFilter}
+          setCatFilter={setCatFilter}
         />
       )}
       {tab === "orders" && (
@@ -122,11 +133,13 @@ function Overview({
   products,
   orders,
   openProducts,
+  openCategory,
   openOrders,
 }: {
   products: Product[];
   orders: Order[];
   openProducts: (f: ProdFilter) => void;
+  openCategory: (c: Category) => void;
   openOrders: (f: OrderFilter) => void;
 }) {
   const inStock = products.filter((p) => p.stock > 0).length;
@@ -167,13 +180,18 @@ function Overview({
         <p className="mb-2 text-sm font-semibold text-neutral-500">Items by category</p>
         <div className="space-y-2">
           {perCategory.map((c) => (
-            <div key={c.id} className="card flex items-center gap-3 p-3">
+            <button
+              key={c.id}
+              onClick={() => openCategory(c.id)}
+              className="card flex w-full items-center gap-3 p-3 text-left active:scale-[0.99]"
+            >
               <span className="text-neutral-500">
                 <CategoryIcon id={c.id} className="h-6 w-6" />
               </span>
               <span className="flex-1 font-medium">{c.label}</span>
               <span className="text-lg font-semibold tabular-nums">{c.count}</span>
-            </div>
+              <span className="text-neutral-300">›</span>
+            </button>
           ))}
         </div>
       </div>
@@ -192,32 +210,58 @@ function Overview({
 
 /* ---------------- Products ---------------- */
 
+function productMessage(p: Product): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const lines = [`*${p.name}* (${p.code})`];
+  lines.push(
+    `Price: ${rupees(p.price)}` + (p.mrp > p.price ? `  (MRP ${rupees(p.mrp)})` : "")
+  );
+  lines.push(`${origin}/p/${p.code}`);
+  if (p.image_url) lines.push(p.image_url);
+  return `${shopName}\n${lines.join("\n")}`;
+}
+
+function sendOne(p: Product) {
+  window.open("https://wa.me/?text=" + encodeURIComponent(productMessage(p)), "_blank");
+}
+
 function ProductsTab({
   products,
   setProducts,
   filter,
   setFilter,
+  catFilter,
+  setCatFilter,
 }: {
   products: Product[];
   setProducts: (p: Product[]) => void;
   filter: ProdFilter;
   setFilter: (f: ProdFilter) => void;
+  catFilter: CatFilter;
+  setCatFilter: (c: CatFilter) => void;
 }) {
   const [busy, setBusy] = useState("");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [shareOpen, setShareOpen] = useState(false);
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products
       .filter((p) => (filter === "oos" ? p.stock === 0 : p.stock > 0))
+      .filter((p) => catFilter === "all" || p.category === catFilter)
       .filter(
         (p) =>
           !q ||
           p.name.toLowerCase().includes(q) ||
           (p.code || "").toLowerCase().includes(q)
       );
-  }, [products, filter, query]);
+  }, [products, filter, catFilter, query]);
+
+  const categoriesPresent = CATEGORY_META.filter((c) =>
+    products.some((p) => p.category === c.id)
+  );
+  const chosen = products.filter((p) => selected.has(p.id));
 
   async function addStock(p: Product, delta: number) {
     setBusy(p.id);
@@ -243,20 +287,6 @@ function ProductsTab({
     });
   }
 
-  function shareWhatsApp() {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const chosen = products.filter((p) => selected.has(p.id));
-    if (chosen.length === 0) return;
-    const blocks = chosen.map((p) => {
-      const link = `${origin}/p/${p.code}`;
-      const parts = [`*${p.name}* (${p.code})`, rupees(p.price), link];
-      if (p.image_url) parts.push(p.image_url);
-      return parts.join("\n");
-    });
-    const msg = `${shopName}\n\n${blocks.join("\n\n")}`;
-    window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
-  }
-
   return (
     <div className="pb-24">
       <input
@@ -265,13 +295,31 @@ function ProductsTab({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="mb-4 flex gap-2">
+      <div className="mb-3 flex gap-2">
         <button onClick={() => setFilter("instock")} className={`chip flex-1 ${filter === "instock" ? "chip-on" : "chip-off"}`}>
           In stock ({products.filter((p) => p.stock > 0).length})
         </button>
         <button onClick={() => setFilter("oos")} className={`chip flex-1 ${filter === "oos" ? "chip-on" : "chip-off"}`}>
           Out of stock ({products.filter((p) => p.stock === 0).length})
         </button>
+      </div>
+
+      <div className="mb-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <button
+          onClick={() => setCatFilter("all")}
+          className={`chip shrink-0 ${catFilter === "all" ? "chip-on" : "chip-off"}`}
+        >
+          All
+        </button>
+        {categoriesPresent.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setCatFilter(c.id)}
+            className={`chip shrink-0 ${catFilter === c.id ? "chip-on" : "chip-off"}`}
+          >
+            {c.label}
+          </button>
+        ))}
       </div>
 
       {shown.length === 0 ? (
@@ -301,6 +349,9 @@ function ProductsTab({
                 <p className="text-xs text-neutral-500">
                   <span className="font-medium text-neutral-600">{p.code}</span>
                   {p.size ? " · " + p.size : ""} · {rupees(p.price)}
+                  {p.mrp > p.price ? (
+                    <span className="ml-1 text-neutral-400 line-through">{rupees(p.mrp)}</span>
+                  ) : null}
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
@@ -334,10 +385,61 @@ function ProductsTab({
               Clear
             </button>
             <button
-              onClick={shareWhatsApp}
+              onClick={() => setShareOpen(true)}
               className="flex-1 rounded-2xl bg-green-600 py-3 text-base font-semibold text-white active:scale-[0.98]"
             >
               Share {selected.size} on WhatsApp
+            </button>
+          </div>
+        </div>
+      )}
+
+      {shareOpen && (
+        <div className="fixed inset-0 z-30 flex items-end bg-black/40" onClick={() => setShareOpen(false)}>
+          <div
+            className="max-h-[80vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Send {chosen.length} on WhatsApp</h3>
+              <button onClick={() => setShareOpen(false)} className="text-sm text-neutral-500">
+                Close
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-neutral-500">
+              Each product is its own message (so every item shows its own image). Send
+              them one by one, or open all.
+            </p>
+            <div className="space-y-2">
+              {chosen.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 rounded-xl border border-neutral-200 p-2">
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+                    {p.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{p.name}</p>
+                    <p className="text-xs text-neutral-500">
+                      {p.code} · {rupees(p.price)}
+                      {p.mrp > p.price ? ` (MRP ${rupees(p.mrp)})` : ""}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => sendOne(p)}
+                    className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white"
+                  >
+                    Send
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => chosen.forEach((p, i) => setTimeout(() => sendOne(p), i * 700))}
+              className="mt-4 w-full rounded-2xl border border-green-600 py-3 text-base font-semibold text-green-700"
+            >
+              Open all {chosen.length} messages
             </button>
           </div>
         </div>

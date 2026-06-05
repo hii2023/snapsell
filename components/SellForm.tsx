@@ -55,6 +55,7 @@ export default function SellForm({
   const [color, setColor] = useState("");
   const [units, setUnits] = useState(1);
   const [price, setPrice] = useState(0);
+  const [mrp, setMrp] = useState(0);
   const [batch, setBatch] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -80,6 +81,7 @@ export default function SellForm({
     setColor("");
     setUnits(1);
     setPrice(0);
+    setMrp(0);
     uploadRef.current = null;
   }
 
@@ -158,6 +160,7 @@ export default function SellForm({
           size,
           color,
           price,
+          mrp,
           stock: units,
         }),
       });
@@ -512,6 +515,29 @@ export default function SellForm({
                       </button>
                     </div>
                   </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-lg font-semibold">
+                    MRP <span className="font-normal text-neutral-400">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-neutral-500">
+                      ₹
+                    </span>
+                    <input
+                      className="input pl-9 text-lg"
+                      inputMode="numeric"
+                      placeholder="Original price (shown crossed out)"
+                      value={mrp > 0 ? String(mrp) : ""}
+                      onChange={(e) => setMrp(Math.round(Number(e.target.value.replace(/[^0-9]/g, "")) || 0))}
+                    />
+                  </div>
+                  {mrp > 0 && mrp <= price && (
+                    <p className="mt-1 text-sm text-amber-600">
+                      MRP should be higher than the selling price to show a discount.
+                    </p>
+                  )}
                 </div>
 
                 <div className="rounded-2xl bg-neutral-50 p-4 text-base text-neutral-600">

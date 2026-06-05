@@ -27,7 +27,7 @@ export default function LoginPage() {
         password,
       });
       if (error) throw error;
-      router.push("/sell");
+      router.push("/orders");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in");

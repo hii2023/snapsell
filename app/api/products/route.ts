@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     size?: string;
     color?: string;
     price?: number;
+    mrp?: number;
     stock?: number;
   };
 
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
       size: (body.size || "").trim(),
       color: (body.color || "").trim(),
       price,
+      mrp: Math.max(0, Math.round(Number(body.mrp) || 0)),
       stock,
     })
     .select()
