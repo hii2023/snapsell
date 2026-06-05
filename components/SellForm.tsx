@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Stepper } from "./ui";
-import { CameraIcon, CheckIcon, ArrowLeftIcon, CategoryIcon } from "./icons";
+import { CheckIcon, ArrowLeftIcon, CategoryIcon } from "./icons";
 import {
   SIZE_OPTIONS,
   SIZE_LABEL,
@@ -15,7 +15,7 @@ import {
 } from "@/lib/constants";
 import type { Category, VisionResult } from "@/lib/types";
 
-type Screen = "capture" | "wizard" | "saved" | "batch";
+type Screen = "wizard" | "saved";
 type Step = 0 | 1 | 2; // category, details, price
 const TITLES = ["What is it?", "Details", "Set a price"];
 
@@ -31,17 +31,19 @@ const ACCENT_HEX: Record<Category, string> = {
 
 export default function SellForm({
   pricePresets,
-  initialFile = null,
+  initialFile,
+  onReshoot,
   onClose,
   onSaved,
 }: {
   pricePresets: number[];
-  initialFile?: File | null;
+  initialFile: File;
+  onReshoot?: () => void;
   onClose?: () => void;
   onSaved?: () => void;
 }) {
   const reduce = useReducedMotion();
-  const [screen, setScreen] = useState<Screen>(initialFile ? "wizard" : "capture");
+  const [screen, setScreen] = useState<Screen>("wizard");
   const [[step, dir], setStep] = useState<[Step, number]>([0, 1]);
   const [reading, setReading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -61,13 +63,12 @@ export default function SellForm({
   const [mrp, setMrp] = useState(0);
   const [batch, setBatch] = useState(false);
 
-  const fileRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
 
-  // Process the photo passed in when the modal opened (first product).
+  // Process the captured photo on mount.
   useEffect(() => {
-    if (initialFile) processFile(initialFile);
+    processFile(initialFile);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -82,31 +83,8 @@ export default function SellForm({
   const accent = category ? ACCENT[category] : ACCENT.apparel;
   const accentHex = category ? ACCENT_HEX[category] : "#0f766e";
 
-  function openCamera() {
-    setError("");
-    if (fileRef.current) fileRef.current.value = "";
-    fileRef.current?.click();
-  }
-
-  function resetProduct() {
-    setPreview("");
-    setImageUrl("");
-    setName("");
-    setCategory(null);
-    setAiCategory(null);
-    setSize("");
-    setColor("");
-    setUnits(1);
-    setPrice(0);
-    setMrp(0);
-    uploadRef.current = null;
-  }
-
   async function processFile(file: File) {
-    resetProduct();
     setPreview(URL.createObjectURL(file));
-    setScreen("wizard");
-    setStep([0, 1]);
     setReading(true);
     setUploading(true);
 
@@ -141,11 +119,6 @@ export default function SellForm({
     } finally {
       setReading(false);
     }
-  }
-
-  function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) processFile(file);
   }
 
   function go(next: Step) {
@@ -188,13 +161,8 @@ export default function SellForm({
       if (!res.ok) throw new Error(json.error || "Save failed");
       setAdded((n) => n + 1);
       onSaved?.();
-      if (batch) {
-        resetProduct();
-        setScreen("batch");
-        setTimeout(() => fileRef.current?.click(), 150);
-      } else {
-        setScreen("saved");
-      }
+      if (batch) onReshoot?.();
+      else setScreen("saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -208,38 +176,10 @@ export default function SellForm({
     exit: (d: number) => ({ x: reduce ? 0 : d * -60, opacity: 0 }),
   };
 
-  const cameraInput = (
-    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhoto} />
-  );
-
-  // ---- Capture (no photo yet) ----
-  if (screen === "capture") {
-    return (
-      <div className="mx-auto flex max-w-md flex-col px-5 py-12 text-center">
-        {cameraInput}
-        <h2 className="text-2xl font-semibold">Add a product</h2>
-        <p className="mt-1 text-neutral-500">Take a photo or pick one from your gallery.</p>
-        <button
-          onClick={openCamera}
-          className="mx-auto mt-8 flex w-full items-center justify-center gap-3 rounded-3xl bg-brand py-6 text-xl font-semibold text-white shadow-lg shadow-brand/20 active:scale-[0.98]"
-        >
-          <CameraIcon className="h-7 w-7" />
-          Take / choose photo
-        </button>
-        {onClose && (
-          <button onClick={onClose} className="mt-4 text-sm text-neutral-500 underline">
-            Cancel
-          </button>
-        )}
-      </div>
-    );
-  }
-
   // ---- Saved ----
   if (screen === "saved") {
     return (
       <div className="mx-auto max-w-md px-5 py-14 text-center">
-        {cameraInput}
         <motion.div
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -253,7 +193,7 @@ export default function SellForm({
           {added} product{added === 1 ? "" : "s"} added.
         </p>
         <div className="mt-8 flex flex-col gap-3">
-          <button onClick={openCamera} className="btn-primary w-full py-4 text-lg">
+          <button onClick={() => onReshoot?.()} className="btn-primary w-full py-4 text-lg">
             Add another product
           </button>
           {onClose && (
@@ -266,50 +206,13 @@ export default function SellForm({
     );
   }
 
-  // ---- Batch ----
-  if (screen === "batch") {
-    return (
-      <div className="mx-auto max-w-md px-5 py-14 text-center">
-        {cameraInput}
-        <motion.div
-          key={added}
-          initial={{ scale: 0.7, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 260, damping: 18 }}
-          className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-green-500 text-white"
-        >
-          <CheckIcon className="h-9 w-9" />
-        </motion.div>
-        <h2 className="text-xl font-semibold">Saved! {added} added</h2>
-        <p className="mt-1 text-neutral-600">Batch mode is on. Snap the next one.</p>
-        <button
-          onClick={openCamera}
-          className="mx-auto mt-8 flex w-full items-center justify-center gap-3 rounded-3xl bg-brand py-6 text-xl font-semibold text-white shadow-lg shadow-brand/20 active:scale-[0.98]"
-        >
-          <CameraIcon className="h-7 w-7" />
-          Take next photo
-        </button>
-        <button
-          onClick={() => {
-            setBatch(false);
-            setScreen("saved");
-          }}
-          className="mt-4 text-sm text-neutral-500 underline"
-        >
-          Finish batch
-        </button>
-      </div>
-    );
-  }
-
   // ---- Wizard ----
   const lastIdx = CATEGORY_META.length - 1;
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 pb-6 pt-4">
-      {cameraInput}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => (step === 0 ? setScreen("capture") : go((step - 1) as Step))}
+          onClick={() => (step === 0 ? onReshoot?.() : go((step - 1) as Step))}
           aria-label="Back"
           className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-500"
         >

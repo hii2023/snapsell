@@ -56,7 +56,7 @@ export default function OrdersClient({
   ];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
       <div className="mb-5 grid grid-cols-3 gap-2">
         {tabs.map((t) => (
           <button
@@ -183,7 +183,7 @@ function Overview({
 
       <div>
         <p className="mb-2 text-sm font-semibold text-neutral-500">Items by category</p>
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {perCategory.map((c) => (
             <button
               key={c.id}
@@ -329,7 +329,7 @@ function ProductsTab({
       {shown.length === 0 ? (
         <p className="py-16 text-center text-neutral-500">No matching products.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {shown.map((p) => (
             <div
               key={p.id}
@@ -536,7 +536,7 @@ function OrdersTab({
       {shown.length === 0 ? (
         <p className="py-16 text-center text-neutral-500">No orders here.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {shown.map((o) => {
             const dispatched = o.delivery_status === "out_for_delivery";
             const delivered = o.delivery_status === "delivered";
