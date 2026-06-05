@@ -1,12 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { VisionResult, Category } from "./types";
-import { SIZE_OPTIONS } from "./constants";
+import { SIZE_OPTIONS, COLORS } from "./constants";
 
 const MODEL = "claude-sonnet-4-6";
 
-// Reads a product photo and returns name + category + a suggested size.
-// Falls back to a safe stub if no API key is set, so the seller flow still
-// works during local setup before the key is wired up.
+// Reads a product photo and returns name + category + suggested size + colour.
+// Falls back to a safe stub if no API key is set, so the seller flow still works
+// during local setup before the key is wired up.
 export async function readProductPhoto(
   base64: string,
   mediaType: string
@@ -17,6 +17,7 @@ export async function readProductPhoto(
       name: "",
       category: "apparel",
       suggested_size: "M",
+      suggested_color: "",
       size_options: SIZE_OPTIONS.apparel,
     };
   }
@@ -32,21 +33,26 @@ export async function readProductPhoto(
         name: {
           type: "string",
           description:
-            "Short product name a shopkeeper would use, e.g. 'Cotton T-shirt', 'Basmati Rice'. Max 4 words.",
+            "Short product name a shopkeeper would use, e.g. 'Cotton T-shirt', 'Basmati Rice', 'Bluetooth Speaker', 'Wooden Chair'. Max 4 words.",
         },
         category: {
           type: "string",
-          enum: ["apparel", "food"],
+          enum: ["apparel", "food", "electronics", "furniture"],
           description:
-            "apparel for clothing/wearables, food for edible items, groceries, kitchen produce.",
+            "apparel = clothing/wearables, food = edible/grocery, electronics = gadgets/devices, furniture = chairs/tables/home furniture.",
         },
         suggested_size: {
           type: "string",
           description:
-            "Best guess size. For apparel use S/M/L/XL/XXL/Free. For food use a weight or count like 250g, 1kg, 1 pc.",
+            "Best guess size. Apparel: S/M/L/XL/XXL/Free. Food: weight like 250g/1kg. Electronics/Furniture: Small/Medium/Large.",
+        },
+        suggested_color: {
+          type: "string",
+          description:
+            "Dominant colour as a single word: Black, White, Grey, Red, Blue, Green, Yellow, Pink, Brown, Beige. Empty if unclear.",
         },
       },
-      required: ["name", "category", "suggested_size"],
+      required: ["name", "category", "suggested_size", "suggested_color"],
     },
   };
 
@@ -69,7 +75,7 @@ export async function readProductPhoto(
           },
           {
             type: "text",
-            text: "Identify this product for a small shop listing. Return the product name, whether it is apparel or food, and a suggested size.",
+            text: "Identify this product for a small shop listing. Return the product name, category, a suggested size, and the dominant colour.",
           },
         ],
       },
@@ -82,6 +88,7 @@ export async function readProductPhoto(
       name: "",
       category: "apparel",
       suggested_size: "M",
+      suggested_color: "",
       size_options: SIZE_OPTIONS.apparel,
     };
   }
@@ -90,18 +97,26 @@ export async function readProductPhoto(
     name?: string;
     category?: Category;
     suggested_size?: string;
+    suggested_color?: string;
   };
-  const category: Category = input.category === "food" ? "food" : "apparel";
+  const valid: Category[] = ["apparel", "food", "electronics", "furniture"];
+  const category: Category = valid.includes(input.category as Category)
+    ? (input.category as Category)
+    : "apparel";
   const options = SIZE_OPTIONS[category];
   const suggested =
     input.suggested_size && options.includes(input.suggested_size)
       ? input.suggested_size
-      : options[Math.floor(options.length / 2)];
+      : "";
+  const colorMatch = COLORS.find(
+    (c) => c.name.toLowerCase() === (input.suggested_color || "").toLowerCase()
+  );
 
   return {
     name: (input.name || "").slice(0, 60),
     category,
     suggested_size: suggested,
+    suggested_color: colorMatch?.name || "",
     size_options: options,
   };
 }

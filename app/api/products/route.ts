@@ -18,12 +18,16 @@ export async function POST(req: NextRequest) {
     category?: Category;
     image_url?: string;
     size?: string;
+    color?: string;
     price?: number;
     stock?: number;
   };
 
   const name = (body.name || "").trim();
-  const category: Category = body.category === "food" ? "food" : "apparel";
+  const valid: Category[] = ["apparel", "food", "electronics", "furniture"];
+  const category: Category = valid.includes(body.category as Category)
+    ? (body.category as Category)
+    : "apparel";
   const price = Math.round(Number(body.price) || 0);
   const stock = Math.round(Number(body.stock) || 0);
 
@@ -39,6 +43,7 @@ export async function POST(req: NextRequest) {
       category,
       image_url: body.image_url || "",
       size: (body.size || "").trim(),
+      color: (body.color || "").trim(),
       price,
       stock,
     })

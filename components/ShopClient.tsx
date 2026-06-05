@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { rupees } from "@/lib/constants";
+import { BagIcon, CheckIcon } from "./icons";
 import type { CartLine, Product } from "@/lib/types";
 
 type Step = "shop" | "checkout" | "done";
@@ -69,8 +70,8 @@ export default function ShopClient({
   if (step === "done") {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-brand/10 text-4xl">
-          ✓
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-brand text-white">
+          <CheckIcon className="h-10 w-10" />
         </div>
         <h2 className="text-2xl font-semibold">Order placed</h2>
         <p className="mt-2 text-neutral-600">
@@ -118,15 +119,16 @@ export default function ShopClient({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-4xl">
-                    🛍️
+                  <div className="flex h-full items-center justify-center text-neutral-300">
+                    <BagIcon className="h-10 w-10" />
                   </div>
                 )}
               </div>
               <div className="p-3">
                 <p className="truncate font-medium">{p.name}</p>
                 <p className="text-sm text-neutral-500">
-                  {p.size ? p.size + " · " : ""}
+                  {[p.size, p.color].filter(Boolean).join(" · ")}
+                  {(p.size || p.color) ? " · " : ""}
                   {rupees(p.price)}
                 </p>
                 {line ? (

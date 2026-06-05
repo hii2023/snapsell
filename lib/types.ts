@@ -1,4 +1,4 @@
-export type Category = "apparel" | "food";
+export type Category = "apparel" | "food" | "electronics" | "furniture";
 
 export type Product = {
   id: string;
@@ -6,6 +6,7 @@ export type Product = {
   category: Category;
   image_url: string;
   size: string;
+  color: string;
   price: number;
   stock: number;
   is_active: boolean;
@@ -62,5 +63,6 @@ export type VisionResult = {
   name: string;
   category: Category;
   suggested_size: string;
+  suggested_color: string;
   size_options: string[];
 };
