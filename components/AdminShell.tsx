@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import OrdersClient from "./OrdersClient";
 import SellForm from "./SellForm";
 import CameraCapture from "./CameraCapture";
@@ -78,9 +79,22 @@ export default function AdminShell({
         />
       )}
 
-      {phase === "wizard" && file && (
-        <div className="fixed inset-0 z-40 bg-black/40 sm:flex sm:items-center sm:justify-center">
-          <div className="relative h-full w-full overflow-y-auto bg-white sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-lg sm:rounded-3xl">
+      <AnimatePresence>
+        {phase === "wizard" && file && (
+        <motion.div
+          className="fixed inset-0 z-40 bg-black/40 sm:flex sm:items-center sm:justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          <motion.div
+            className="relative h-full w-full overflow-y-auto bg-white sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-lg sm:rounded-3xl"
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
             <button
               onClick={close}
               aria-label="Close"
@@ -98,9 +112,10 @@ export default function AdminShell({
               onClose={close}
               onSaved={() => setAdded((n) => n + 1)}
             />
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

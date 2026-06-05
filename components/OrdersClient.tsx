@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon } from "./icons";
 import type { Category, Order, Product } from "@/lib/types";
@@ -71,33 +72,43 @@ export default function OrdersClient({
         ))}
       </div>
 
-      {tab === "overview" && (
-        <Overview
-          products={products}
-          orders={orders}
-          openProducts={openProducts}
-          openCategory={openCategory}
-          openOrders={openOrders}
-        />
-      )}
-      {tab === "products" && (
-        <ProductsTab
-          products={products}
-          setProducts={setProducts}
-          filter={prodFilter}
-          setFilter={setProdFilter}
-          catFilter={catFilter}
-          setCatFilter={setCatFilter}
-        />
-      )}
-      {tab === "orders" && (
-        <OrdersTab
-          orders={orders}
-          setOrders={setOrders}
-          filter={orderFilter}
-          setFilter={setOrderFilter}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        >
+          {tab === "overview" && (
+            <Overview
+              products={products}
+              orders={orders}
+              openProducts={openProducts}
+              openCategory={openCategory}
+              openOrders={openOrders}
+            />
+          )}
+          {tab === "products" && (
+            <ProductsTab
+              products={products}
+              setProducts={setProducts}
+              filter={prodFilter}
+              setFilter={setProdFilter}
+              catFilter={catFilter}
+              setCatFilter={setCatFilter}
+            />
+          )}
+          {tab === "orders" && (
+            <OrdersTab
+              orders={orders}
+              setOrders={setOrders}
+              filter={orderFilter}
+              setFilter={setOrderFilter}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
@@ -158,7 +169,7 @@ function Overview({
 
   const perCategory = CATEGORY_META.map((c) => ({
     ...c,
-    count: products.filter((p) => p.category === c.id).length,
+    count: products.filter((p) => p.category === c.id && p.stock > 0).length,
   })).filter((c) => c.count > 0);
 
   return (
@@ -182,7 +193,7 @@ function Overview({
       </div>
 
       <div>
-        <p className="mb-2 text-sm font-semibold text-neutral-500">Items by category</p>
+        <p className="mb-2 text-sm font-semibold text-neutral-500">In stock by category</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {perCategory.map((c) => (
             <button
@@ -418,11 +429,23 @@ function ProductsTab({
         </div>
       )}
 
-      {shareOpen && (
-        <div className="fixed inset-0 z-30 flex items-end bg-black/40" onClick={() => setShareOpen(false)}>
-          <div
-            className="max-h-[80vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4"
+      <AnimatePresence>
+        {shareOpen && (
+        <motion.div
+          className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
+          onClick={() => setShareOpen(false)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          <motion.div
+            className="max-h-[80vh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 sm:max-w-lg sm:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 34 }}
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Send {chosen.length} on WhatsApp</h3>
@@ -467,9 +490,10 @@ function ProductsTab({
             >
               Send all {chosen.length}
             </button>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
