@@ -10,6 +10,7 @@ export type Category =
 export type Product = {
   id: string;
   name: string;
+  code: string;
   category: Category;
   image_url: string;
   size: string;
@@ -22,6 +23,7 @@ export type Product = {
 
 export type PaymentMode = "online" | "cod";
 export type PaymentStatus = "pending" | "paid" | "failed";
+export type Fulfillment = "delivery" | "pickup";
 export type DeliveryProvider = "manual" | "porter";
 export type DeliveryStatus =
   | "unbooked"
@@ -47,6 +49,7 @@ export type Order = {
   total: number;
   payment_mode: PaymentMode;
   payment_status: PaymentStatus;
+  fulfillment: Fulfillment;
   razorpay_order_id: string | null;
   razorpay_payment_id: string | null;
   delivery_provider: DeliveryProvider;

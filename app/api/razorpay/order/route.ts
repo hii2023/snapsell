@@ -21,7 +21,9 @@ export async function POST(req: NextRequest) {
     name?: string;
     phone?: string;
     address?: string;
+    fulfillment?: "delivery" | "pickup";
   };
+  const fulfillment = body.fulfillment === "pickup" ? "pickup" : "delivery";
 
   const items = (body.items || []).filter(
     (i) => i.product_id && Number(i.qty) > 0
@@ -62,6 +64,7 @@ export async function POST(req: NextRequest) {
       name: body.name || "",
       phone: body.phone || "",
       address: body.address || "",
+      fulfillment,
     },
   });
 

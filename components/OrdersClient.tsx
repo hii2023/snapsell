@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { rupees } from "@/lib/constants";
+import { useMemo, useState } from "react";
+import { rupees, CATEGORY_META } from "@/lib/constants";
+import { CategoryIcon } from "./icons";
 import type { Order, Product } from "@/lib/types";
 
-type Tab = "orders" | "stock" | "oos";
+type Tab = "overview" | "products" | "orders";
+type ProdFilter = "instock" | "oos";
+type OrderFilter = "all" | "dispatch" | "paid" | "unpaid";
+
+const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "SnapSell";
+
+const isPendingDispatch = (o: Order) =>
+  o.delivery_status === "unbooked" || o.delivery_status === "booked";
 
 export default function OrdersClient({
   initialOrders,
@@ -13,17 +21,25 @@ export default function OrdersClient({
   initialOrders: Order[];
   initialProducts: Product[];
 }) {
-  const [tab, setTab] = useState<Tab>("orders");
+  const [tab, setTab] = useState<Tab>("overview");
   const [orders, setOrders] = useState(initialOrders);
   const [products, setProducts] = useState(initialProducts);
+  const [prodFilter, setProdFilter] = useState<ProdFilter>("instock");
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
 
-  const inStock = products.filter((p) => p.stock > 0).length;
-  const outOfStock = products.filter((p) => p.stock === 0).length;
+  function openProducts(f: ProdFilter) {
+    setProdFilter(f);
+    setTab("products");
+  }
+  function openOrders(f: OrderFilter) {
+    setOrderFilter(f);
+    setTab("orders");
+  }
 
-  const tabs: { id: Tab; label: string; count: number }[] = [
-    { id: "orders", label: "Orders", count: orders.length },
-    { id: "stock", label: "In stock", count: inStock },
-    { id: "oos", label: "Out of stock", count: outOfStock },
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "products", label: "Products" },
+    { id: "orders", label: "Orders" },
   ];
 
   return (
@@ -34,58 +50,329 @@ export default function OrdersClient({
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`rounded-full px-2 py-2 text-center text-sm font-medium transition-colors ${
-              tab === t.id
-                ? "bg-brand text-white"
-                : "border border-neutral-300 bg-white text-neutral-700"
+              tab === t.id ? "bg-brand text-white" : "border border-neutral-300 bg-white text-neutral-700"
             }`}
           >
             {t.label}
-            <span className="ml-1 tabular-nums opacity-80">({t.count})</span>
           </button>
         ))}
       </div>
 
-      {tab === "orders" ? (
-        <OrdersList orders={orders} setOrders={setOrders} />
-      ) : (
-        <StockList
+      {tab === "overview" && (
+        <Overview
+          products={products}
+          orders={orders}
+          openProducts={openProducts}
+          openOrders={openOrders}
+        />
+      )}
+      {tab === "products" && (
+        <ProductsTab
           products={products}
           setProducts={setProducts}
-          filter={tab === "oos" ? "oos" : "instock"}
+          filter={prodFilter}
+          setFilter={setProdFilter}
+        />
+      )}
+      {tab === "orders" && (
+        <OrdersTab
+          orders={orders}
+          setOrders={setOrders}
+          filter={orderFilter}
+          setFilter={setOrderFilter}
         />
       )}
     </div>
   );
 }
 
-function Badge({ tone, children }: { tone: "green" | "amber" | "gray" | "red"; children: React.ReactNode }) {
+function Badge({ tone, children }: { tone: "green" | "amber" | "blue" | "gray" | "red"; children: React.ReactNode }) {
   const map = {
     green: "bg-green-100 text-green-700",
     amber: "bg-amber-100 text-amber-700",
+    blue: "bg-blue-100 text-blue-700",
     gray: "bg-neutral-100 text-neutral-600",
     red: "bg-red-100 text-red-700",
   };
+  return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${map[tone]}`}>{children}</span>;
+}
+
+/* ---------------- Overview ---------------- */
+
+function StatCard({ label, value, onClick, tone = "default" }: { label: string; value: number; onClick?: () => void; tone?: "default" | "amber" | "red" | "green" }) {
+  const tones = {
+    default: "bg-white border-neutral-200",
+    amber: "bg-amber-50 border-amber-200",
+    red: "bg-red-50 border-red-200",
+    green: "bg-green-50 border-green-200",
+  };
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${map[tone]}`}>
-      {children}
-    </span>
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      className={`rounded-2xl border p-4 text-left ${tones[tone]} ${onClick ? "active:scale-[0.98]" : "cursor-default"}`}
+    >
+      <p className="text-3xl font-bold tabular-nums">{value}</p>
+      <p className="mt-1 text-sm text-neutral-600">{label}</p>
+    </button>
   );
 }
 
-function OrdersList({
+function Overview({
+  products,
+  orders,
+  openProducts,
+  openOrders,
+}: {
+  products: Product[];
+  orders: Order[];
+  openProducts: (f: ProdFilter) => void;
+  openOrders: (f: OrderFilter) => void;
+}) {
+  const inStock = products.filter((p) => p.stock > 0).length;
+  const oos = products.filter((p) => p.stock === 0).length;
+  const readyToShip = orders.filter(isPendingDispatch).length;
+  const paid = orders.filter((o) => o.payment_status === "paid").length;
+  const unpaid = orders.filter((o) => o.payment_status === "pending").length;
+  const revenue = orders
+    .filter((o) => o.payment_status === "paid")
+    .reduce((s, o) => s + o.total, 0);
+
+  const perCategory = CATEGORY_META.map((c) => ({
+    ...c,
+    count: products.filter((p) => p.category === c.id).length,
+  })).filter((c) => c.count > 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard label="In stock" value={inStock} tone="green" onClick={() => openProducts("instock")} />
+        <StatCard label="Out of stock" value={oos} tone="red" onClick={() => openProducts("oos")} />
+        <StatCard label="Ready to ship" value={readyToShip} tone="amber" onClick={() => openOrders("dispatch")} />
+        <StatCard label="Total orders" value={orders.length} onClick={() => openOrders("all")} />
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-semibold text-neutral-500">Payments</p>
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard label="Payment received" value={paid} tone="green" onClick={() => openOrders("paid")} />
+          <StatCard label="Payment pending" value={unpaid} tone="amber" onClick={() => openOrders("unpaid")} />
+        </div>
+        <p className="mt-2 text-sm text-neutral-500">
+          Revenue collected: <span className="font-semibold text-ink">{rupees(revenue)}</span>
+        </p>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-semibold text-neutral-500">Items by category</p>
+        <div className="space-y-2">
+          {perCategory.map((c) => (
+            <div key={c.id} className="card flex items-center gap-3 p-3">
+              <span className="text-neutral-500">
+                <CategoryIcon id={c.id} className="h-6 w-6" />
+              </span>
+              <span className="flex-1 font-medium">{c.label}</span>
+              <span className="text-lg font-semibold tabular-nums">{c.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-semibold text-neutral-500">Quick filters</p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => openProducts("instock")} className="chip chip-off">In stock</button>
+          <button onClick={() => openProducts("oos")} className="chip chip-off">Out of stock</button>
+          <button onClick={() => openOrders("dispatch")} className="chip chip-off">Ready for delivery</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Products ---------------- */
+
+function ProductsTab({
+  products,
+  setProducts,
+  filter,
+  setFilter,
+}: {
+  products: Product[];
+  setProducts: (p: Product[]) => void;
+  filter: ProdFilter;
+  setFilter: (f: ProdFilter) => void;
+}) {
+  const [busy, setBusy] = useState("");
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return products
+      .filter((p) => (filter === "oos" ? p.stock === 0 : p.stock > 0))
+      .filter(
+        (p) =>
+          !q ||
+          p.name.toLowerCase().includes(q) ||
+          (p.code || "").toLowerCase().includes(q)
+      );
+  }, [products, filter, query]);
+
+  async function addStock(p: Product, delta: number) {
+    setBusy(p.id);
+    try {
+      const res = await fetch("/api/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: p.id, stock: Math.max(0, p.stock + delta) }),
+      });
+      const json = await res.json();
+      if (res.ok) setProducts(products.map((x) => (x.id === p.id ? json.product : x)));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function shareWhatsApp() {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const chosen = products.filter((p) => selected.has(p.id));
+    if (chosen.length === 0) return;
+    const blocks = chosen.map((p) => {
+      const link = `${origin}/p/${p.code}`;
+      const parts = [`*${p.name}* (${p.code})`, rupees(p.price), link];
+      if (p.image_url) parts.push(p.image_url);
+      return parts.join("\n");
+    });
+    const msg = `${shopName}\n\n${blocks.join("\n\n")}`;
+    window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+  }
+
+  return (
+    <div className="pb-24">
+      <input
+        className="input mb-3"
+        placeholder="Search by name or code (e.g. DR001)"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <div className="mb-4 flex gap-2">
+        <button onClick={() => setFilter("instock")} className={`chip flex-1 ${filter === "instock" ? "chip-on" : "chip-off"}`}>
+          In stock ({products.filter((p) => p.stock > 0).length})
+        </button>
+        <button onClick={() => setFilter("oos")} className={`chip flex-1 ${filter === "oos" ? "chip-on" : "chip-off"}`}>
+          Out of stock ({products.filter((p) => p.stock === 0).length})
+        </button>
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="py-16 text-center text-neutral-500">No matching products.</p>
+      ) : (
+        <div className="space-y-3">
+          {shown.map((p) => (
+            <div
+              key={p.id}
+              className={`card flex items-center gap-3 p-3 ${p.stock === 0 ? "border-red-200 bg-red-50/40" : ""}`}
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(p.id)}
+                onChange={() => toggleSelect(p.id)}
+                className="h-5 w-5 shrink-0"
+                style={{ accentColor: "#0f766e" }}
+              />
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+                {p.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{p.name}</p>
+                <p className="text-xs text-neutral-500">
+                  <span className="font-medium text-neutral-600">{p.code}</span>
+                  {p.size ? " · " + p.size : ""} · {rupees(p.price)}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`min-w-7 text-center font-semibold tabular-nums ${p.stock === 0 ? "text-red-600" : ""}`}>
+                  {p.stock}
+                </span>
+                <button
+                  className="h-8 w-8 rounded-full border border-neutral-300 text-lg disabled:opacity-40"
+                  disabled={busy === p.id || p.stock === 0}
+                  onClick={() => addStock(p, -1)}
+                >
+                  -
+                </button>
+                <button
+                  className="h-8 w-8 rounded-full border border-neutral-300 text-lg disabled:opacity-40"
+                  disabled={busy === p.id}
+                  onClick={() => addStock(p, 1)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selected.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
+          <div className="mx-auto flex max-w-md items-center gap-3">
+            <button onClick={() => setSelected(new Set())} className="text-sm text-neutral-500 underline">
+              Clear
+            </button>
+            <button
+              onClick={shareWhatsApp}
+              className="flex-1 rounded-2xl bg-green-600 py-3 text-base font-semibold text-white active:scale-[0.98]"
+            >
+              Share {selected.size} on WhatsApp
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Orders ---------------- */
+
+function OrdersTab({
   orders,
   setOrders,
+  filter,
+  setFilter,
 }: {
   orders: Order[];
   setOrders: (o: Order[]) => void;
+  filter: OrderFilter;
+  setFilter: (f: OrderFilter) => void;
 }) {
-  const [busy, setBusy] = useState<string>("");
+  const [busy, setBusy] = useState("");
+
+  const shown = orders.filter((o) => {
+    if (filter === "dispatch") return isPendingDispatch(o);
+    if (filter === "paid") return o.payment_status === "paid";
+    if (filter === "unpaid") return o.payment_status === "pending";
+    return true;
+  });
 
   function patch(updated: Order) {
     setOrders(orders.map((o) => (o.id === updated.id ? updated : o)));
   }
 
-  async function updateOrder(id: string, body: Record<string, unknown>) {
+  async function update(id: string, body: Record<string, unknown>) {
     setBusy(id);
     try {
       const res = await fetch("/api/orders", {
@@ -110,183 +397,121 @@ function OrdersList({
       });
       const json = await res.json();
       if (res.ok) {
-        const order = orders.find((o) => o.id === id);
-        if (order) patch({ ...order, delivery_status: "booked" });
+        const o = orders.find((x) => x.id === id);
+        if (o) patch({ ...o, delivery_status: "booked" });
         if (json.link) window.open(json.link, "_blank");
-      } else {
-        alert(json.error || "Could not book");
-      }
+      } else alert(json.error || "Could not book");
     } finally {
       setBusy("");
     }
   }
 
-  if (orders.length === 0) {
-    return <p className="py-16 text-center text-neutral-500">No orders yet.</p>;
-  }
+  const filters: { id: OrderFilter; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "dispatch", label: "To dispatch" },
+    { id: "paid", label: "Paid" },
+    { id: "unpaid", label: "Unpaid" },
+  ];
 
   return (
-    <div className="space-y-3">
-      {orders.map((o) => (
-        <div key={o.id} className="card p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="font-medium">{o.customer_name}</p>
-              <p className="text-sm text-neutral-500">{o.phone}</p>
-            </div>
-            <p className="text-lg font-semibold">{rupees(o.total)}</p>
-          </div>
+    <div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {filters.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`chip ${filter === f.id ? "chip-on" : "chip-off"}`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
-          <p className="mt-2 text-sm text-neutral-600">{o.address}</p>
+      {shown.length === 0 ? (
+        <p className="py-16 text-center text-neutral-500">No orders here.</p>
+      ) : (
+        <div className="space-y-3">
+          {shown.map((o) => {
+            const dispatched = o.delivery_status === "out_for_delivery";
+            const delivered = o.delivery_status === "delivered";
+            return (
+              <div key={o.id} className="card p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-medium">{o.customer_name}</p>
+                    <p className="text-sm text-neutral-500">{o.phone}</p>
+                  </div>
+                  <p className="text-lg font-semibold">{rupees(o.total)}</p>
+                </div>
 
-          <ul className="mt-2 text-sm text-neutral-700">
-            {(o.order_items || []).map((i) => (
-              <li key={i.id}>
-                {i.qty} x {i.name_snapshot}
-                {i.size_snapshot ? ` (${i.size_snapshot})` : ""}
-              </li>
-            ))}
-          </ul>
+                <div className="mt-1 text-sm text-neutral-600">
+                  {o.fulfillment === "pickup" ? "Store pickup" : o.address}
+                </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {o.payment_mode === "online" ? (
-              <Badge tone={o.payment_status === "paid" ? "green" : "amber"}>
-                {o.payment_status === "paid" ? "Paid online" : "Online pending"}
-              </Badge>
-            ) : (
-              <Badge tone={o.payment_status === "paid" ? "green" : "amber"}>
-                {o.payment_status === "paid" ? "COD collected" : "COD pending"}
-              </Badge>
-            )}
-            <Badge tone={o.delivery_status === "delivered" ? "green" : "gray"}>
-              {o.delivery_status.replace(/_/g, " ")}
-            </Badge>
-          </div>
+                <ul className="mt-2 text-sm text-neutral-700">
+                  {(o.order_items || []).map((i) => (
+                    <li key={i.id}>
+                      {i.qty} x {i.name_snapshot}
+                      {i.size_snapshot ? ` (${i.size_snapshot})` : ""}
+                    </li>
+                  ))}
+                </ul>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {o.delivery_status === "unbooked" ? (
-              <button
-                className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                disabled={busy === o.id}
-                onClick={() => bookDelivery(o.id)}
-              >
-                Book delivery
-              </button>
-            ) : o.delivery_status !== "delivered" ? (
-              <button
-                className="btn-ghost px-4 py-2 text-sm disabled:opacity-50"
-                disabled={busy === o.id}
-                onClick={() => updateOrder(o.id, { delivery_status: "delivered" })}
-              >
-                Mark delivered
-              </button>
-            ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge tone={o.fulfillment === "pickup" ? "gray" : "blue"}>
+                    {o.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+                  </Badge>
+                  <Badge tone={o.payment_status === "paid" ? "green" : "amber"}>
+                    {o.payment_status === "paid" ? "Payment received" : "Payment pending"}
+                  </Badge>
+                  <Badge tone={delivered ? "green" : dispatched ? "blue" : "amber"}>
+                    {delivered ? "Delivered" : dispatched ? "Dispatched" : "Pending dispatch"}
+                  </Badge>
+                </div>
 
-            {o.payment_mode === "cod" && o.payment_status !== "paid" ? (
-              <button
-                className="btn-ghost px-4 py-2 text-sm disabled:opacity-50"
-                disabled={busy === o.id}
-                onClick={() => updateOrder(o.id, { payment_status: "paid" })}
-              >
-                Cash collected
-              </button>
-            ) : null}
-          </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {o.fulfillment === "delivery" && isPendingDispatch(o) && (
+                    <button
+                      className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => bookDelivery(o.id)}
+                    >
+                      Book delivery
+                    </button>
+                  )}
+                  {!dispatched && !delivered && (
+                    <button
+                      className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
+                    >
+                      Mark dispatched
+                    </button>
+                  )}
+                  {dispatched && (
+                    <button
+                      className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { delivery_status: "delivered" })}
+                    >
+                      Mark delivered
+                    </button>
+                  )}
+                  {o.payment_status !== "paid" && (
+                    <button
+                      className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { payment_status: "paid" })}
+                    >
+                      Payment received
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      ))}
-    </div>
-  );
-}
-
-function StockList({
-  products,
-  setProducts,
-  filter,
-}: {
-  products: Product[];
-  setProducts: (p: Product[]) => void;
-  filter: "instock" | "oos";
-}) {
-  const [busy, setBusy] = useState<string>("");
-  const shown =
-    filter === "oos"
-      ? products.filter((p) => p.stock === 0)
-      : products.filter((p) => p.stock > 0);
-
-  async function addStock(p: Product, delta: number) {
-    setBusy(p.id);
-    try {
-      const res = await fetch("/api/products", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: p.id, stock: Math.max(0, p.stock + delta) }),
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setProducts(products.map((x) => (x.id === p.id ? json.product : x)));
-      }
-    } finally {
-      setBusy("");
-    }
-  }
-
-  if (shown.length === 0) {
-    return (
-      <p className="py-16 text-center text-neutral-500">
-        {filter === "oos"
-          ? "Nothing is out of stock. Good going."
-          : "No products in stock yet."}
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {shown.map((p) => (
-        <div
-          key={p.id}
-          className={`card flex items-center gap-3 p-3 ${
-            p.stock === 0 ? "border-red-200 bg-red-50/40" : ""
-          }`}
-        >
-          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
-            {p.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
-            ) : null}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">{p.name}</p>
-            <p className="text-sm text-neutral-500">
-              {p.size ? p.size + " · " : ""}
-              {rupees(p.price)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`min-w-10 text-center font-semibold tabular-nums ${
-                p.stock === 0 ? "text-red-600" : ""
-              }`}
-            >
-              {p.stock}
-            </span>
-            <button
-              className="h-9 w-9 rounded-full border border-neutral-300 text-xl disabled:opacity-40"
-              disabled={busy === p.id || p.stock === 0}
-              onClick={() => addStock(p, -1)}
-            >
-              -
-            </button>
-            <button
-              className="h-9 w-9 rounded-full border border-neutral-300 text-xl disabled:opacity-40"
-              disabled={busy === p.id}
-              onClick={() => addStock(p, 1)}
-            >
-              +
-            </button>
-          </div>
-        </div>
-      ))}
+      )}
     </div>
   );
 }

@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
         phone: notes.phone || "",
         address: notes.address || "",
       },
+      fulfillment: notes.fulfillment === "pickup" ? "pickup" : "delivery",
       items,
     });
   } catch (e) {

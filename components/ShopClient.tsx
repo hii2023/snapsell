@@ -125,7 +125,14 @@ export default function ShopClient({
                 )}
               </div>
               <div className="p-3">
-                <p className="truncate font-medium">{p.name}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate font-medium">{p.name}</p>
+                  {p.code ? (
+                    <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500">
+                      {p.code}
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-sm text-neutral-500">
                   {[p.size, p.color].filter(Boolean).join(" · ")}
                   {(p.size || p.color) ? " · " : ""}
@@ -197,6 +204,7 @@ function Checkout({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">("delivery");
   const [mode, setMode] = useState<"online" | "cod">("cod");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -206,7 +214,8 @@ function Checkout({
   function validate(): boolean {
     if (!name.trim()) return fail("Enter your name");
     if (phone.trim().length < 8) return fail("Enter a valid phone number");
-    if (!address.trim()) return fail("Enter a delivery address");
+    if (fulfillment === "delivery" && !address.trim())
+      return fail("Enter a delivery address");
     return true;
   }
   function fail(m: string) {
@@ -218,7 +227,7 @@ function Checkout({
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone, address, items }),
+      body: JSON.stringify({ name, phone, address, fulfillment, items }),
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || "Could not place order");
@@ -228,7 +237,7 @@ function Checkout({
     const orderRes = await fetch("/api/razorpay/order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({ items, name, phone, address, fulfillment }),
     });
     const order = await orderRes.json();
     if (!orderRes.ok) throw new Error(order.error || "Payment setup failed");
@@ -257,6 +266,7 @@ function Checkout({
                 name,
                 phone,
                 address,
+                fulfillment,
                 items,
               }),
             });
@@ -325,13 +335,39 @@ function Checkout({
           />
         </div>
         <div>
-          <label className="label">Delivery address</label>
-          <textarea
-            className="input min-h-24"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
+          <label className="label">How do you want it?</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`chip flex-1 ${fulfillment === "delivery" ? "chip-on" : "chip-off"}`}
+              onClick={() => setFulfillment("delivery")}
+            >
+              Delivery
+            </button>
+            <button
+              type="button"
+              className={`chip flex-1 ${fulfillment === "pickup" ? "chip-on" : "chip-off"}`}
+              onClick={() => setFulfillment("pickup")}
+            >
+              Pickup
+            </button>
+          </div>
         </div>
+        {fulfillment === "delivery" ? (
+          <div>
+            <label className="label">Delivery address</label>
+            <textarea
+              className="input min-h-24"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="House / shop, street, area, city, pincode"
+            />
+          </div>
+        ) : (
+          <p className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
+            You will collect this order from the store. No address needed.
+          </p>
+        )}
         <div>
           <label className="label">Payment</label>
           <div className="flex gap-2">
@@ -340,7 +376,7 @@ function Checkout({
               className={`chip flex-1 ${mode === "cod" ? "chip-on" : "chip-off"}`}
               onClick={() => setMode("cod")}
             >
-              Cash on delivery
+              {fulfillment === "pickup" ? "Cash on pickup" : "Cash on delivery"}
             </button>
             <button
               type="button"

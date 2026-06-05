@@ -20,6 +20,7 @@ export async function placeOrder(args: {
   items: ItemInput[];
   paymentMode: "online" | "cod";
   paymentStatus: "pending" | "paid";
+  fulfillment: "delivery" | "pickup";
   razorpayOrderId?: string | null;
   razorpayPaymentId?: string | null;
 }): Promise<string> {
@@ -35,6 +36,7 @@ export async function placeOrder(args: {
     p_payment_status: args.paymentStatus,
     p_razorpay_order_id: args.razorpayOrderId ?? null,
     p_razorpay_payment_id: args.razorpayPaymentId ?? null,
+    p_fulfillment: args.fulfillment,
     p_items: items,
   });
 
@@ -53,6 +55,7 @@ export async function finalizeOnlineOrder(args: {
   razorpayOrderId: string;
   razorpayPaymentId: string;
   customer: CustomerInput;
+  fulfillment: "delivery" | "pickup";
   items: ItemInput[];
 }): Promise<void> {
   const supabase = await supabaseServer();
@@ -62,6 +65,7 @@ export async function finalizeOnlineOrder(args: {
     p_customer_name: args.customer.name.trim(),
     p_phone: args.customer.phone.trim(),
     p_address: args.customer.address.trim(),
+    p_fulfillment: args.fulfillment,
     p_items: cleanItems(args.items),
   });
   if (error) throw new Error(error.message);

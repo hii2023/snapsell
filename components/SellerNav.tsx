@@ -24,7 +24,7 @@ export default function SellerNav({ active }: { active: "sell" | "orders" }) {
               active === "orders" ? "bg-brand text-white" : "text-neutral-600"
             }`}
           >
-            Orders
+            Dashboard
           </Link>
         </nav>
       </div>

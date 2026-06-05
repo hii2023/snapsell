@@ -9,19 +9,29 @@ export async function POST(req: NextRequest) {
     name?: string;
     phone?: string;
     address?: string;
+    fulfillment?: "delivery" | "pickup";
     items?: unknown;
   };
 
-  if (!body.name || !body.phone || !body.address) {
+  const fulfillment = body.fulfillment === "pickup" ? "pickup" : "delivery";
+  if (!body.name || !body.phone) {
     return NextResponse.json({ error: "Missing details" }, { status: 400 });
+  }
+  if (fulfillment === "delivery" && !body.address) {
+    return NextResponse.json({ error: "Address is required for delivery" }, { status: 400 });
   }
 
   try {
     const orderId = await placeOrder({
-      customer: { name: body.name, phone: body.phone, address: body.address },
+      customer: {
+        name: body.name,
+        phone: body.phone,
+        address: fulfillment === "pickup" ? body.address || "Store pickup" : body.address!,
+      },
       items: (body.items as { product_id: string; qty: number }[]) || [],
       paymentMode: "cod",
       paymentStatus: "pending",
+      fulfillment,
     });
     return NextResponse.json({ order_id: orderId });
   } catch (e) {

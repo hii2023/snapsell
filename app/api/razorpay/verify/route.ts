@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     name?: string;
     phone?: string;
     address?: string;
+    fulfillment?: "delivery" | "pickup";
     items?: { product_id: string; qty: number }[];
   };
 
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
         phone: body.phone || "",
         address: body.address || "",
       },
+      fulfillment: body.fulfillment === "pickup" ? "pickup" : "delivery",
       items: body.items || [],
     });
     return NextResponse.json({ ok: true });

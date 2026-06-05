@@ -1,0 +1,7 @@
+-- Recreate snapsell_place_order and snapsell_finalize_online_order with a
+-- p_fulfillment parameter (delivery|pickup). Full bodies applied in migration
+-- snapsell_rpc_fulfillment. Signatures:
+--   snapsell_place_order(name, phone, address, payment_mode, payment_status,
+--                        rzp_order_id, rzp_payment_id, fulfillment, items jsonb)
+--   snapsell_finalize_online_order(rzp_order_id, rzp_payment_id, name, phone,
+--                                  address, fulfillment, items jsonb)
