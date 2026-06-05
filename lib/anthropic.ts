@@ -37,9 +37,9 @@ export async function readProductPhoto(
         },
         category: {
           type: "string",
-          enum: ["apparel", "food", "electronics", "furniture", "cleaning"],
+          enum: ["apparel", "food", "electronics", "furniture", "cleaning", "jewellery", "cosmetics"],
           description:
-            "apparel = clothing/wearables, food = edible/grocery, electronics = gadgets/devices, furniture = chairs/tables/home furniture, cleaning = cleaning supplies/chemicals/detergents.",
+            "apparel = clothing/wearables, food = edible/grocery, electronics = gadgets/devices, furniture = chairs/tables/home furniture, cleaning = cleaning supplies/chemicals/detergents, jewellery = rings/necklaces/earrings/ornaments, cosmetics = makeup/beauty/skincare.",
         },
         suggested_size: {
           type: "string",
@@ -105,6 +105,8 @@ export async function readProductPhoto(
     "electronics",
     "furniture",
     "cleaning",
+    "jewellery",
+    "cosmetics",
   ];
   const category: Category = valid.includes(input.category as Category)
     ? (input.category as Category)

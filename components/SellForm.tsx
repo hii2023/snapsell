@@ -26,6 +26,8 @@ const ACCENT_HEX: Record<Category, string> = {
   electronics: "#7c3aed",
   furniture: "#d97706",
   cleaning: "#059669",
+  jewellery: "#e11d48",
+  cosmetics: "#c026d3",
 };
 
 export default function SellForm({

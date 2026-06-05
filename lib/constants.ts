@@ -8,6 +8,8 @@ export const SIZE_OPTIONS: Record<Category, string[]> = {
   electronics: ["Laptop", "Mobile", "Other"],
   furniture: ["Small", "Medium", "Large", "Single", "Double", "Queen", "King"],
   cleaning: ["250ml", "500ml", "1L", "2L", "5L", "1 pc"],
+  jewellery: ["Ring", "Necklace", "Earrings", "Bangle", "Chain", "Other"],
+  cosmetics: ["Small", "30ml", "50ml", "100ml", "1 pc"],
 };
 
 export const SIZE_LABEL: Record<Category, string> = {
@@ -16,15 +18,19 @@ export const SIZE_LABEL: Record<Category, string> = {
   electronics: "Type",
   furniture: "Size",
   cleaning: "Size",
+  jewellery: "Type",
+  cosmetics: "Size",
 };
 
-// Whether a colour choice makes sense for this category.
+// Colour selection is intentionally off for every category for now.
 export const HAS_COLOR: Record<Category, boolean> = {
-  apparel: true,
+  apparel: false,
   food: false,
-  electronics: true,
-  furniture: true,
+  electronics: false,
+  furniture: false,
   cleaning: false,
+  jewellery: false,
+  cosmetics: false,
 };
 
 export const COLORS: { name: string; hex: string }[] = [
@@ -41,7 +47,8 @@ export const COLORS: { name: string; hex: string }[] = [
 ];
 
 // Per-category accent so the category screen is colourful and the chosen colour
-// carries through the rest of the flow. Classes are static so Tailwind keeps them.
+// carries through the flow. Classes are full static strings so Tailwind keeps
+// them (tailwind.config scans ./lib too).
 export type Accent = {
   text: string;
   bg: string;
@@ -52,46 +59,13 @@ export type Accent = {
 };
 
 export const ACCENT: Record<Category, Accent> = {
-  apparel: {
-    text: "text-blue-600",
-    bg: "bg-blue-50",
-    ring: "ring-blue-400",
-    border: "border-blue-500",
-    solid: "bg-blue-600",
-    solidText: "text-white",
-  },
-  food: {
-    text: "text-orange-600",
-    bg: "bg-orange-50",
-    ring: "ring-orange-400",
-    border: "border-orange-500",
-    solid: "bg-orange-600",
-    solidText: "text-white",
-  },
-  electronics: {
-    text: "text-violet-600",
-    bg: "bg-violet-50",
-    ring: "ring-violet-400",
-    border: "border-violet-500",
-    solid: "bg-violet-600",
-    solidText: "text-white",
-  },
-  furniture: {
-    text: "text-amber-700",
-    bg: "bg-amber-50",
-    ring: "ring-amber-400",
-    border: "border-amber-500",
-    solid: "bg-amber-600",
-    solidText: "text-white",
-  },
-  cleaning: {
-    text: "text-emerald-600",
-    bg: "bg-emerald-50",
-    ring: "ring-emerald-400",
-    border: "border-emerald-500",
-    solid: "bg-emerald-600",
-    solidText: "text-white",
-  },
+  apparel: { text: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-400", border: "border-blue-500", solid: "bg-blue-600", solidText: "text-white" },
+  food: { text: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-400", border: "border-orange-500", solid: "bg-orange-600", solidText: "text-white" },
+  electronics: { text: "text-violet-600", bg: "bg-violet-50", ring: "ring-violet-400", border: "border-violet-500", solid: "bg-violet-600", solidText: "text-white" },
+  furniture: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-400", border: "border-amber-500", solid: "bg-amber-600", solidText: "text-white" },
+  cleaning: { text: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-400", border: "border-emerald-500", solid: "bg-emerald-600", solidText: "text-white" },
+  jewellery: { text: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-400", border: "border-rose-500", solid: "bg-rose-600", solidText: "text-white" },
+  cosmetics: { text: "text-fuchsia-600", bg: "bg-fuchsia-50", ring: "ring-fuchsia-400", border: "border-fuchsia-500", solid: "bg-fuchsia-600", solidText: "text-white" },
 };
 
 export const CATEGORY_META: { id: Category; label: string }[] = [
@@ -100,6 +74,8 @@ export const CATEGORY_META: { id: Category; label: string }[] = [
   { id: "electronics", label: "Electronics" },
   { id: "furniture", label: "Furniture" },
   { id: "cleaning", label: "Cleaning" },
+  { id: "jewellery", label: "Jewellery" },
+  { id: "cosmetics", label: "Cosmetics" },
 ];
 
 export const DEFAULT_PRICE_PRESETS = [49, 99, 199, 299, 499, 999];

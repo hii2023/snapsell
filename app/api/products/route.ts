@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
     "electronics",
     "furniture",
     "cleaning",
+    "jewellery",
+    "cosmetics",
   ];
   const category: Category = valid.includes(body.category as Category)
     ? (body.category as Category)

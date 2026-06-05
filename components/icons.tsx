@@ -57,6 +57,24 @@ export function CleaningIcon({ className = base }: P) {
   );
 }
 
+export function JewelleryIcon({ className = base }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m9 3 3 4 3-4M7 3h10l3 4-8 9-8-9 3-4Z" />
+      <path d="M4 7h16" />
+    </svg>
+  );
+}
+
+export function CosmeticsIcon({ className = base }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="8.5" y="9" width="7" height="12" rx="1.5" />
+      <path d="M10.5 9V5.5a1.5 1.5 0 0 1 3 0V9M12 3v2.5" />
+    </svg>
+  );
+}
+
 export function CheckIcon({ className = base }: P) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -88,5 +106,7 @@ export function CategoryIcon({ id, className = "h-8 w-8" }: { id: Category; clas
   if (id === "food") return <FoodIcon className={className} />;
   if (id === "electronics") return <ElectronicsIcon className={className} />;
   if (id === "cleaning") return <CleaningIcon className={className} />;
+  if (id === "jewellery") return <JewelleryIcon className={className} />;
+  if (id === "cosmetics") return <CosmeticsIcon className={className} />;
   return <FurnitureIcon className={className} />;
 }

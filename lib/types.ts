@@ -3,7 +3,9 @@ export type Category =
   | "food"
   | "electronics"
   | "furniture"
-  | "cleaning";
+  | "cleaning"
+  | "jewellery"
+  | "cosmetics";
 
 export type Product = {
   id: string;
