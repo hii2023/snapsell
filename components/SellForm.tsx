@@ -35,12 +35,16 @@ export default function SellForm({
   onReshoot,
   onClose,
   onSaved,
+  onAdvance,
+  addedTotal,
 }: {
   pricePresets: number[];
   initialFile: File;
   onReshoot?: () => void;
   onClose?: () => void;
   onSaved?: () => void;
+  onAdvance?: () => boolean;
+  addedTotal?: number;
 }) {
   const reduce = useReducedMotion();
   const [screen, setScreen] = useState<Screen>("wizard");
@@ -161,6 +165,8 @@ export default function SellForm({
       if (!res.ok) throw new Error(json.error || "Save failed");
       setAdded((n) => n + 1);
       onSaved?.();
+      // If more photos are queued (multi-select), jump straight to the next one.
+      if (onAdvance?.()) return;
       if (batch) onReshoot?.();
       else setScreen("saved");
     } catch (err) {
@@ -190,7 +196,7 @@ export default function SellForm({
         </motion.div>
         <h2 className="text-2xl font-semibold">Listed!</h2>
         <p className="mt-2 text-neutral-600">
-          {added} product{added === 1 ? "" : "s"} added.
+          {(addedTotal ?? added)} product{(addedTotal ?? added) === 1 ? "" : "s"} added.
         </p>
         <div className="mt-8 flex flex-col gap-3">
           <button onClick={() => onReshoot?.()} className="btn-primary w-full py-4 text-lg">

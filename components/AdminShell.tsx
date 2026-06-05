@@ -24,7 +24,8 @@ export default function AdminShell({
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("closed");
-  const [file, setFile] = useState<File | null>(null);
+  const [queue, setQueue] = useState<File[]>([]);
+  const [qIndex, setQIndex] = useState(0);
   const [added, setAdded] = useState(0);
   const [shot, setShot] = useState(0);
 
@@ -32,17 +33,34 @@ export default function AdminShell({
     setAdded(0);
     setPhase("camera");
   }
-  function onCapture(f: File) {
-    setFile(f);
+  function onCapture(files: File[]) {
+    setQueue(files);
+    setQIndex(0);
     setShot((n) => n + 1);
     setPhase("wizard");
   }
+  // Move to the next queued photo; returns false when the queue is finished.
+  function advance() {
+    if (qIndex + 1 < queue.length) {
+      setQIndex((i) => i + 1);
+      return true;
+    }
+    return false;
+  }
+  function reshoot() {
+    setQueue([]);
+    setQIndex(0);
+    setPhase("camera");
+  }
   function close() {
     setPhase("closed");
-    setFile(null);
+    setQueue([]);
+    setQIndex(0);
     setAdded(0);
     router.refresh();
   }
+
+  const current = queue[qIndex];
 
   return (
     <>
@@ -75,45 +93,56 @@ export default function AdminShell({
         <CameraCapture
           onCapture={onCapture}
           onClose={close}
-          hint={added > 0 ? `${added} added. Snap the next product.` : "Point the camera at your product"}
+          hint={
+            added > 0
+              ? `${added} added. Snap or pick the next product(s).`
+              : "Take a photo, or open gallery to pick several at once"
+          }
         />
       )}
 
       <AnimatePresence>
-        {phase === "wizard" && file && (
-        <motion.div
-          className="fixed inset-0 z-40 bg-black/40 sm:flex sm:items-center sm:justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-        >
+        {phase === "wizard" && current && (
           <motion.div
-            className="relative h-full w-full overflow-y-auto bg-white sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-lg sm:rounded-3xl"
-            initial={{ opacity: 0, y: 24, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed inset-0 z-40 bg-black/40 sm:flex sm:items-center sm:justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
           >
-            <button
-              onClick={close}
-              aria-label="Close"
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-600"
+            <motion.div
+              className="relative h-full w-full overflow-y-auto bg-white sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-lg sm:rounded-3xl"
+              initial={{ opacity: 0, y: 24, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 24, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-            <SellForm
-              key={shot}
-              pricePresets={pricePresets}
-              initialFile={file}
-              onReshoot={() => setPhase("camera")}
-              onClose={close}
-              onSaved={() => setAdded((n) => n + 1)}
-            />
+              {queue.length > 1 && (
+                <div className="absolute left-4 top-4 z-10 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                  Photo {qIndex + 1} of {queue.length}
+                </div>
+              )}
+              <button
+                onClick={close}
+                aria-label="Close"
+                className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-600"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+              <SellForm
+                key={`${shot}-${qIndex}`}
+                pricePresets={pricePresets}
+                initialFile={current}
+                onReshoot={reshoot}
+                onClose={close}
+                onSaved={() => setAdded((n) => n + 1)}
+                onAdvance={advance}
+                addedTotal={added}
+              />
+            </motion.div>
           </motion.div>
-        </motion.div>
         )}
       </AnimatePresence>
     </>

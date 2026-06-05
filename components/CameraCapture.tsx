@@ -9,7 +9,7 @@ export default function CameraCapture({
   onClose,
   hint,
 }: {
-  onCapture: (file: File) => void;
+  onCapture: (files: File[]) => void;
   onClose: () => void;
   hint?: string;
 }) {
@@ -58,7 +58,7 @@ export default function CameraCapture({
     ctx.drawImage(video, 0, 0);
     canvas.toBlob(
       (blob) => {
-        if (blob) onCapture(new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" }));
+        if (blob) onCapture([new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" })]);
       },
       "image/jpeg",
       0.9
@@ -66,13 +66,13 @@ export default function CameraCapture({
   }
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (f) onCapture(f);
+    const files = Array.from(e.target.files || []);
+    if (files.length) onCapture(files);
   }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onPick} />
 
       <div className="flex items-center justify-between px-4 py-4 text-white">
         <span className="text-sm opacity-80">{hint || "Point the camera at your product"}</span>
