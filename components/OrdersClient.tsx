@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { rupees, CATEGORY_META } from "@/lib/constants";
-import { CategoryIcon } from "./icons";
+import { CategoryIcon, CheckIcon } from "./icons";
 import type { Category, Order, Product } from "@/lib/types";
 
 type Tab = "overview" | "products" | "orders";
@@ -311,6 +311,7 @@ function ProductsTab({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [shareOpen, setShareOpen] = useState(false);
+  const [sendIndex, setSendIndex] = useState(0);
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -452,7 +453,10 @@ function ProductsTab({
               Clear
             </button>
             <button
-              onClick={() => setShareOpen(true)}
+              onClick={() => {
+                setSendIndex(0);
+                setShareOpen(true);
+              }}
               className="flex-1 rounded-2xl bg-green-600 py-3 text-base font-semibold text-white active:scale-[0.98]"
             >
               Share {selected.size} on WhatsApp
@@ -479,48 +483,82 @@ function ProductsTab({
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
           >
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Send {chosen.length} on WhatsApp</h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Share on WhatsApp</h3>
               <button onClick={() => setShareOpen(false)} className="text-sm text-neutral-500">
                 Close
               </button>
             </div>
-            <p className="mb-3 text-sm text-neutral-500">
-              Tap <b>Send</b> on a product for its own message with the photo. Or use
-              <b> Send all together</b> to share every photo in one message. Pick WhatsApp
-              and the contact when the share sheet opens.
-            </p>
-            <div className="space-y-2">
-              {chosen.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 rounded-xl border border-neutral-200 p-2">
-                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
-                    {p.image_url ? (
+
+            {sendIndex < chosen.length ? (
+              <div>
+                <p className="mb-3 text-sm text-neutral-500">
+                  Product {sendIndex + 1} of {chosen.length}. Each one sends as its own
+                  message with its photo. Pick WhatsApp and the contact when it opens.
+                </p>
+                <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 p-3">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+                    {chosen[sendIndex].image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                      <img src={chosen[sendIndex].image_url} alt={chosen[sendIndex].name} className="h-full w-full object-cover" />
                     ) : null}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{p.name}</p>
-                    <p className="text-xs text-neutral-500">
-                      {p.code} · {rupees(p.price)}
-                      {p.mrp > p.price ? ` (MRP ${rupees(p.mrp)})` : ""}
+                    <p className="truncate font-medium">{chosen[sendIndex].name}</p>
+                    <p className="text-sm text-neutral-500">
+                      {chosen[sendIndex].code} · {rupees(chosen[sendIndex].price)}
+                      {chosen[sendIndex].mrp > chosen[sendIndex].price
+                        ? ` (MRP ${rupees(chosen[sendIndex].mrp)})`
+                        : ""}
                     </p>
                   </div>
-                  <button
-                    onClick={() => sendOne(p)}
-                    className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white"
-                  >
-                    Send
-                  </button>
                 </div>
-              ))}
+                <button
+                  onClick={async () => {
+                    await sendOne(chosen[sendIndex]);
+                    setSendIndex((i) => i + 1);
+                  }}
+                  className="mt-4 w-full rounded-2xl bg-green-600 py-4 text-lg font-semibold text-white active:scale-[0.98]"
+                >
+                  Send this on WhatsApp
+                </button>
+                <button
+                  onClick={() => setSendIndex((i) => i + 1)}
+                  className="mt-2 w-full py-2 text-sm text-neutral-500 underline"
+                >
+                  Skip this one
+                </button>
+                <div className="mt-4 flex justify-center gap-1.5">
+                  {chosen.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        i < sendIndex ? "bg-green-600" : i === sendIndex ? "bg-green-400" : "bg-neutral-300"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white">
+                  <CheckIcon className="h-8 w-8" />
+                </div>
+                <p className="font-semibold">All {chosen.length} sent</p>
+                <button onClick={() => setShareOpen(false)} className="btn-primary mt-4 w-full py-3">
+                  Done
+                </button>
+              </div>
+            )}
+
+            <div className="mt-5 border-t border-neutral-100 pt-4">
+              <button
+                onClick={() => sendAll(chosen)}
+                className="w-full rounded-2xl border border-green-600 py-3 text-base font-semibold text-green-700"
+              >
+                Or send all in one message
+              </button>
             </div>
-            <button
-              onClick={() => sendAll(chosen)}
-              className="mt-4 w-full rounded-2xl border border-green-600 py-3 text-base font-semibold text-green-700"
-            >
-              Send all {chosen.length} together (one message)
-            </button>
           </motion.div>
         </motion.div>
         )}
