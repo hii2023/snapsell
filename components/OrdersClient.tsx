@@ -4,7 +4,7 @@ import { useState } from "react";
 import { rupees } from "@/lib/constants";
 import type { Order, Product } from "@/lib/types";
 
-type Tab = "orders" | "stock";
+type Tab = "orders" | "stock" | "oos";
 
 export default function OrdersClient({
   initialOrders,
@@ -17,27 +17,42 @@ export default function OrdersClient({
   const [orders, setOrders] = useState(initialOrders);
   const [products, setProducts] = useState(initialProducts);
 
+  const inStock = products.filter((p) => p.stock > 0).length;
+  const outOfStock = products.filter((p) => p.stock === 0).length;
+
+  const tabs: { id: Tab; label: string; count: number }[] = [
+    { id: "orders", label: "Orders", count: orders.length },
+    { id: "stock", label: "In stock", count: inStock },
+    { id: "oos", label: "Out of stock", count: outOfStock },
+  ];
+
   return (
     <div className="mx-auto max-w-md px-4 py-6">
-      <div className="mb-5 flex gap-2">
-        <button
-          className={`chip flex-1 ${tab === "orders" ? "chip-on" : "chip-off"}`}
-          onClick={() => setTab("orders")}
-        >
-          Orders ({orders.length})
-        </button>
-        <button
-          className={`chip flex-1 ${tab === "stock" ? "chip-on" : "chip-off"}`}
-          onClick={() => setTab("stock")}
-        >
-          Stock ({products.length})
-        </button>
+      <div className="mb-5 grid grid-cols-3 gap-2">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`rounded-full px-2 py-2 text-center text-sm font-medium transition-colors ${
+              tab === t.id
+                ? "bg-brand text-white"
+                : "border border-neutral-300 bg-white text-neutral-700"
+            }`}
+          >
+            {t.label}
+            <span className="ml-1 tabular-nums opacity-80">({t.count})</span>
+          </button>
+        ))}
       </div>
 
       {tab === "orders" ? (
         <OrdersList orders={orders} setOrders={setOrders} />
       ) : (
-        <StockList products={products} setProducts={setProducts} />
+        <StockList
+          products={products}
+          setProducts={setProducts}
+          filter={tab === "oos" ? "oos" : "instock"}
+        />
       )}
     </div>
   );
@@ -186,11 +201,17 @@ function OrdersList({
 function StockList({
   products,
   setProducts,
+  filter,
 }: {
   products: Product[];
   setProducts: (p: Product[]) => void;
+  filter: "instock" | "oos";
 }) {
   const [busy, setBusy] = useState<string>("");
+  const shown =
+    filter === "oos"
+      ? products.filter((p) => p.stock === 0)
+      : products.filter((p) => p.stock > 0);
 
   async function addStock(p: Product, delta: number) {
     setBusy(p.id);
@@ -209,14 +230,25 @@ function StockList({
     }
   }
 
-  if (products.length === 0) {
-    return <p className="py-16 text-center text-neutral-500">No products yet.</p>;
+  if (shown.length === 0) {
+    return (
+      <p className="py-16 text-center text-neutral-500">
+        {filter === "oos"
+          ? "Nothing is out of stock. Good going."
+          : "No products in stock yet."}
+      </p>
+    );
   }
 
   return (
     <div className="space-y-3">
-      {products.map((p) => (
-        <div key={p.id} className="card flex items-center gap-3 p-3">
+      {shown.map((p) => (
+        <div
+          key={p.id}
+          className={`card flex items-center gap-3 p-3 ${
+            p.stock === 0 ? "border-red-200 bg-red-50/40" : ""
+          }`}
+        >
           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
             {p.image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
