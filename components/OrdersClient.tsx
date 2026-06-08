@@ -862,40 +862,47 @@ function OrdersTab({
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {o.fulfillment === "delivery" && isPendingDispatch(o) && (
+                  {/* Step 1: Payment Received */}
+                  {o.payment_status !== "paid" && (
                     <button
-                      className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm disabled:opacity-50"
+                      className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { payment_status: "paid" })}
+                    >
+                      ① Payment received
+                    </button>
+                  )}
+
+                  {/* Step 2: Book Delivery (only for delivery orders, after payment received) */}
+                  {o.fulfillment === "delivery" && o.payment_status === "paid" && !dispatched && !delivered && (
+                    <button
+                      className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
                       disabled={busy === o.id}
                       onClick={() => bookDelivery(o.id)}
                     >
-                      Book delivery
+                      ② Book delivery
                     </button>
                   )}
-                  {!dispatched && !delivered && (
+
+                  {/* Step 3: Mark Dispatched (after payment received, for delivery or after booking) */}
+                  {o.payment_status === "paid" && !dispatched && !delivered && (
                     <button
                       className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
                       disabled={busy === o.id}
                       onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
                     >
-                      Mark dispatched
+                      ③ Mark dispatched
                     </button>
                   )}
-                  {dispatched && (
+
+                  {/* Step 4: Mark Delivered (after dispatched) */}
+                  {dispatched && !delivered && (
                     <button
                       className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
                       disabled={busy === o.id}
                       onClick={() => update(o.id, { delivery_status: "delivered" })}
                     >
-                      Mark delivered
-                    </button>
-                  )}
-                  {o.payment_status !== "paid" && (
-                    <button
-                      className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { payment_status: "paid" })}
-                    >
-                      Payment received
+                      ④ Mark delivered
                     </button>
                   )}
                 </div>
