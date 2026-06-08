@@ -22,8 +22,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const input = email.trim();
-      // Map the "Admin" username to its email; emails pass through unchanged.
-      const mapped = input.toLowerCase() === "admin" ? "admin@snapsell.app" : input;
+      // Map "Admin" or "TS - Admin" username to email; emails pass through unchanged.
+      const lowerInput = input.toLowerCase();
+      const mapped =
+        lowerInput === "admin" || lowerInput === "ts - admin" || lowerInput === "ts-admin"
+          ? "admin@snapsell.app"
+          : input;
       const supabase = supabaseBrowser();
       const { error } = await supabase.auth.signInWithPassword({
         email: mapped,
@@ -63,8 +67,9 @@ export default function LoginPage() {
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Admin"
+              placeholder="TS - Admin"
             />
+            <p className="mt-1 text-xs text-neutral-500">Username: TS - Admin</p>
           </div>
           <div>
             <label className="label">Password</label>

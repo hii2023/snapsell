@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 const plex = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -8,11 +9,20 @@ const plex = IBM_Plex_Sans({
   variable: "--font-plex",
 });
 
-const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
+const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "Thrift Shopper Store";
 
 export const metadata: Metadata = {
   title: shopName,
-  description: "Snap a photo, list it, sell it.",
+  description: "Buy and sell thrifted items easily",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: shopName,
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -28,7 +38,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={plex.variable}>
-      <body className="font-sans antialiased">{children}</body>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0f766e" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content={shopName} />
+      </head>
+      <body className="font-sans antialiased">
+        {children}
+        <ServiceWorkerRegister />
+      </body>
     </html>
   );
 }
