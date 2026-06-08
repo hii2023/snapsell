@@ -61,6 +61,8 @@ export type Order = {
   delivery_provider: DeliveryProvider;
   delivery_status: DeliveryStatus;
   delivery_tracking: string | null;
+  pickup_date: string;
+  pickup_time: string;
   created_at: string;
   order_items?: OrderItem[];
 };

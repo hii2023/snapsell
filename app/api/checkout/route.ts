@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
     address?: string;
     fulfillment?: "delivery" | "pickup";
     payment_mode?: "cod" | "qr";
+    pickup_date?: string;
+    pickup_time?: string;
     items?: unknown;
   };
 
@@ -21,6 +23,9 @@ export async function POST(req: NextRequest) {
   }
   if (fulfillment === "delivery" && !body.address) {
     return NextResponse.json({ error: "Address is required for delivery" }, { status: 400 });
+  }
+  if (fulfillment === "pickup" && (!body.pickup_date || !body.pickup_time)) {
+    return NextResponse.json({ error: "Pickup date and time are required" }, { status: 400 });
   }
 
   try {
@@ -34,6 +39,8 @@ export async function POST(req: NextRequest) {
       paymentMode,
       paymentStatus: "pending",
       fulfillment,
+      pickupDate: body.pickup_date || "",
+      pickupTime: body.pickup_time || "",
     });
     return NextResponse.json({ order_id: orderId });
   } catch (e) {

@@ -21,6 +21,8 @@ export async function placeOrder(args: {
   paymentMode: "online" | "cod" | "qr";
   paymentStatus: "pending" | "paid";
   fulfillment: "delivery" | "pickup";
+  pickupDate?: string;
+  pickupTime?: string;
   razorpayOrderId?: string | null;
   razorpayPaymentId?: string | null;
 }): Promise<string> {
@@ -37,6 +39,8 @@ export async function placeOrder(args: {
     p_razorpay_order_id: args.razorpayOrderId ?? null,
     p_razorpay_payment_id: args.razorpayPaymentId ?? null,
     p_fulfillment: args.fulfillment,
+    p_pickup_date: args.pickupDate || "",
+    p_pickup_time: args.pickupTime || "",
     p_items: items,
   });
 

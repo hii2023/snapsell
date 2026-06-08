@@ -316,6 +316,8 @@ function Checkout({
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">("delivery");
+  const [pickupDate, setPickupDate] = useState("");
+  const [pickupTime, setPickupTime] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [booked, setBooked] = useState<{ id: string; amount: number } | null>(null);
@@ -332,6 +334,8 @@ function Checkout({
     if (!name.trim()) return fail("Enter your name");
     if (phone.trim().length < 8) return fail("Enter a valid phone number");
     if (fulfillment === "delivery" && !address.trim()) return fail("Enter a delivery address");
+    if (fulfillment === "pickup" && !pickupDate) return fail("Select a pickup date");
+    if (fulfillment === "pickup" && !pickupTime) return fail("Select a pickup time");
     return true;
   }
   function fail(m: string) {
@@ -347,7 +351,16 @@ function Checkout({
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, address, fulfillment, payment_mode: "qr", items }),
+        body: JSON.stringify({
+          name,
+          phone,
+          address,
+          fulfillment,
+          pickup_date: pickupDate,
+          pickup_time: pickupTime,
+          payment_mode: "qr",
+          items,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not book");
@@ -454,27 +467,53 @@ function Checkout({
             />
           </div>
         ) : (
-          <div className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
-            <p className="font-medium text-ink">Collect from store:</p>
-            <p className="mt-1 whitespace-pre-wrap">{pickupAddress}</p>
-            <div className="mt-2 flex gap-2">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(pickupAddress);
-                  alert("Address copied!");
-                }}
-                className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 active:scale-[0.98]"
-              >
-                📋 Copy
-              </button>
-              <a
-                href={directionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-brand underline"
-              >
-                Get directions
-              </a>
+          <div className="space-y-3">
+            <div>
+              <label className="label">Pickup date</label>
+              <input
+                type="date"
+                className="input"
+                value={pickupDate}
+                onChange={(e) => setPickupDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Pickup time</label>
+              <input
+                type="time"
+                className="input"
+                value={pickupTime}
+                onChange={(e) => setPickupTime(e.target.value)}
+              />
+            </div>
+            <div className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
+              <p className="font-medium text-ink">Collect from store:</p>
+              <p className="mt-1 whitespace-pre-wrap">{pickupAddress}</p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(pickupAddress);
+                    alert("Address copied!");
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 active:scale-[0.98]"
+                >
+                  📋 Copy
+                </button>
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-medium text-brand underline"
+                >
+                  Get directions
+                </a>
+              </div>
+            </div>
+            <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+              <p className="font-semibold">Important:</p>
+              <p className="mt-1">
+                You must collect your item within 2 weeks of purchase. Items not collected within this period will be re-sold without any refund.
+              </p>
             </div>
           </div>
         )}
