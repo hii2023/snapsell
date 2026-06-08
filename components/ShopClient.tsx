@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { rupees, CATEGORY_META, PICKUP_ADDRESS, PICKUP_DIRECTIONS_URL } from "@/lib/constants";
+import QRCode from "qrcode";
+import {
+  rupees,
+  CATEGORY_META,
+  PICKUP_ADDRESS,
+  PICKUP_DIRECTIONS_URL,
+  deliveryFeeFor,
+} from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
 import type { Category, CartLine, Product } from "@/lib/types";
 
@@ -127,7 +134,6 @@ export default function ShopClient({
       <Checkout
         cart={cart}
         total={total}
-        razorpayKeyId={razorpayKeyId}
         shopName={shopName}
         onBack={() => setStep("shop")}
         onDone={() => setStep("done")}
@@ -267,14 +273,12 @@ export default function ShopClient({
 function Checkout({
   cart,
   total,
-  razorpayKeyId,
   shopName,
   onBack,
   onDone,
 }: {
   cart: CartLine[];
   total: number;
-  razorpayKeyId: string;
   shopName: string;
   onBack: () => void;
   onDone: () => void;
@@ -283,18 +287,18 @@ function Checkout({
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">("delivery");
-  // Pay online is the primary option; default to it when Razorpay is configured.
-  const [mode, setMode] = useState<"online" | "cod">(razorpayKeyId ? "online" : "cod");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [booked, setBooked] = useState<{ id: string; amount: number } | null>(null);
 
   const items = cart.map((l) => ({ product_id: l.product_id, qty: l.qty }));
+  const deliveryFee = deliveryFeeFor(total, fulfillment === "pickup");
+  const grandTotal = total + deliveryFee;
 
   function validate(): boolean {
     if (!name.trim()) return fail("Enter your name");
     if (phone.trim().length < 8) return fail("Enter a valid phone number");
-    if (fulfillment === "delivery" && !address.trim())
-      return fail("Enter a delivery address");
+    if (fulfillment === "delivery" && !address.trim()) return fail("Enter a delivery address");
     return true;
   }
   function fail(m: string) {
@@ -302,74 +306,19 @@ function Checkout({
     return false;
   }
 
-  async function placeCod() {
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone, address, fulfillment, items }),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || "Could not place order");
-  }
-
-  async function placeOnline() {
-    const orderRes = await fetch("/api/razorpay/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items, name, phone, address, fulfillment }),
-    });
-    const order = await orderRes.json();
-    if (!orderRes.ok) throw new Error(order.error || "Payment setup failed");
-
-    await loadRazorpay();
-    if (!window.Razorpay) throw new Error("Payment library failed to load");
-
-    await new Promise<void>((resolve, reject) => {
-      const rzp = new window.Razorpay!({
-        key: razorpayKeyId,
-        amount: order.amount,
-        currency: "INR",
-        name: shopName,
-        order_id: order.razorpay_order_id,
-        prefill: { name, contact: phone },
-        theme: { color: "#0f766e" },
-        handler: async (resp: Record<string, string>) => {
-          try {
-            const verifyRes = await fetch("/api/razorpay/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_order_id: resp.razorpay_order_id,
-                razorpay_payment_id: resp.razorpay_payment_id,
-                razorpay_signature: resp.razorpay_signature,
-                name,
-                phone,
-                address,
-                fulfillment,
-                items,
-              }),
-            });
-            const vj = await verifyRes.json();
-            if (!verifyRes.ok) throw new Error(vj.error || "Verification failed");
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
-        },
-        modal: { ondismiss: () => reject(new Error("Payment cancelled")) },
-      });
-      rzp.open();
-    });
-  }
-
   async function submit() {
     setError("");
     if (!validate()) return;
     setLoading(true);
     try {
-      if (mode === "cod" || total === 0) await placeCod();
-      else await placeOnline();
-      onDone();
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, address, fulfillment, payment_mode: "qr", items }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Could not book");
+      setBooked({ id: json.order_id, amount: grandTotal });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -377,12 +326,27 @@ function Checkout({
     }
   }
 
+  if (booked) {
+    return (
+      <BookingConfirm
+        bookingId={booked.id}
+        amount={booked.amount}
+        name={name}
+        phone={phone}
+        fulfillment={fulfillment}
+        cart={cart}
+        shopName={shopName}
+        onDone={onDone}
+      />
+    );
+  }
+
   return (
     <div className="mx-auto max-w-md px-4 py-6 pb-28">
       <button onClick={onBack} className="text-sm text-brand underline">
         Back
       </button>
-      <h2 className="mt-3 text-2xl font-semibold">Checkout</h2>
+      <h2 className="mt-3 text-2xl font-semibold">Book your items</h2>
 
       <div className="mt-4 card divide-y divide-neutral-100">
         {cart.map((l) => (
@@ -393,9 +357,15 @@ function Checkout({
             <span className="font-medium">{rupees(l.price * l.qty)}</span>
           </div>
         ))}
+        {deliveryFee > 0 && (
+          <div className="flex justify-between p-3 text-sm">
+            <span>Delivery {total < 1000 ? "(free over ₹1000)" : ""}</span>
+            <span className="font-medium">{rupees(deliveryFee)}</span>
+          </div>
+        )}
         <div className="flex justify-between p-3 font-semibold">
           <span>Total</span>
-          <span>{rupees(total)}</span>
+          <span>{rupees(grandTotal)}</span>
         </div>
       </div>
 
@@ -406,12 +376,7 @@ function Checkout({
         </div>
         <div>
           <label className="label">Phone</label>
-          <input
-            className="input"
-            inputMode="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+          <input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
         <div>
           <label className="label">How do you want it?</label>
@@ -456,49 +421,18 @@ function Checkout({
             </a>
           </div>
         )}
-        {total === 0 ? (
-          <p className="rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
-            Free item. No payment needed. Please arrange transport / pickup yourself.
-          </p>
-        ) : (
-          <div>
-            <label className="label">Payment</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={`chip flex-1 ${mode === "online" ? "chip-on" : "chip-off"}`}
-                onClick={() => setMode("online")}
-              >
-                Pay online
-              </button>
-              <button
-                type="button"
-                className={`chip flex-1 ${mode === "cod" ? "chip-on" : "chip-off"}`}
-                onClick={() => setMode("cod")}
-              >
-                {fulfillment === "pickup" ? "Cash on pickup" : "Cash on delivery"}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
 
       <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
         <div className="mx-auto max-w-md">
-          <button
-            onClick={submit}
-            disabled={loading}
-            className="btn-primary w-full text-lg disabled:opacity-50"
-          >
+          <button onClick={submit} disabled={loading} className="btn-primary w-full text-lg disabled:opacity-50">
             {loading
-              ? "Please wait..."
-              : total === 0
-                ? "Place order (Free)"
-                : mode === "cod"
-                  ? `Place order · ${rupees(total)}`
-                  : `Pay ${rupees(total)}`}
+              ? "Booking..."
+              : grandTotal === 0
+                ? "Book (Free)"
+                : `Book · pay ${rupees(grandTotal)} by QR`}
           </button>
         </div>
       </div>
@@ -506,13 +440,89 @@ function Checkout({
   );
 }
 
-function loadRazorpay(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.Razorpay) return resolve();
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load payment library"));
-    document.body.appendChild(script);
-  });
+function BookingConfirm({
+  bookingId,
+  amount,
+  name,
+  phone,
+  fulfillment,
+  cart,
+  shopName,
+  onDone,
+}: {
+  bookingId: string;
+  amount: number;
+  name: string;
+  phone: string;
+  fulfillment: "delivery" | "pickup";
+  cart: CartLine[];
+  shopName: string;
+  onDone: () => void;
+}) {
+  const ref = "IR-" + bookingId.slice(0, 8).toUpperCase();
+  const [qr, setQr] = useState("");
+
+  const upi = process.env.NEXT_PUBLIC_UPI_ID || "";
+  const upiName = process.env.NEXT_PUBLIC_UPI_NAME || shopName;
+  const wa = process.env.NEXT_PUBLIC_SELLER_WHATSAPP || "";
+
+  useEffect(() => {
+    if (!upi || amount <= 0) return;
+    const url = `upi://pay?pa=${upi}&pn=${encodeURIComponent(upiName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(ref)}`;
+    QRCode.toDataURL(url, { width: 240, margin: 1 }).then(setQr).catch(() => {});
+  }, [upi, upiName, amount, ref]);
+
+  const items = cart.map((l) => `${l.qty} x ${l.name}${l.size ? ` (${l.size})` : ""}`).join(", ");
+  const msg = `${shopName} booking ${ref}\nName: ${name} (${phone})\nItems: ${items}\nFulfilment: ${fulfillment}\nAmount: ${amount > 0 ? "₹" + amount : "Free"}\nI have paid by UPI. My payment reference: `;
+  const waUrl = (wa ? `https://wa.me/${wa}` : "https://wa.me/") + `?text=${encodeURIComponent(msg)}`;
+
+  return (
+    <div className="mx-auto max-w-md px-4 py-8 text-center">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand text-white">
+        <CheckIcon className="h-9 w-9" />
+      </div>
+      <h2 className="text-2xl font-semibold">Booking confirmed</h2>
+      <p className="mt-1 text-neutral-600">
+        Your booking ID is <span className="font-semibold text-ink">{ref}</span>
+      </p>
+
+      {amount > 0 ? (
+        <div className="mt-6 card p-5">
+          <p className="text-lg font-semibold">Pay {rupees(amount)} by UPI</p>
+          {qr ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qr} alt="UPI QR" className="mx-auto mt-3 h-56 w-56" />
+          ) : upi ? (
+            <p className="mt-3 text-sm text-neutral-500">Generating QR...</p>
+          ) : (
+            <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+              Payment QR is being set up. Tap the WhatsApp button below and the team will
+              share UPI details.
+            </p>
+          )}
+          {upi ? <p className="mt-2 text-sm text-neutral-500">UPI: {upi}</p> : null}
+          <p className="mt-3 text-sm text-neutral-600">
+            Scan with any UPI app (GPay, PhonePe, Paytm), pay, then tap the button below to
+            send your payment proof to the team.
+          </p>
+        </div>
+      ) : (
+        <p className="mt-6 rounded-xl bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+          This is a free item. {fulfillment === "pickup" ? "Collect it from the store." : "Arrange transport with the team."}
+        </p>
+      )}
+
+      <a
+        href={waUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-green-600 py-4 text-lg font-semibold text-white"
+      >
+        Send payment proof on WhatsApp
+      </a>
+      <button onClick={onDone} className="btn-ghost mt-3 w-full py-3">
+        Done
+      </button>
+    </div>
+  );
 }

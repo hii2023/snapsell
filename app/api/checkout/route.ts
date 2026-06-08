@@ -10,10 +10,12 @@ export async function POST(req: NextRequest) {
     phone?: string;
     address?: string;
     fulfillment?: "delivery" | "pickup";
+    payment_mode?: "cod" | "qr";
     items?: unknown;
   };
 
   const fulfillment = body.fulfillment === "pickup" ? "pickup" : "delivery";
+  const paymentMode = body.payment_mode === "cod" ? "cod" : "qr";
   if (!body.name || !body.phone) {
     return NextResponse.json({ error: "Missing details" }, { status: 400 });
   }
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
         address: fulfillment === "pickup" ? body.address || "Store pickup" : body.address!,
       },
       items: (body.items as { product_id: string; qty: number }[]) || [],
-      paymentMode: "cod",
+      paymentMode,
       paymentStatus: "pending",
       fulfillment,
     });

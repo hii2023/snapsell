@@ -23,7 +23,7 @@ export type Product = {
   created_at: string;
 };
 
-export type PaymentMode = "online" | "cod";
+export type PaymentMode = "online" | "cod" | "qr";
 export type PaymentStatus = "pending" | "paid" | "failed";
 export type Fulfillment = "delivery" | "pickup";
 export type DeliveryProvider = "manual" | "porter";
@@ -49,6 +49,7 @@ export type Order = {
   phone: string;
   address: string;
   total: number;
+  delivery_fee: number;
   payment_mode: PaymentMode;
   payment_status: PaymentStatus;
   fulfillment: Fulfillment;

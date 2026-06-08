@@ -18,7 +18,7 @@ function cleanItems(items: unknown): ItemInput[] {
 export async function placeOrder(args: {
   customer: CustomerInput;
   items: ItemInput[];
-  paymentMode: "online" | "cod";
+  paymentMode: "online" | "cod" | "qr";
   paymentStatus: "pending" | "paid";
   fulfillment: "delivery" | "pickup";
   razorpayOrderId?: string | null;
