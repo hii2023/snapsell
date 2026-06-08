@@ -334,8 +334,6 @@ function Checkout({
     if (!name.trim()) return fail("Enter your name");
     if (phone.trim().length < 8) return fail("Enter a valid phone number");
     if (fulfillment === "delivery" && !address.trim()) return fail("Enter a delivery address");
-    if (fulfillment === "pickup" && !pickupDate) return fail("Select a pickup date");
-    if (fulfillment === "pickup" && !pickupTime) return fail("Select a pickup time");
     return true;
   }
   function fail(m: string) {
@@ -469,7 +467,7 @@ function Checkout({
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="label">Pickup date</label>
+              <label className="label">Pickup date <span className="font-normal text-neutral-400">(optional)</span></label>
               <input
                 type="date"
                 className="input"
@@ -478,7 +476,7 @@ function Checkout({
               />
             </div>
             <div>
-              <label className="label">Pickup time</label>
+              <label className="label">Pickup time <span className="font-normal text-neutral-400">(optional)</span></label>
               <input
                 type="time"
                 className="input"
