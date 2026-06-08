@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
   const body = (await req.json()) as {
     name?: string;
     category?: Category;
+    subcategory?: string;
     image_url?: string;
+    images?: string[];
+    description?: string;
     size?: string;
     color?: string;
     price?: number;
@@ -36,6 +39,10 @@ export async function POST(req: NextRequest) {
   };
 
   const name = (body.name || "").trim();
+  const images = Array.isArray(body.images)
+    ? body.images.filter((u) => typeof u === "string" && u)
+    : [];
+  const primary = images[0] || body.image_url || "";
   const category: Category = VALID.includes(body.category as Category)
     ? (body.category as Category)
     : "apparel";
@@ -54,7 +61,10 @@ export async function POST(req: NextRequest) {
     .insert({
       name,
       category,
-      image_url: body.image_url || "",
+      subcategory: (body.subcategory || "").trim(),
+      image_url: primary,
+      images: images.length ? images : primary ? [primary] : [],
+      description: (body.description || "").trim(),
       size: (body.size || "").trim(),
       color: (body.color || "").trim(),
       price,
@@ -95,6 +105,9 @@ export async function PATCH(req: NextRequest) {
     id?: string;
     name?: string;
     category?: Category;
+    subcategory?: string;
+    images?: string[];
+    description?: string;
     size?: string;
     color?: string;
     price?: number;
@@ -107,7 +120,14 @@ export async function PATCH(req: NextRequest) {
 
   const patch: Record<string, unknown> = {};
   if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
-  if (body.category && VALID.includes(body.category)) patch.category = body.category;
+  if (body.category) patch.category = body.category;
+  if (typeof body.subcategory === "string") patch.subcategory = body.subcategory.trim();
+  if (typeof body.description === "string") patch.description = body.description.trim();
+  if (Array.isArray(body.images)) {
+    const imgs = body.images.filter((u) => typeof u === "string" && u);
+    patch.images = imgs;
+    patch.image_url = imgs[0] || "";
+  }
   if (typeof body.size === "string") patch.size = body.size.trim();
   if (typeof body.color === "string") patch.color = body.color.trim();
   if (typeof body.stock === "number") patch.stock = Math.max(0, Math.round(body.stock));

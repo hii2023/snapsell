@@ -513,12 +513,17 @@ function BookingConfirm({
   const upi = cfg.upiId;
   const upiName = cfg.upiName || shopName;
   const wa = cfg.whatsapp;
+  const upiUrl =
+    upi && amount > 0
+      ? `upi://pay?pa=${upi}&pn=${encodeURIComponent(upiName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(ref)}`
+      : "";
+  // GPay-specific scheme (falls back to the generic upi: link on the QR / button).
+  const gpayUrl = upiUrl ? upiUrl.replace("upi://pay", "tez://upi/pay") : "";
 
   useEffect(() => {
-    if (!upi || amount <= 0) return;
-    const url = `upi://pay?pa=${upi}&pn=${encodeURIComponent(upiName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(ref)}`;
-    QRCode.toDataURL(url, { width: 240, margin: 1 }).then(setQr).catch(() => {});
-  }, [upi, upiName, amount, ref]);
+    if (!upiUrl) return;
+    QRCode.toDataURL(upiUrl, { width: 240, margin: 1 }).then(setQr).catch(() => {});
+  }, [upiUrl]);
 
   const items = cart.map((l) => `${l.qty} x ${l.name}${l.size ? ` (${l.size})` : ""}`).join(", ");
   const msg = `${shopName} booking ${ref}\nName: ${name} (${phone})\nItems: ${items}\nFulfilment: ${fulfillment}\nAmount: ${amount > 0 ? "₹" + amount : "Free"}\nI have paid by UPI. My payment reference: `;
@@ -550,9 +555,19 @@ function BookingConfirm({
           )}
           {upi ? <p className="mt-2 text-sm text-neutral-500">UPI: {upi}</p> : null}
           <p className="mt-3 text-sm text-neutral-600">
-            Scan with any UPI app (GPay, PhonePe, Paytm), pay, then tap the button below to
-            send your payment proof to the team.
+            Scan the QR, or on your phone tap below to open your UPI app with the amount
+            filled in. After paying, send proof to the team.
           </p>
+          {upiUrl && (
+            <div className="mt-3 space-y-2">
+              <a href={gpayUrl} className="flex w-full items-center justify-center rounded-2xl bg-brand py-3 text-base font-semibold text-white">
+                Pay {rupees(amount)} in GPay
+              </a>
+              <a href={upiUrl} className="flex w-full items-center justify-center rounded-2xl border border-brand py-3 text-base font-semibold text-brand">
+                Pay in other UPI app
+              </a>
+            </div>
+          )}
         </div>
       ) : (
         <p className="mt-6 rounded-xl bg-emerald-50 p-4 text-sm font-medium text-emerald-800">

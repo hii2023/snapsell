@@ -73,17 +73,13 @@ export default async function ProductPage({
             Go to shop
           </Link>
         </div>
-      ) : p.stock <= 0 ? (
-        <div className="mx-auto max-w-md px-4 py-10">
-          <div className="aspect-square overflow-hidden rounded-2xl bg-neutral-100">
-            {p.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
-            ) : null}
-          </div>
+      ) : (
+        <div className="mx-auto max-w-2xl px-4 py-6">
+          <Gallery images={p.images?.length ? p.images : p.image_url ? [p.image_url] : []} name={p.name} />
           <h1 className="mt-4 text-2xl font-semibold">{p.name}</h1>
           <p className="mt-1 text-neutral-500">
-            {[p.size, p.color].filter(Boolean).join(" · ")} ·{" "}
+            {[p.size, p.color, p.subcategory].filter(Boolean).join(" · ")}
+            {p.size || p.color || p.subcategory ? " · " : ""}
             {p.giveaway ? (
               <span className="font-semibold text-emerald-700">Give away · Free</span>
             ) : (
@@ -93,16 +89,49 @@ export default async function ProductPage({
               </>
             )}
           </p>
-          <p className="mt-5 rounded-xl bg-red-50 p-4 text-center font-medium text-red-700">
-            Sold out
-          </p>
-          <Link href="/" className="mt-4 block text-center text-brand underline">
-            See other products
-          </Link>
+          {p.description ? (
+            <p className="mt-3 whitespace-pre-wrap text-neutral-700">{p.description}</p>
+          ) : null}
+
+          {p.stock <= 0 ? (
+            <>
+              <p className="mt-5 rounded-xl bg-red-50 p-4 text-center font-medium text-red-700">Sold out</p>
+              <Link href="/" className="mt-4 block text-center text-brand underline">
+                See other products
+              </Link>
+            </>
+          ) : (
+            <div className="mt-6">
+              <ShopClient products={[p]} shopName={shopName} />
+            </div>
+          )}
         </div>
-      ) : (
-        <ShopClient products={[p]} shopName={shopName} />
       )}
     </main>
+  );
+}
+
+function Gallery({ images, name }: { images: string[]; name: string }) {
+  if (!images.length) return <div className="aspect-square w-full rounded-2xl bg-neutral-100" />;
+  if (images.length === 1) {
+    return (
+      <div className="aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={images[0]} alt={name} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+  return (
+    <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+      {images.map((url, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={i}
+          src={url}
+          alt={name}
+          className="aspect-square w-72 shrink-0 snap-center rounded-2xl object-cover"
+        />
+      ))}
+    </div>
   );
 }

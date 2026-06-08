@@ -39,6 +39,7 @@ export default function SellForm({
   addedTotal,
   batch = false,
   onBatchChange,
+  subcats = {},
 }: {
   pricePresets: number[];
   initialFile: File;
@@ -49,6 +50,7 @@ export default function SellForm({
   addedTotal?: number;
   batch?: boolean;
   onBatchChange?: (b: boolean) => void;
+  subcats?: Record<string, string[]>;
 }) {
   const reduce = useReducedMotion();
   const [screen, setScreen] = useState<Screen>("wizard");
@@ -66,6 +68,8 @@ export default function SellForm({
   const [aiCategory, setAiCategory] = useState<Category | null>(null);
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const [description, setDescription] = useState("");
   const [units, setUnits] = useState(1);
   const [price, setPrice] = useState(0);
   const [mrp, setMrp] = useState(0);
@@ -139,6 +143,7 @@ export default function SellForm({
     setCategory(c);
     if (!SIZE_OPTIONS[c].includes(size)) setSize("");
     if (!HAS_COLOR[c]) setColor("");
+    if (!(subcats[c] || []).includes(subcategory)) setSubcategory("");
     go(1);
   }
 
@@ -159,6 +164,8 @@ export default function SellForm({
           name: name.trim(),
           category,
           image_url: imageUrl,
+          subcategory,
+          description,
           size,
           color,
           price: giveaway ? 0 : price,
@@ -340,6 +347,27 @@ export default function SellForm({
                   </div>
                 </div>
 
+                {(subcats[category] || []).length > 0 && (
+                  <div>
+                    <label className="mb-2 block text-lg font-semibold">Subcategory</label>
+                    <div className="flex flex-wrap gap-2.5">
+                      {(subcats[category] || []).map((sub) => (
+                        <button
+                          key={sub}
+                          onClick={() => setSubcategory(subcategory === sub ? "" : sub)}
+                          className={`rounded-full border-2 px-5 py-2.5 text-lg font-medium transition active:scale-95 ${
+                            subcategory === sub
+                              ? `${accent.solid} ${accent.solidText} border-transparent`
+                              : "border-neutral-300 bg-white text-neutral-700"
+                          }`}
+                        >
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {HAS_COLOR[category] && (
                   <div>
                     <label className="mb-2 block text-lg font-semibold">Colour</label>
@@ -365,6 +393,18 @@ export default function SellForm({
                 <div>
                   <label className="mb-2 block text-lg font-semibold">How many units?</label>
                   <Stepper value={units} onChange={setUnits} />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-lg font-semibold">
+                    Description <span className="font-normal text-neutral-400">(optional)</span>
+                  </label>
+                  <textarea
+                    className="input min-h-20"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Condition, details, what's included..."
+                  />
                 </div>
 
                 <button

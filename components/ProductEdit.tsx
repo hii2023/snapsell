@@ -1,23 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Stepper } from "./ui";
 import { SIZE_OPTIONS, SIZE_LABEL, HAS_COLOR, COLORS, CATEGORY_META } from "@/lib/constants";
 import type { Category, Product } from "@/lib/types";
 
 export default function ProductEdit({
   product,
+  subcats,
   onClose,
   onSaved,
   onDeleted,
 }: {
   product: Product;
+  subcats: Record<string, string[]>;
   onClose: () => void;
   onSaved: (p: Product) => void;
   onDeleted: (id: string) => void;
 }) {
   const [name, setName] = useState(product.name);
   const [category, setCategory] = useState<Category>(product.category);
+  const [subcategory, setSubcategory] = useState(product.subcategory || "");
+  const [description, setDescription] = useState(product.description || "");
+  const [images, setImages] = useState<string[]>(
+    product.images?.length ? product.images : product.image_url ? [product.image_url] : []
+  );
   const [size, setSize] = useState(product.size);
   const [color, setColor] = useState(product.color);
   const [price, setPrice] = useState(product.price);
@@ -27,7 +34,33 @@ export default function ProductEdit({
   const [stock, setStock] = useState(product.stock);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const subOptions = subcats[category] || [];
+
+  async function addImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    setError("");
+    try {
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const json = await res.json();
+        if (res.ok && json.url) setImages((prev) => [...prev, json.url]);
+      }
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+  function removeImage(url: string) {
+    setImages((prev) => prev.filter((u) => u !== url));
+  }
 
   async function del() {
     setError("");
@@ -48,6 +81,7 @@ export default function ProductEdit({
     setCategory(c);
     if (!SIZE_OPTIONS[c].includes(size)) setSize("");
     if (!HAS_COLOR[c]) setColor("");
+    if (!(subcats[c] || []).includes(subcategory)) setSubcategory("");
   }
 
   async function save() {
@@ -63,6 +97,9 @@ export default function ProductEdit({
           id: product.id,
           name: name.trim(),
           category,
+          subcategory,
+          description,
+          images,
           size,
           color,
           price,
@@ -98,8 +135,45 @@ export default function ProductEdit({
 
         <div className="space-y-5">
           <div>
+            <label className="label">Photos</label>
+            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={addImages} />
+            <div className="flex flex-wrap gap-2">
+              {images.map((url) => (
+                <div key={url} className="relative h-20 w-20 overflow-hidden rounded-xl bg-neutral-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    onClick={() => removeImage(url)}
+                    aria-label="Remove photo"
+                    className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="flex h-20 w-20 flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 text-xs text-neutral-500 disabled:opacity-50"
+              >
+                {uploading ? "..." : "+ Add"}
+              </button>
+            </div>
+          </div>
+
+          <div>
             <label className="label">Product name</label>
             <input className="input text-lg" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+
+          <div>
+            <label className="label">Description (optional)</label>
+            <textarea
+              className="input min-h-20"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Condition, details, what's included..."
+            />
           </div>
 
           <div>
@@ -116,6 +190,23 @@ export default function ProductEdit({
               ))}
             </div>
           </div>
+
+          {subOptions.length > 0 && (
+            <div>
+              <label className="label">Subcategory</label>
+              <div className="flex flex-wrap gap-2">
+                {subOptions.map((sub) => (
+                  <button
+                    key={sub}
+                    onClick={() => setSubcategory(subcategory === sub ? "" : sub)}
+                    className={`chip ${subcategory === sub ? "chip-on" : "chip-off"}`}
+                  >
+                    {sub}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="label">{SIZE_LABEL[category]}</label>

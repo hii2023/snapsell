@@ -30,6 +30,7 @@ export default async function DashboardPage() {
     delivery_fee_amount: row?.delivery_fee_amount ?? 100,
     delivery_free_above: row?.delivery_free_above ?? 1000,
     extra_categories: Array.isArray(row?.extra_categories) ? row.extra_categories : [],
+    subcats: row?.subcats && typeof row.subcats === "object" ? row.subcats : {},
   };
 
   return (

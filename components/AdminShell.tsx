@@ -154,6 +154,7 @@ export default function AdminShell({
                 addedTotal={added}
                 batch={batch}
                 onBatchChange={setBatch}
+                subcats={settings.subcats}
               />
             </motion.div>
           </motion.div>

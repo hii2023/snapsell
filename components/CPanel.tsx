@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { CATEGORY_META } from "@/lib/constants";
-import type { ExtraCategory, Settings } from "@/lib/types";
+import type { Settings } from "@/lib/types";
 
 function slug(s: string) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "cat";
 }
 
 export default function CPanel({ initial }: { initial: Settings }) {
-  const [s, setS] = useState<Settings>(initial);
+  const [s, setS] = useState<Settings>({ ...initial, subcats: initial.subcats || {} });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [newCat, setNewCat] = useState("");
@@ -18,6 +18,12 @@ export default function CPanel({ initial }: { initial: Settings }) {
   function set<K extends keyof Settings>(k: K, v: Settings[K]) {
     setS((prev) => ({ ...prev, [k]: v }));
   }
+
+  // Every category: built-in plus custom.
+  const allCats = [
+    ...CATEGORY_META.map((c) => ({ id: c.id as string, label: c.label, custom: false })),
+    ...s.extra_categories.map((c) => ({ id: c.id, label: c.label, custom: true })),
+  ];
 
   function addCategory() {
     const label = newCat.trim();
@@ -28,25 +34,19 @@ export default function CPanel({ initial }: { initial: Settings }) {
   }
   function removeCategory(id: string) {
     set("extra_categories", s.extra_categories.filter((c) => c.id !== id));
+    const next = { ...s.subcats };
+    delete next[id];
+    set("subcats", next);
   }
-  function addSub(cat: ExtraCategory) {
-    const label = (newSub[cat.id] || "").trim();
+  function addSub(catId: string) {
+    const label = (newSub[catId] || "").trim();
     if (!label) return;
-    set(
-      "extra_categories",
-      s.extra_categories.map((c) =>
-        c.id === cat.id ? { ...c, subs: [...c.subs, label] } : c
-      )
-    );
-    setNewSub((p) => ({ ...p, [cat.id]: "" }));
+    const cur = s.subcats[catId] || [];
+    if (!cur.includes(label)) set("subcats", { ...s.subcats, [catId]: [...cur, label] });
+    setNewSub((p) => ({ ...p, [catId]: "" }));
   }
-  function removeSub(cat: ExtraCategory, sub: string) {
-    set(
-      "extra_categories",
-      s.extra_categories.map((c) =>
-        c.id === cat.id ? { ...c, subs: c.subs.filter((x) => x !== sub) } : c
-      )
-    );
+  function removeSub(catId: string, sub: string) {
+    set("subcats", { ...s.subcats, [catId]: (s.subcats[catId] || []).filter((x) => x !== sub) });
   }
 
   async function save() {
@@ -107,25 +107,28 @@ export default function CPanel({ initial }: { initial: Settings }) {
       </section>
 
       <section>
-        <h3 className="mb-1 text-lg font-semibold">Categories</h3>
-        <p className="mb-3 text-sm text-neutral-500">
-          Built-in: {CATEGORY_META.map((c) => c.label).join(", ")}. Add your own below.
-        </p>
+        <h3 className="mb-1 text-lg font-semibold">Categories & subcategories</h3>
+        <p className="mb-3 text-sm text-neutral-500">Add subcategories under any category. Built-in categories can't be removed.</p>
 
         <div className="space-y-3">
-          {s.extra_categories.map((c) => (
-            <div key={c.id} className="card p-3">
+          {allCats.map((cat) => (
+            <div key={cat.id} className="card p-3">
               <div className="flex items-center justify-between">
-                <span className="font-medium">{c.label}</span>
-                <button onClick={() => removeCategory(c.id)} className="text-sm text-red-600">
-                  Remove
-                </button>
+                <span className="font-medium">
+                  {cat.label}
+                  {!cat.custom && <span className="ml-2 text-xs text-neutral-400">built-in</span>}
+                </span>
+                {cat.custom && (
+                  <button onClick={() => removeCategory(cat.id)} className="text-sm text-red-600">
+                    Remove
+                  </button>
+                )}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {c.subs.map((sub) => (
+                {(s.subcats[cat.id] || []).map((sub) => (
                   <span key={sub} className="flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-sm">
                     {sub}
-                    <button onClick={() => removeSub(c, sub)} className="text-neutral-400">×</button>
+                    <button onClick={() => removeSub(cat.id, sub)} className="text-neutral-400">×</button>
                   </span>
                 ))}
               </div>
@@ -133,10 +136,10 @@ export default function CPanel({ initial }: { initial: Settings }) {
                 <input
                   className="input flex-1 py-2 text-sm"
                   placeholder="Add subcategory"
-                  value={newSub[c.id] || ""}
-                  onChange={(e) => setNewSub((p) => ({ ...p, [c.id]: e.target.value }))}
+                  value={newSub[cat.id] || ""}
+                  onChange={(e) => setNewSub((p) => ({ ...p, [cat.id]: e.target.value }))}
                 />
-                <button onClick={() => addSub(c)} className="btn-ghost px-4 py-2 text-sm">
+                <button onClick={() => addSub(cat.id)} className="btn-ghost px-4 py-2 text-sm">
                   Add
                 </button>
               </div>
@@ -144,11 +147,14 @@ export default function CPanel({ initial }: { initial: Settings }) {
           ))}
         </div>
 
-        <div className="mt-3 flex gap-2">
-          <input className="input flex-1" placeholder="New category name" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
-          <button onClick={addCategory} className="btn-primary px-5">
-            Add
-          </button>
+        <div className="mt-4">
+          <label className="label">Add a new category</label>
+          <div className="flex gap-2">
+            <input className="input flex-1" placeholder="e.g. Books" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
+            <button onClick={addCategory} className="btn-primary px-5">
+              Add
+            </button>
+          </div>
         </div>
       </section>
 

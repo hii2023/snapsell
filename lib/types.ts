@@ -12,7 +12,10 @@ export type Product = {
   name: string;
   code: string;
   category: Category;
+  subcategory: string;
   image_url: string;
+  images: string[];
+  description: string;
   size: string;
   color: string;
   price: number;
@@ -83,6 +86,7 @@ export type Settings = {
   delivery_fee_amount: number;
   delivery_free_above: number;
   extra_categories: ExtraCategory[];
+  subcats: Record<string, string[]>;
 };
 
 export type VisionResult = {

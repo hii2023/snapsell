@@ -102,6 +102,7 @@ export default function OrdersClient({
               setFilter={setProdFilter}
               catFilter={catFilter}
               setCatFilter={setCatFilter}
+              subcats={settings.subcats}
             />
           )}
           {tab === "orders" && (
@@ -312,6 +313,7 @@ function ProductsTab({
   setFilter,
   catFilter,
   setCatFilter,
+  subcats,
 }: {
   products: Product[];
   setProducts: (p: Product[]) => void;
@@ -319,6 +321,7 @@ function ProductsTab({
   setFilter: (f: ProdFilter) => void;
   catFilter: CatFilter;
   setCatFilter: (c: CatFilter) => void;
+  subcats: Record<string, string[]>;
 }) {
   const [busy, setBusy] = useState("");
   const [query, setQuery] = useState("");
@@ -631,6 +634,7 @@ function ProductsTab({
       {editing && (
         <ProductEdit
           product={editing}
+          subcats={subcats}
           onClose={() => setEditing(null)}
           onSaved={(p) => {
             setProducts(products.map((x) => (x.id === p.id ? p : x)));
@@ -764,8 +768,18 @@ function OrdersTab({
                   <Badge tone={o.payment_status === "paid" ? "green" : "amber"}>
                     {o.payment_status === "paid" ? "Payment received" : "Payment pending"}
                   </Badge>
-                  <Badge tone={delivered ? "green" : dispatched ? "blue" : "amber"}>
-                    {delivered ? "Delivered" : dispatched ? "Dispatched" : "Pending dispatch"}
+                  <Badge
+                    tone={
+                      delivered ? "green" : dispatched ? "blue" : o.payment_status === "paid" ? "blue" : "amber"
+                    }
+                  >
+                    {delivered
+                      ? "Delivered"
+                      : dispatched
+                        ? "Dispatched"
+                        : o.payment_status === "paid"
+                          ? "Ready to dispatch"
+                          : "Awaiting payment"}
                   </Badge>
                 </div>
 
