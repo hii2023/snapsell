@@ -2,13 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import {
-  rupees,
-  CATEGORY_META,
-  PICKUP_ADDRESS,
-  PICKUP_DIRECTIONS_URL,
-  deliveryFeeFor,
-} from "@/lib/constants";
+import { rupees, CATEGORY_META, PICKUP_ADDRESS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
 import type { Category, CartLine, Product } from "@/lib/types";
 
@@ -20,15 +14,32 @@ declare global {
   }
 }
 
+type ShopCfg = {
+  upiId: string;
+  upiName: string;
+  whatsapp: string;
+  pickupAddress: string;
+  deliveryFee: number;
+  freeAbove: number;
+};
+
 export default function ShopClient({
   products,
-  razorpayKeyId,
   shopName,
+  cfg,
 }: {
   products: Product[];
-  razorpayKeyId: string;
   shopName: string;
+  cfg?: ShopCfg;
 }) {
+  const c: ShopCfg = cfg ?? {
+    upiId: process.env.NEXT_PUBLIC_UPI_ID || "",
+    upiName: process.env.NEXT_PUBLIC_UPI_NAME || shopName,
+    whatsapp: process.env.NEXT_PUBLIC_SELLER_WHATSAPP || "",
+    pickupAddress: "",
+    deliveryFee: 100,
+    freeAbove: 1000,
+  };
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
   const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
@@ -135,8 +146,14 @@ export default function ShopClient({
         cart={cart}
         total={total}
         shopName={shopName}
+        cfg={c}
         onBack={() => setStep("shop")}
         onDone={() => setStep("done")}
+        onRemove={(id) => setQty(id, 0)}
+        onClear={() => {
+          setCart([]);
+          setStep("shop");
+        }}
       />
     );
   }
@@ -255,11 +272,17 @@ export default function ShopClient({
 
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
             <div>
               <p className="text-sm text-neutral-500">{count} item(s)</p>
               <p className="text-lg font-semibold">{rupees(total)}</p>
             </div>
+            <button
+              onClick={() => setCart([])}
+              className="rounded-2xl border border-neutral-300 px-4 py-3 text-sm text-neutral-600"
+            >
+              Clear
+            </button>
             <button className="btn-primary flex-1" onClick={() => setStep("checkout")}>
               Checkout
             </button>
@@ -274,14 +297,20 @@ function Checkout({
   cart,
   total,
   shopName,
+  cfg,
   onBack,
   onDone,
+  onRemove,
+  onClear,
 }: {
   cart: CartLine[];
   total: number;
   shopName: string;
+  cfg: ShopCfg;
   onBack: () => void;
   onDone: () => void;
+  onRemove: (id: string) => void;
+  onClear: () => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -292,8 +321,12 @@ function Checkout({
   const [booked, setBooked] = useState<{ id: string; amount: number } | null>(null);
 
   const items = cart.map((l) => ({ product_id: l.product_id, qty: l.qty }));
-  const deliveryFee = deliveryFeeFor(total, fulfillment === "pickup");
+  const deliveryFee =
+    fulfillment === "pickup" || total <= 0 ? 0 : total >= cfg.freeAbove ? 0 : cfg.deliveryFee;
   const grandTotal = total + deliveryFee;
+  const pickupAddress = cfg.pickupAddress || PICKUP_ADDRESS;
+  const directionsUrl =
+    "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(pickupAddress);
 
   function validate(): boolean {
     if (!name.trim()) return fail("Enter your name");
@@ -336,6 +369,7 @@ function Checkout({
         fulfillment={fulfillment}
         cart={cart}
         shopName={shopName}
+        cfg={cfg}
         onDone={onDone}
       />
     );
@@ -343,23 +377,35 @@ function Checkout({
 
   return (
     <div className="mx-auto max-w-md px-4 py-6 pb-28">
-      <button onClick={onBack} className="text-sm text-brand underline">
-        Back
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="text-sm text-brand underline">
+          Back
+        </button>
+        <button onClick={onClear} className="text-sm text-neutral-500 underline">
+          Clear cart
+        </button>
+      </div>
       <h2 className="mt-3 text-2xl font-semibold">Book your items</h2>
 
       <div className="mt-4 card divide-y divide-neutral-100">
         {cart.map((l) => (
-          <div key={l.product_id} className="flex justify-between p-3 text-sm">
-            <span>
+          <div key={l.product_id} className="flex items-center justify-between gap-2 p-3 text-sm">
+            <span className="flex-1">
               {l.qty} x {l.name} {l.size ? `(${l.size})` : ""}
             </span>
             <span className="font-medium">{rupees(l.price * l.qty)}</span>
+            <button
+              onClick={() => onRemove(l.product_id)}
+              aria-label="Remove"
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-100 text-neutral-500"
+            >
+              ×
+            </button>
           </div>
         ))}
         {deliveryFee > 0 && (
           <div className="flex justify-between p-3 text-sm">
-            <span>Delivery {total < 1000 ? "(free over ₹1000)" : ""}</span>
+            <span>Delivery (free over {rupees(cfg.freeAbove)})</span>
             <span className="font-medium">{rupees(deliveryFee)}</span>
           </div>
         )}
@@ -410,9 +456,9 @@ function Checkout({
         ) : (
           <div className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
             <p className="font-medium text-ink">Collect from store:</p>
-            <p className="mt-1">{PICKUP_ADDRESS}</p>
+            <p className="mt-1">{pickupAddress}</p>
             <a
-              href={PICKUP_DIRECTIONS_URL}
+              href={directionsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 inline-flex items-center gap-1 font-medium text-brand underline"
@@ -448,6 +494,7 @@ function BookingConfirm({
   fulfillment,
   cart,
   shopName,
+  cfg,
   onDone,
 }: {
   bookingId: string;
@@ -457,14 +504,15 @@ function BookingConfirm({
   fulfillment: "delivery" | "pickup";
   cart: CartLine[];
   shopName: string;
+  cfg: ShopCfg;
   onDone: () => void;
 }) {
   const ref = "IR-" + bookingId.slice(0, 8).toUpperCase();
   const [qr, setQr] = useState("");
 
-  const upi = process.env.NEXT_PUBLIC_UPI_ID || "";
-  const upiName = process.env.NEXT_PUBLIC_UPI_NAME || shopName;
-  const wa = process.env.NEXT_PUBLIC_SELLER_WHATSAPP || "";
+  const upi = cfg.upiId;
+  const upiName = cfg.upiName || shopName;
+  const wa = cfg.whatsapp;
 
   useEffect(() => {
     if (!upi || amount <= 0) return;

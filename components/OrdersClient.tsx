@@ -5,9 +5,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon, CheckIcon } from "./icons";
 import ProductEdit from "./ProductEdit";
-import type { Category, Order, Product } from "@/lib/types";
+import CPanel from "./CPanel";
+import type { Category, Order, Product, Settings } from "@/lib/types";
 
-type Tab = "overview" | "products" | "orders";
+type Tab = "overview" | "products" | "orders" | "settings";
 type ProdFilter = "instock" | "oos";
 type CatFilter = Category | "all";
 type OrderFilter = "all" | "dispatch" | "paid" | "unpaid";
@@ -20,9 +21,11 @@ const isPendingDispatch = (o: Order) =>
 export default function OrdersClient({
   initialOrders,
   initialProducts,
+  settings,
 }: {
   initialOrders: Order[];
   initialProducts: Product[];
+  settings: Settings;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [orders, setOrders] = useState(initialOrders);
@@ -55,11 +58,12 @@ export default function OrdersClient({
     { id: "overview", label: "Overview" },
     { id: "products", label: "Products" },
     { id: "orders", label: "Orders" },
+    { id: "settings", label: "Settings" },
   ];
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-      <div className="mb-5 grid grid-cols-3 gap-2">
+      <div className="mb-5 grid grid-cols-4 gap-2">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -108,6 +112,7 @@ export default function OrdersClient({
               setFilter={setOrderFilter}
             />
           )}
+          {tab === "settings" && <CPanel initial={settings} />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -365,6 +370,21 @@ function ProductsTab({
     });
   }
 
+  async function deleteSelected() {
+    if (!confirm(`Delete ${selected.size} product(s) permanently?`)) return;
+    const ids = [...selected];
+    setBusy("bulk");
+    try {
+      for (const id of ids) {
+        await fetch(`/api/products?id=${id}`, { method: "DELETE" });
+      }
+      setProducts(products.filter((p) => !selected.has(p.id)));
+      setSelected(new Set());
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
     <div className="pb-24">
       <input
@@ -485,9 +505,16 @@ function ProductsTab({
 
       {selected.size > 0 && (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
-          <div className="mx-auto flex max-w-md items-center gap-3">
+          <div className="mx-auto flex max-w-md items-center gap-2">
             <button onClick={() => setSelected(new Set())} className="text-sm text-neutral-500 underline">
               Clear
+            </button>
+            <button
+              onClick={deleteSelected}
+              disabled={busy === "bulk"}
+              className="rounded-2xl border border-red-300 px-4 py-3 text-sm font-medium text-red-600 disabled:opacity-50"
+            >
+              {busy === "bulk" ? "..." : `Delete ${selected.size}`}
             </button>
             <button
               onClick={() => {

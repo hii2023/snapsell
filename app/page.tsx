@@ -13,16 +13,37 @@ const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 export default async function ShopPage() {
   let products: Product[] = [];
 
+  let cfg = {
+    upiId: process.env.NEXT_PUBLIC_UPI_ID || "",
+    upiName: process.env.NEXT_PUBLIC_UPI_NAME || shopName,
+    whatsapp: process.env.NEXT_PUBLIC_SELLER_WHATSAPP || "",
+    pickupAddress: "",
+    deliveryFee: 100,
+    freeAbove: 1000,
+  };
+
   if (supabaseConfigured()) {
     const supabase = await supabaseServer();
-    // RLS already restricts to in-stock, active products, but we filter too.
-    const { data } = await supabase
-      .from(T.products)
-      .select("*")
-      .gt("stock", 0)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: row }] = await Promise.all([
+      supabase
+        .from(T.products)
+        .select("*")
+        .gt("stock", 0)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase.from(T.settings).select("*").eq("id", 1).single(),
+    ]);
     products = (data as Product[]) || [];
+    if (row) {
+      cfg = {
+        upiId: row.upi_id || cfg.upiId,
+        upiName: row.upi_name || cfg.upiName,
+        whatsapp: row.whatsapp_number || cfg.whatsapp,
+        pickupAddress: row.pickup_address || "",
+        deliveryFee: row.delivery_fee_amount ?? 100,
+        freeAbove: row.delivery_free_above ?? 1000,
+      };
+    }
   }
 
   return (
@@ -45,11 +66,7 @@ export default async function ShopPage() {
           </p>
         </div>
       ) : (
-        <ShopClient
-          products={products}
-          razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ""}
-          shopName={shopName}
-        />
+        <ShopClient products={products} shopName={shopName} cfg={cfg} />
       )}
     </main>
   );

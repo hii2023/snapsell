@@ -8,21 +8,22 @@ import OrdersClient from "./OrdersClient";
 import SellForm from "./SellForm";
 import CameraCapture from "./CameraCapture";
 import Logo from "./Logo";
-import type { Order, Product } from "@/lib/types";
+import type { Order, Product, Settings } from "@/lib/types";
 
 const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
 type Phase = "closed" | "camera" | "wizard";
 
 export default function AdminShell({
-  pricePresets,
+  settings,
   initialOrders,
   initialProducts,
 }: {
-  pricePresets: number[];
+  settings: Settings;
   initialOrders: Order[];
   initialProducts: Product[];
 }) {
+  const pricePresets = settings.price_presets;
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("closed");
   const [queue, setQueue] = useState<File[]>([]);
@@ -68,7 +69,7 @@ export default function AdminShell({
     <>
       <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/orders">
+          <Link href="/">
             <Logo />
           </Link>
           <div className="flex items-center gap-2">
@@ -90,7 +91,7 @@ export default function AdminShell({
         </div>
       </header>
 
-      <OrdersClient initialOrders={initialOrders} initialProducts={initialProducts} />
+      <OrdersClient initialOrders={initialOrders} initialProducts={initialProducts} settings={settings} />
 
       <button
         onClick={startAdd}

@@ -72,6 +72,19 @@ export type CartLine = {
   stock: number;
 };
 
+export type ExtraCategory = { id: string; label: string; subs: string[] };
+
+export type Settings = {
+  price_presets: number[];
+  upi_id: string;
+  upi_name: string;
+  whatsapp_number: string;
+  pickup_address: string;
+  delivery_fee_amount: number;
+  delivery_free_above: number;
+  extra_categories: ExtraCategory[];
+};
+
 export type VisionResult = {
   name: string;
   category: Category;

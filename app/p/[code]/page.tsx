@@ -101,11 +101,7 @@ export default async function ProductPage({
           </Link>
         </div>
       ) : (
-        <ShopClient
-          products={[p]}
-          razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ""}
-          shopName={shopName}
-        />
+        <ShopClient products={[p]} shopName={shopName} />
       )}
     </main>
   );
