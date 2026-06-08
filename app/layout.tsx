@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 const plex = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         {children}
         <ServiceWorkerRegister />
+        <InstallAppButton />
       </body>
     </html>
   );
