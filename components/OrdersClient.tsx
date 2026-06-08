@@ -12,7 +12,8 @@ import type { Category, Order, Product, Settings } from "@/lib/types";
 type Tab = "overview" | "products" | "orders" | "settings";
 type ProdFilter = "instock" | "oos";
 type CatFilter = Category | "all";
-type OrderFilter = "all" | "dispatch" | "paid" | "unpaid";
+type OrderFilter = "all" | "unpaid" | "paid" | "ready" | "booked" | "delivered" | "pickup" | "return";
+type FulfillmentFilter = "all" | "delivery" | "pickup";
 
 const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
@@ -39,6 +40,7 @@ export default function OrdersClient({
   const [prodFilter, setProdFilter] = useState<ProdFilter>("instock");
   const [catFilter, setCatFilter] = useState<CatFilter>("all");
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("unpaid");
+  const [fulfillmentFilter, setFulfillmentFilter] = useState<FulfillmentFilter>("all");
 
   function openProducts(f: ProdFilter) {
     setProdFilter(f);
@@ -112,6 +114,8 @@ export default function OrdersClient({
               setOrders={setOrders}
               filter={orderFilter}
               setFilter={setOrderFilter}
+              fulfillmentFilter={fulfillmentFilter}
+              setFulfillmentFilter={setFulfillmentFilter}
             />
           )}
           {tab === "settings" && <CPanel initial={settings} />}
@@ -705,11 +709,15 @@ function OrdersTab({
   setOrders,
   filter,
   setFilter,
+  fulfillmentFilter,
+  setFulfillmentFilter,
 }: {
   orders: Order[];
   setOrders: (o: Order[]) => void;
   filter: OrderFilter;
   setFilter: (f: OrderFilter) => void;
+  fulfillmentFilter: FulfillmentFilter;
+  setFulfillmentFilter: (f: FulfillmentFilter) => void;
 }) {
   const [busy, setBusy] = useState("");
 
@@ -733,9 +741,27 @@ function OrdersTab({
   }
 
   const shown = orders.filter((o) => {
-    if (filter === "dispatch") return isPendingDispatch(o);
-    if (filter === "paid") return o.payment_status === "paid";
-    if (filter === "unpaid") return o.payment_status === "pending";
+    // Filter by order stage
+    if (filter === "unpaid") {
+      if (o.payment_status !== "pending") return false;
+    } else if (filter === "paid") {
+      if (o.payment_status !== "paid") return false;
+    } else if (filter === "ready") {
+      if (o.delivery_status !== "out_for_delivery") return false;
+    } else if (filter === "booked") {
+      if (o.delivery_status !== "booked") return false;
+    } else if (filter === "delivered") {
+      if (o.delivery_status !== "delivered") return false;
+    } else if (filter === "pickup") {
+      if (o.fulfillment !== "pickup" || o.delivery_status === "delivered") return false;
+    } else if (filter === "return") {
+      if (o.return_status === "none") return false;
+    }
+
+    // Filter by fulfillment (delivery/pickup)
+    if (fulfillmentFilter === "delivery" && o.fulfillment !== "delivery") return false;
+    if (fulfillmentFilter === "pickup" && o.fulfillment !== "pickup") return false;
+
     return true;
   });
 
@@ -778,20 +804,43 @@ function OrdersTab({
   }
 
   const filters: { id: OrderFilter; label: string }[] = [
-    { id: "all", label: "All" },
-    { id: "dispatch", label: "To dispatch" },
-    { id: "paid", label: "Paid" },
     { id: "unpaid", label: "Unpaid" },
+    { id: "paid", label: "Paid" },
+    { id: "ready", label: "Ready to Dispatch" },
+    { id: "booked", label: "Booked" },
+    { id: "delivered", label: "Delivered" },
+    { id: "pickup", label: "Customer Pickup" },
+    { id: "return", label: "Return" },
+  ];
+
+  const fulfillmentFilters: { id: FulfillmentFilter; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "delivery", label: "Delivery" },
+    { id: "pickup", label: "Pickup" },
   ];
 
   return (
     <div>
+      <p className="mb-2 text-sm font-semibold text-neutral-700">Order Status</p>
       <div className="mb-4 flex flex-wrap gap-2">
         {filters.map((f) => (
           <button
             key={f.id}
             onClick={() => setFilter(f.id)}
             className={`chip ${filter === f.id ? "chip-on" : "chip-off"}`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="mb-2 text-sm font-semibold text-neutral-700">Fulfillment Type</p>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {fulfillmentFilters.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFulfillmentFilter(f.id)}
+            className={`chip ${fulfillmentFilter === f.id ? "chip-on" : "chip-off"}`}
           >
             {f.label}
           </button>
