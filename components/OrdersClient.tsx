@@ -861,121 +861,136 @@ function OrdersTab({
                   </Badge>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 space-y-2">
                   {/* Step 1: Payment Received */}
                   {o.payment_status !== "paid" && (
-                    <button
-                      className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { payment_status: "paid" })}
-                    >
-                      ① Payment received
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { payment_status: "paid" })}
+                      >
+                        ① Payment received
+                      </button>
+                    </div>
                   )}
 
                   {/* Step 2: Book Delivery (only for delivery orders, after payment received) */}
                   {o.fulfillment === "delivery" && o.payment_status === "paid" && !dispatched && !delivered && (
-                    <button
-                      className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => bookDelivery(o.id)}
-                    >
-                      ② Book delivery
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => bookDelivery(o.id)}
+                      >
+                        ② Book delivery
+                      </button>
+                    </div>
                   )}
 
                   {/* Step 3: Mark Dispatched (after payment received, for delivery or after booking) */}
                   {o.payment_status === "paid" && !dispatched && !delivered && (
-                    <button
-                      className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
-                    >
-                      ③ Mark dispatched
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
+                      >
+                        ③ Mark dispatched
+                      </button>
+                    </div>
                   )}
 
                   {/* Step 4: Mark Delivered (after dispatched) */}
                   {dispatched && !delivered && (
-                    <button
-                      className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { delivery_status: "delivered" })}
-                    >
-                      ④ Mark delivered
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { delivery_status: "delivered" })}
+                      >
+                        ④ Mark delivered
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 5: Mark Return Requested (after dispatched) */}
+                  {dispatched && o.return_status === "none" && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2 text-sm text-orange-700 disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { return_status: "requested" })}
+                      >
+                        ⑤ Mark return requested
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 6: Accept Return */}
+                  {o.return_status === "requested" && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { return_status: "accepted" })}
+                      >
+                        ⑥ Accept return
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 7: Mark Refund Requested */}
+                  {o.return_status === "accepted" && o.refund_status === "none" && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { refund_status: "requested" })}
+                      >
+                        ⑦ Mark refund requested
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 8: Mark Refunded */}
+                  {o.refund_status === "requested" && (
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        type="number"
+                        value={o.refund_amount || o.total}
+                        onChange={(e) => {
+                          const amount = Number(e.target.value);
+                          if (amount > 0 && amount <= o.total) {
+                            update(o.id, { refund_amount: amount });
+                          }
+                        }}
+                        className="input w-28 px-3 py-2 text-sm"
+                        min="0"
+                        max={o.total}
+                        placeholder="Refund amount"
+                      />
+                      <button
+                        className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { refund_status: "completed" })}
+                      >
+                        ⑧ Mark refunded
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Status badges */}
+                  {(o.payment_status === "paid" || o.return_status !== "none" || o.refund_status !== "none") && (
+                    <div className="flex flex-wrap gap-2">
+                      {o.payment_status === "paid" && <Badge tone="green">✓ Payment received</Badge>}
+                      {o.return_status === "requested" && <Badge tone="amber">Return requested</Badge>}
+                      {o.return_status === "accepted" && <Badge tone="green">✓ Return accepted</Badge>}
+                      {o.refund_status === "requested" && <Badge tone="amber">Refund requested</Badge>}
+                      {o.refund_status === "completed" && <Badge tone="green">✓ Refunded ₹{o.refund_amount || o.total}</Badge>}
+                    </div>
                   )}
                 </div>
-
-                {dispatched && o.return_status === "none" && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2 text-sm text-orange-700 disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { return_status: "requested" })}
-                    >
-                      Mark return requested
-                    </button>
-                  </div>
-                )}
-
-                {o.return_status === "requested" && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { return_status: "accepted" })}
-                    >
-                      Accept return
-                    </button>
-                  </div>
-                )}
-
-                {o.return_status === "accepted" && o.refund_status === "none" && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { refund_status: "requested" })}
-                    >
-                      Mark refund requested
-                    </button>
-                  </div>
-                )}
-
-                {o.refund_status === "requested" && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <input
-                      type="number"
-                      value={o.refund_amount || o.total}
-                      onChange={(e) => {
-                        const amount = Number(e.target.value);
-                        if (amount > 0 && amount <= o.total) {
-                          update(o.id, { refund_amount: amount });
-                        }
-                      }}
-                      className="input w-28 px-3 py-2 text-sm"
-                      min="0"
-                      max={o.total}
-                    />
-                    <button
-                      className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { refund_status: "completed" })}
-                    >
-                      Mark refunded
-                    </button>
-                  </div>
-                )}
-
-                {(o.return_status !== "none" || o.refund_status !== "none") && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {o.return_status === "requested" && <Badge tone="amber">Return requested</Badge>}
-                    {o.return_status === "accepted" && <Badge tone="green">Return accepted</Badge>}
-                    {o.refund_status === "requested" && <Badge tone="amber">Refund requested</Badge>}
-                    {o.refund_status === "completed" && <Badge tone="green">Refunded ₹{o.refund_amount || o.total}</Badge>}
-                  </div>
-                )}
               </div>
             );
           })}
