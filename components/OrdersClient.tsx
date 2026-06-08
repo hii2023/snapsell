@@ -899,6 +899,59 @@ function OrdersTab({
                     </button>
                   )}
                 </div>
+
+                {delivered && o.return_status === "none" && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2 text-sm text-orange-700 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { return_status: "requested" })}
+                    >
+                      Mark return requested
+                    </button>
+                  </div>
+                )}
+
+                {o.return_status === "requested" && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { return_status: "approved" })}
+                    >
+                      Approve return
+                    </button>
+                    <button
+                      className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { return_status: "rejected" })}
+                    >
+                      Reject return
+                    </button>
+                  </div>
+                )}
+
+                {o.return_status === "approved" && o.refund_status === "none" && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { refund_status: "completed", refund_amount: o.total })}
+                    >
+                      Process refund (₹{o.total})
+                    </button>
+                  </div>
+                )}
+
+                {(o.return_status !== "none" || o.refund_status !== "none") && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {o.return_status === "requested" && <Badge tone="amber">Return requested</Badge>}
+                    {o.return_status === "approved" && <Badge tone="green">Return approved</Badge>}
+                    {o.return_status === "rejected" && <Badge tone="red">Return rejected</Badge>}
+                    {o.refund_status === "pending" && <Badge tone="amber">Refund pending</Badge>}
+                    {o.refund_status === "completed" && <Badge tone="green">Refunded ₹{o.refund_amount}</Badge>}
+                  </div>
+                )}
               </div>
             );
           })}
