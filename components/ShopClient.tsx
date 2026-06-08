@@ -456,15 +456,26 @@ function Checkout({
         ) : (
           <div className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
             <p className="font-medium text-ink">Collect from store:</p>
-            <p className="mt-1">{pickupAddress}</p>
-            <a
-              href={directionsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 font-medium text-brand underline"
-            >
-              Get directions
-            </a>
+            <p className="mt-1 whitespace-pre-wrap">{pickupAddress}</p>
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(pickupAddress);
+                  alert("Address copied!");
+                }}
+                className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 active:scale-[0.98]"
+              >
+                📋 Copy
+              </button>
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-brand underline"
+              >
+                Get directions
+              </a>
+            </div>
           </div>
         )}
       </div>
