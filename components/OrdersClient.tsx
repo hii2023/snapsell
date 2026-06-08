@@ -888,8 +888,21 @@ function OrdersTab({
                     </div>
                   )}
 
-                  {/* Step 3: Mark Dispatched (after payment received, for delivery or after booking) */}
-                  {o.payment_status === "paid" && !dispatched && !delivered && (
+                  {/* Step 2: Mark Customer Picked Up (only for pickup orders, after payment received) */}
+                  {o.fulfillment === "pickup" && o.payment_status === "paid" && !dispatched && !delivered && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-xl border border-purple-300 bg-purple-50 px-4 py-2 text-sm text-purple-700 disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
+                      >
+                        ② Customer picked up
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 3: Mark Dispatched (only for delivery orders, after payment received) */}
+                  {o.fulfillment === "delivery" && o.payment_status === "paid" && !dispatched && !delivered && (
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
@@ -901,7 +914,7 @@ function OrdersTab({
                     </div>
                   )}
 
-                  {/* Step 4: Mark Delivered (after dispatched) */}
+                  {/* Step 4/3: Mark Delivered (after dispatched/pickup) */}
                   {dispatched && !delivered && (
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -909,12 +922,12 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { delivery_status: "delivered" })}
                       >
-                        ④ Mark delivered
+                        {o.fulfillment === "delivery" ? "④ Mark delivered" : "③ Mark delivered"}
                       </button>
                     </div>
                   )}
 
-                  {/* Step 5: Mark Return Requested (after dispatched) */}
+                  {/* Step 5/4: Mark Return Requested (after dispatched/pickup) */}
                   {dispatched && o.return_status === "none" && (
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -922,12 +935,12 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { return_status: "requested" })}
                       >
-                        ⑤ Mark return requested
+                        {o.fulfillment === "delivery" ? "⑤ Mark return requested" : "④ Mark return requested"}
                       </button>
                     </div>
                   )}
 
-                  {/* Step 6: Accept Return */}
+                  {/* Step 6/5: Accept Return */}
                   {o.return_status === "requested" && (
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -935,12 +948,12 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { return_status: "accepted" })}
                       >
-                        ⑥ Accept return
+                        {o.fulfillment === "delivery" ? "⑥ Accept return" : "⑤ Accept return"}
                       </button>
                     </div>
                   )}
 
-                  {/* Step 7: Mark Refund Requested */}
+                  {/* Step 7/6: Mark Refund Requested */}
                   {o.return_status === "accepted" && o.refund_status === "none" && (
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -948,12 +961,12 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { refund_status: "requested" })}
                       >
-                        ⑦ Mark refund requested
+                        {o.fulfillment === "delivery" ? "⑦ Mark refund requested" : "⑥ Mark refund requested"}
                       </button>
                     </div>
                   )}
 
-                  {/* Step 8: Mark Refunded */}
+                  {/* Step 8/7: Mark Refunded */}
                   {o.refund_status === "requested" && (
                     <div className="flex flex-wrap gap-2">
                       <input
@@ -975,7 +988,7 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { refund_status: "completed" })}
                       >
-                        ⑧ Mark refunded
+                        {o.fulfillment === "delivery" ? "⑧ Mark refunded" : "⑦ Mark refunded"}
                       </button>
                     </div>
                   )}
