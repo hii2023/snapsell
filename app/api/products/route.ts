@@ -69,6 +69,21 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ product: data });
 }
 
+// Delete a product (seller-only).
+export async function DELETE(req: NextRequest) {
+  const seller = await requireSeller();
+  if (!seller.ok) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  const supabase = await supabaseServer();
+  const { error } = await supabase.from(T.products).delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
+
 // Edit / restock / toggle a product (seller-only). All fields optional.
 export async function PATCH(req: NextRequest) {
   const seller = await requireSeller();

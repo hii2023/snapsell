@@ -9,10 +9,12 @@ export default function ProductEdit({
   product,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   product: Product;
   onClose: () => void;
   onSaved: (p: Product) => void;
+  onDeleted: (id: string) => void;
 }) {
   const [name, setName] = useState(product.name);
   const [category, setCategory] = useState<Category>(product.category);
@@ -20,10 +22,27 @@ export default function ProductEdit({
   const [color, setColor] = useState(product.color);
   const [price, setPrice] = useState(product.price);
   const [mrp, setMrp] = useState(product.mrp);
+  const [half, setHalf] = useState(false);
   const [giveaway, setGiveaway] = useState(product.giveaway);
   const [stock, setStock] = useState(product.stock);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+
+  async function del() {
+    setError("");
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/products?id=${product.id}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Delete failed");
+      onDeleted(product.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   function chooseCategory(c: Category) {
     setCategory(c);
@@ -154,25 +173,47 @@ export default function ProductEdit({
           </div>
 
           {!giveaway && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Price (₹)</label>
-                <input
-                  className="input"
-                  inputMode="numeric"
-                  value={price > 0 ? String(price) : ""}
-                  onChange={(e) => setPrice(Math.round(Number(e.target.value.replace(/[^0-9]/g, "")) || 0))}
-                />
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Price (₹)</label>
+                  <input
+                    className={`input ${half ? "bg-neutral-100 text-neutral-500" : ""}`}
+                    inputMode="numeric"
+                    readOnly={half}
+                    value={price > 0 ? String(price) : ""}
+                    onChange={(e) =>
+                      !half && setPrice(Math.round(Number(e.target.value.replace(/[^0-9]/g, "")) || 0))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="label">MRP (₹)</label>
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    value={mrp > 0 ? String(mrp) : ""}
+                    onChange={(e) => {
+                      const v = Math.round(Number(e.target.value.replace(/[^0-9]/g, "")) || 0);
+                      setMrp(v);
+                      if (half) setPrice(Math.round(v / 2));
+                    }}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="label">MRP (₹)</label>
+              <label className="flex items-center gap-2 text-sm text-neutral-700">
                 <input
-                  className="input"
-                  inputMode="numeric"
-                  value={mrp > 0 ? String(mrp) : ""}
-                  onChange={(e) => setMrp(Math.round(Number(e.target.value.replace(/[^0-9]/g, "")) || 0))}
+                  type="checkbox"
+                  checked={half}
+                  onChange={(e) => {
+                    setHalf(e.target.checked);
+                    if (e.target.checked && mrp > 0) setPrice(Math.round(mrp / 2));
+                  }}
+                  className="h-5 w-5"
+                  style={{ accentColor: "#0f766e" }}
                 />
-              </div>
+                Set price at 50% of MRP
+              </label>
             </div>
           )}
 
@@ -185,10 +226,18 @@ export default function ProductEdit({
 
           <button
             onClick={save}
-            disabled={saving}
+            disabled={saving || deleting}
             className="btn-primary w-full py-4 text-lg disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save changes"}
+          </button>
+
+          <button
+            onClick={del}
+            disabled={saving || deleting}
+            className="w-full rounded-2xl border border-red-300 py-3 text-base font-medium text-red-600 disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : "Delete product"}
           </button>
         </div>
       </div>

@@ -70,6 +70,7 @@ export default function SellForm({
   const [price, setPrice] = useState(0);
   const [mrp, setMrp] = useState(0);
   const [giveaway, setGiveaway] = useState(false);
+  const [half, setHalf] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
@@ -471,9 +472,26 @@ export default function SellForm({
                       inputMode="numeric"
                       placeholder="Original price (shown crossed out)"
                       value={mrp > 0 ? String(mrp) : ""}
-                      onChange={(e) => setMrp(Math.round(Number(e.target.value.replace(/[^0-9]/g, "")) || 0))}
+                      onChange={(e) => {
+                        const v = Math.round(Number(e.target.value.replace(/[^0-9]/g, "")) || 0);
+                        setMrp(v);
+                        if (half) setPrice(Math.round(v / 2));
+                      }}
                     />
                   </div>
+                  <label className="mt-2 flex items-center gap-2 text-sm text-neutral-700">
+                    <input
+                      type="checkbox"
+                      checked={half}
+                      onChange={(e) => {
+                        setHalf(e.target.checked);
+                        if (e.target.checked && mrp > 0) setPrice(Math.round(mrp / 2));
+                      }}
+                      className="h-5 w-5"
+                      style={{ accentColor: accentHex }}
+                    />
+                    Set price at 50% of MRP
+                  </label>
                   {mrp > 0 && mrp <= price && (
                     <p className="mt-1 text-sm text-amber-600">
                       MRP should be higher than the selling price to show a discount.

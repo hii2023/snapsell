@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { rupees, CATEGORY_META } from "@/lib/constants";
+import { rupees, CATEGORY_META, PICKUP_ADDRESS, PICKUP_DIRECTIONS_URL } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
 import type { Category, CartLine, Product } from "@/lib/types";
 
@@ -443,9 +443,18 @@ function Checkout({
             />
           </div>
         ) : (
-          <p className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
-            You will collect this order from the store. No address needed.
-          </p>
+          <div className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
+            <p className="font-medium text-ink">Collect from store:</p>
+            <p className="mt-1">{PICKUP_ADDRESS}</p>
+            <a
+              href={PICKUP_DIRECTIONS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 font-medium text-brand underline"
+            >
+              Get directions
+            </a>
+          </div>
         )}
         {total === 0 ? (
           <p className="rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-800">

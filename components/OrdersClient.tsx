@@ -321,6 +321,7 @@ function ProductsTab({
   const [shareOpen, setShareOpen] = useState(false);
   const [sendIndex, setSendIndex] = useState(0);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [view, setView] = useState<"list" | "grid">("list");
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -399,10 +400,25 @@ function ProductsTab({
         ))}
       </div>
 
+      <div className="mb-3 flex justify-end gap-1">
+        <button
+          onClick={() => setView("list")}
+          className={`rounded-lg px-3 py-1 text-sm ${view === "list" ? "bg-brand text-white" : "border border-neutral-300 text-neutral-600"}`}
+        >
+          List
+        </button>
+        <button
+          onClick={() => setView("grid")}
+          className={`rounded-lg px-3 py-1 text-sm ${view === "grid" ? "bg-brand text-white" : "border border-neutral-300 text-neutral-600"}`}
+        >
+          Grid
+        </button>
+      </div>
+
       {shown.length === 0 ? (
         <p className="py-16 text-center text-neutral-500">No matching products.</p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={view === "grid" ? "grid grid-cols-2 gap-3 lg:grid-cols-3" : "grid grid-cols-1 gap-2"}>
           {shown.map((p) => (
             <div
               key={p.id}
@@ -593,6 +609,10 @@ function ProductsTab({
             setProducts(products.map((x) => (x.id === p.id ? p : x)));
             setEditing(null);
           }}
+          onDeleted={(id) => {
+            setProducts(products.filter((x) => x.id !== id));
+            setEditing(null);
+          }}
         />
       )}
     </div>
@@ -735,10 +755,11 @@ function OrdersTab({
                   {!dispatched && !delivered && (
                     <button
                       className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                      disabled={busy === o.id}
+                      disabled={busy === o.id || o.payment_status !== "paid"}
+                      title={o.payment_status !== "paid" ? "Mark payment received first" : ""}
                       onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
                     >
-                      Mark dispatched
+                      {o.payment_status !== "paid" ? "Payment first" : "Mark dispatched"}
                     </button>
                   )}
                   {dispatched && (

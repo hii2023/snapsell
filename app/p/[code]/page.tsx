@@ -54,7 +54,7 @@ export default async function ProductPage({
     <main className="min-h-screen">
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-4">
-          <Link href="/orders" className="text-xl font-semibold">
+          <Link href="/" className="text-xl font-semibold">
             {shopName}
           </Link>
           {p?.code ? (

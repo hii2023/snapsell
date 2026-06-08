@@ -70,13 +70,22 @@ export default function AdminShell({
           <Link href="/orders" className="text-lg font-semibold">
             {shopName}
           </Link>
-          <button
-            onClick={startAdd}
-            className="flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            Add product
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              target="_blank"
+              className="rounded-full border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700"
+            >
+              View store
+            </Link>
+            <button
+              onClick={startAdd}
+              className="flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+              Add
+            </button>
+          </div>
         </div>
       </header>
 

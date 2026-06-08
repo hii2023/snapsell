@@ -80,6 +80,22 @@ export const CATEGORY_META: { id: Category; label: string }[] = [
 
 export const DEFAULT_PRICE_PRESETS = [49, 99, 199, 299, 499, 999];
 
+// Pickup location for "Pickup" orders + give-away items.
+export const PICKUP_ADDRESS =
+  "India Recycles, Godown no. 3 SK Estate, Nr Nagdev mandir, Sarkhej - Gandhinagar Highway, LJ University Rd, Ahmedabad, Gujarat 382210";
+export const PICKUP_DIRECTIONS_URL =
+  "https://www.google.com/maps/dir/?api=1&destination=" +
+  encodeURIComponent(PICKUP_ADDRESS);
+
+// Delivery: free over this amount, otherwise a flat fee.
+export const FREE_DELIVERY_ABOVE = 1000;
+export const DELIVERY_FEE = 100;
+
+export function deliveryFeeFor(itemsTotal: number, pickup: boolean): number {
+  if (pickup || itemsTotal <= 0) return 0;
+  return itemsTotal >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_FEE;
+}
+
 export function rupees(n: number): string {
   return "₹" + n.toLocaleString("en-IN");
 }
