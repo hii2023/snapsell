@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import * as XLSX from "xlsx";
 import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon, CheckIcon } from "./icons";
 import ProductEdit from "./ProductEdit";
@@ -712,6 +713,25 @@ function OrdersTab({
 }) {
   const [busy, setBusy] = useState("");
 
+  function exportToExcel() {
+    const data = shown.map((o) => ({
+      "Order ID": o.id.slice(0, 8),
+      "Customer": o.customer_name,
+      "Phone": o.phone,
+      "Address": o.fulfillment === "pickup" ? "Store Pickup" : o.address,
+      "Total": `₹${o.total}`,
+      "Payment": o.payment_status === "paid" ? "Received" : "Pending",
+      "Fulfillment": o.fulfillment === "pickup" ? "Pickup" : "Delivery",
+      "Status": o.delivery_status === "delivered" ? "Delivered" : o.delivery_status === "out_for_delivery" ? "Dispatched" : "Pending",
+      "Items": (o.order_items || []).map((i) => `${i.qty}x ${i.name_snapshot}`).join("; "),
+      "Date": new Date(o.created_at).toLocaleDateString(),
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Orders");
+    XLSX.writeFile(wb, `orders-${new Date().toISOString().split('T')[0]}.xlsx`);
+  }
+
   const shown = orders.filter((o) => {
     if (filter === "dispatch") return isPendingDispatch(o);
     if (filter === "paid") return o.payment_status === "paid";
@@ -778,6 +798,17 @@ function OrdersTab({
         ))}
       </div>
 
+      {shown.length > 0 && (
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={exportToExcel}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 active:scale-[0.98]"
+          >
+            📊 Export to Excel
+          </button>
+        </div>
+      )}
+
       {shown.length === 0 ? (
         <p className="py-16 text-center text-neutral-500">No orders here.</p>
       ) : (
@@ -843,11 +874,10 @@ function OrdersTab({
                   {!dispatched && !delivered && (
                     <button
                       className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                      disabled={busy === o.id || o.payment_status !== "paid"}
-                      title={o.payment_status !== "paid" ? "Mark payment received first" : ""}
+                      disabled={busy === o.id}
                       onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
                     >
-                      {o.payment_status !== "paid" ? "Payment first" : "Mark dispatched"}
+                      Mark dispatched
                     </button>
                   )}
                   {dispatched && (
