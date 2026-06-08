@@ -6,9 +6,13 @@ import { supabaseServer } from "./supabase-server";
 // If SELLER_EMAIL is unset, any authenticated user is treated as the seller
 // (fine for a dedicated project).
 function isSeller(email: string | undefined): boolean {
-  const allowed = (process.env.SELLER_EMAIL || "").trim().toLowerCase();
-  if (!allowed) return true;
-  return (email || "").trim().toLowerCase() === allowed;
+  const allowed = (process.env.SELLER_EMAIL || "")
+    .toLowerCase()
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (allowed.length === 0) return true;
+  return allowed.includes((email || "").trim().toLowerCase());
 }
 
 export async function requireSeller(): Promise<

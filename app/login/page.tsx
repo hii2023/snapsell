@@ -21,9 +21,12 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
+      const input = email.trim();
+      // Map the "Admin" username to its email; emails pass through unchanged.
+      const mapped = input.toLowerCase() === "admin" ? "admin@snapsell.app" : input;
       const supabase = supabaseBrowser();
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: mapped,
         password,
       });
       if (error) throw error;
@@ -52,14 +55,15 @@ export default function LoginPage() {
       ) : (
         <form onSubmit={signIn} className="mt-6 space-y-4">
           <div>
-            <label className="label">Email</label>
+            <label className="label">Username</label>
             <input
-              type="email"
+              type="text"
               required
+              autoCapitalize="none"
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="Admin"
             />
           </div>
           <div>

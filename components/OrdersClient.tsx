@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon, CheckIcon } from "./icons";
@@ -330,6 +330,9 @@ function ProductsTab({
   const [sendIndex, setSendIndex] = useState(0);
   const [editing, setEditing] = useState<Product | null>(null);
   const [view, setView] = useState<"list" | "grid">("list");
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fired = useRef(false);
+  const selectMode = selected.size > 0;
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -371,6 +374,26 @@ function ProductsTab({
       else next.add(id);
       return next;
     });
+  }
+
+  // Press-and-hold a product to start selecting; then tap others to add/remove.
+  function startPress(id: string) {
+    fired.current = false;
+    pressTimer.current = setTimeout(() => {
+      fired.current = true;
+      toggleSelect(id);
+    }, 450);
+  }
+  function endPress() {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+  }
+  function rowClick(p: Product) {
+    if (fired.current) {
+      fired.current = false;
+      return;
+    }
+    if (selectMode) toggleSelect(p.id);
+    else setEditing(p);
   }
 
   async function deleteSelected() {
@@ -423,7 +446,11 @@ function ProductsTab({
         ))}
       </div>
 
-      <div className="mb-3 flex justify-end gap-1">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-xs text-neutral-400">
+          {selectMode ? `${selected.size} selected · tap to add/remove` : "Tap to edit · hold to select"}
+        </span>
+        <div className="flex gap-1">
         <button
           onClick={() => setView("list")}
           className={`rounded-lg px-3 py-1 text-sm ${view === "list" ? "bg-brand text-white" : "border border-neutral-300 text-neutral-600"}`}
@@ -436,6 +463,7 @@ function ProductsTab({
         >
           Grid
         </button>
+        </div>
       </div>
 
       {shown.length === 0 ? (
@@ -445,27 +473,42 @@ function ProductsTab({
           {shown.map((p) => (
             <div
               key={p.id}
-              className={`card flex items-center gap-3 p-3 ${p.stock === 0 ? "border-red-200 bg-red-50/40" : ""}`}
+              onPointerDown={() => startPress(p.id)}
+              onPointerUp={endPress}
+              onPointerLeave={endPress}
+              onPointerCancel={endPress}
+              onClick={() => rowClick(p)}
+              className={`card flex cursor-pointer select-none items-center gap-3 p-3 ${
+                p.stock === 0 ? "border-red-200 bg-red-50/40" : ""
+              } ${selected.has(p.id) ? "ring-2 ring-brand" : ""}`}
             >
-              <input
-                type="checkbox"
-                checked={selected.has(p.id)}
-                onChange={() => toggleSelect(p.id)}
-                className="h-5 w-5 shrink-0"
-                style={{ accentColor: "#0f766e" }}
-              />
+              {selectMode && (
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                    selected.has(p.id) ? "border-brand bg-brand text-white" : "border-neutral-300"
+                  }`}
+                >
+                  {selected.has(p.id) && (
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  )}
+                </span>
+              )}
               <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
                 {p.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
                 ) : null}
               </div>
-              <button onClick={() => setEditing(p)} className="min-w-0 flex-1 text-left">
+              <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1 truncate font-medium">
                   <span className="truncate">{p.name}</span>
-                  <svg className="h-3.5 w-3.5 shrink-0 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                  </svg>
+                  {!selectMode && (
+                    <svg className="h-3.5 w-3.5 shrink-0 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                  )}
                 </p>
                 <p className="text-xs text-neutral-500">
                   <span className="font-medium text-neutral-600">{p.code}</span>
@@ -481,8 +524,12 @@ function ProductsTab({
                     </>
                   )}
                 </p>
-              </button>
-              <div className="flex items-center gap-1.5">
+              </div>
+              <div
+                className="flex items-center gap-1.5"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <span className={`min-w-7 text-center font-semibold tabular-nums ${p.stock === 0 ? "text-red-600" : ""}`}>
                   {p.stock}
                 </span>
