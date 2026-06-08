@@ -35,6 +35,8 @@ export type DeliveryStatus =
   | "booked"
   | "out_for_delivery"
   | "delivered";
+export type ReturnStatus = "none" | "requested" | "accepted" | "completed";
+export type RefundStatus = "none" | "requested" | "completed";
 
 export type OrderItem = {
   id: string;

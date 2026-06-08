@@ -900,7 +900,7 @@ function OrdersTab({
                   )}
                 </div>
 
-                {delivered && o.return_status === "none" && (
+                {dispatched && o.return_status === "none" && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2 text-sm text-orange-700 disabled:opacity-50"
@@ -917,28 +917,46 @@ function OrdersTab({
                     <button
                       className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
                       disabled={busy === o.id}
-                      onClick={() => update(o.id, { return_status: "approved" })}
+                      onClick={() => update(o.id, { return_status: "accepted" })}
                     >
-                      Approve return
-                    </button>
-                    <button
-                      className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700 disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { return_status: "rejected" })}
-                    >
-                      Reject return
+                      Accept return
                     </button>
                   </div>
                 )}
 
-                {o.return_status === "approved" && o.refund_status === "none" && (
+                {o.return_status === "accepted" && o.refund_status === "none" && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
                       disabled={busy === o.id}
-                      onClick={() => update(o.id, { refund_status: "completed", refund_amount: o.total })}
+                      onClick={() => update(o.id, { refund_status: "requested" })}
                     >
-                      Process refund (₹{o.total})
+                      Mark refund requested
+                    </button>
+                  </div>
+                )}
+
+                {o.refund_status === "requested" && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <input
+                      type="number"
+                      value={o.refund_amount || o.total}
+                      onChange={(e) => {
+                        const amount = Number(e.target.value);
+                        if (amount > 0 && amount <= o.total) {
+                          update(o.id, { refund_amount: amount });
+                        }
+                      }}
+                      className="input w-28 px-3 py-2 text-sm"
+                      min="0"
+                      max={o.total}
+                    />
+                    <button
+                      className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { refund_status: "completed" })}
+                    >
+                      Mark refunded
                     </button>
                   </div>
                 )}
@@ -946,10 +964,9 @@ function OrdersTab({
                 {(o.return_status !== "none" || o.refund_status !== "none") && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {o.return_status === "requested" && <Badge tone="amber">Return requested</Badge>}
-                    {o.return_status === "approved" && <Badge tone="green">Return approved</Badge>}
-                    {o.return_status === "rejected" && <Badge tone="red">Return rejected</Badge>}
-                    {o.refund_status === "pending" && <Badge tone="amber">Refund pending</Badge>}
-                    {o.refund_status === "completed" && <Badge tone="green">Refunded ₹{o.refund_amount}</Badge>}
+                    {o.return_status === "accepted" && <Badge tone="green">Return accepted</Badge>}
+                    {o.refund_status === "requested" && <Badge tone="amber">Refund requested</Badge>}
+                    {o.refund_status === "completed" && <Badge tone="green">Refunded ₹{o.refund_amount || o.total}</Badge>}
                   </div>
                 )}
               </div>
