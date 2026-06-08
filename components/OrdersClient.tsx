@@ -28,7 +28,7 @@ export default function OrdersClient({
   initialProducts: Product[];
   settings: Settings;
 }) {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("orders");
   const [orders, setOrders] = useState(initialOrders);
   const [products, setProducts] = useState(initialProducts);
 
@@ -38,7 +38,7 @@ export default function OrdersClient({
 
   const [prodFilter, setProdFilter] = useState<ProdFilter>("instock");
   const [catFilter, setCatFilter] = useState<CatFilter>("all");
-  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>("unpaid");
 
   function openProducts(f: ProdFilter) {
     setProdFilter(f);
