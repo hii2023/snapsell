@@ -18,11 +18,11 @@ export default function Logo({ className = "" }: { className?: string }) {
       aria-label={name}
       className={className}
       style={{
-        width: "120px",
-        height: "90px",
+        width: "130px",
+        height: "96px",
         backgroundImage: "url(/logo.png)",
-        backgroundSize: "148%",
-        backgroundPosition: "50% 30%",
+        backgroundSize: "130%",
+        backgroundPosition: "50% 44%",
         backgroundRepeat: "no-repeat",
         flexShrink: 0,
       }}
