@@ -814,7 +814,7 @@ function OrdersTab({
     { id: "unpaid", label: "Unpaid" },
     { id: "paid", label: "Paid" },
     { id: "packing", label: "Packing Done" },
-    { id: "booked", label: "Booked" },
+    { id: "booked", label: "Delivery Booked" },
     { id: "pickup", label: "Customer Pickup" },
     { id: "delivered", label: "Delivered" },
     { id: "return", label: "Return" },
