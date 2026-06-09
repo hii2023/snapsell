@@ -59,6 +59,17 @@ export default async function ShopPage() {
 
   return (
     <main className="min-h-screen bg-neutral-50">
+      {/* Top announcement bar */}
+      <div className="bg-ink text-white">
+        <p className="mx-auto max-w-6xl px-4 py-1.5 text-center text-[11px] leading-relaxed sm:text-xs">
+          Handpicked thrift treasures and FMCG deals.{" "}
+          <span className="font-semibold text-emerald-300">Save money</span>,{" "}
+          <span className="font-semibold text-emerald-300">reduce waste</span>,{" "}
+          <span className="font-semibold text-emerald-300">discover daily</span>.{" "}
+          <span className="font-semibold text-amber-300">Pick up or delivered.</span>
+        </p>
+      </div>
+
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <LogoLink />
