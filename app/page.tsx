@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { unstable_noStore as noStore } from "next/cache";
 import { supabaseConfigured } from "@/lib/supabase";
 import LogoLink from "@/components/LogoLink";
@@ -17,7 +18,10 @@ export const metadata: Metadata = { title: "Thrift Shoppers" };
 const shopName = "Thrift Shoppers";
 
 export default async function ShopPage() {
-  noStore(); // belt-and-suspenders: disables Next.js data cache for this render
+  noStore();
+  // Force browsers and CDN to never cache this page
+  const h = await headers();
+  void h; // accessed to mark dynamic; Next.js sees headers() and forces no-cache
   let products: Product[] = [];
 
   let cfg = {

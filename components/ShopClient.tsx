@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { supabaseBrowser } from "@/lib/supabase";
+import { T } from "@/lib/db";
 import { rupees, CATEGORY_META, PICKUP_ADDRESS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
 import type { Category, CartLine, Product } from "@/lib/types";
@@ -23,7 +25,7 @@ type ShopCfg = {
 };
 
 export default function ShopClient({
-  products,
+  products: initialProducts,
   shopName,
   cfg,
 }: {
@@ -39,10 +41,27 @@ export default function ShopClient({
     deliveryFee: 100,
     freeAbove: 1000,
   };
+
+  // Start with server-rendered data, then immediately refresh client-side.
+  // This bypasses all Next.js / Vercel CDN caching — always shows live products.
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
   const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
   const [hydrated, setHydrated] = useState(false);
+
+  // Live fetch on mount — guarantees fresh products regardless of server cache
+  useEffect(() => {
+    const sb = supabaseBrowser();
+    sb.from(T.products)
+      .select("*")
+      .gt("stock", 0)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data && data.length >= 0) setProducts(data as Product[]);
+      });
+  }, []);
 
   // Persist the cart so it survives page switches (shop <-> product pages).
   useEffect(() => {
