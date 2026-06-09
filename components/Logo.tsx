@@ -22,7 +22,7 @@ export default function Logo({ className = "" }: { className?: string }) {
         height: "96px",
         backgroundImage: "url(/logo.png)",
         backgroundSize: "130%",
-        backgroundPosition: "50% 44%",
+        backgroundPosition: "50% 58%",
         backgroundRepeat: "no-repeat",
         flexShrink: 0,
       }}
