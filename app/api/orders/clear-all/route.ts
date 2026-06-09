@@ -14,31 +14,41 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = await supabaseServer();
 
+    // Get count before deletion
+    const { count: itemCount } = await supabase
+      .from("snapsell_order_items")
+      .select("*", { count: "exact", head: true });
+
+    const { count: orderCount } = await supabase
+      .from("snapsell_orders")
+      .select("*", { count: "exact", head: true });
+
     // Delete all order items first (foreign key constraint)
     const { error: itemsError } = await supabase
       .from("snapsell_order_items")
       .delete()
-      .gt("id", ""); // Delete all by matching any non-empty id
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all
 
-    if (itemsError && itemsError.code !== "PGRST116") {
+    if (itemsError) {
       return NextResponse.json({ error: itemsError.message }, { status: 500 });
     }
 
     // Delete all orders
-    const { data: deleted, error: ordersError } = await supabase
+    const { error: ordersError } = await supabase
       .from("snapsell_orders")
       .delete()
-      .gt("id", "") // Delete all by matching any non-empty id
-      .select("id");
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all
 
-    if (ordersError && ordersError.code !== "PGRST116") {
+    if (ordersError) {
       return NextResponse.json({ error: ordersError.message }, { status: 500 });
     }
 
+    const totalDeleted = (orderCount || 0) + (itemCount || 0);
+
     return NextResponse.json({
       success: true,
-      deletedCount: deleted?.length || 0,
-      message: `Deleted ALL ${deleted?.length || 0} orders`,
+      deletedCount: orderCount || 0,
+      message: `Deleted ALL ${orderCount || 0} orders and their items`,
     });
   } catch (error) {
     return NextResponse.json(
