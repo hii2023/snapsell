@@ -12,7 +12,7 @@ import type { Category, Order, Product, Settings } from "@/lib/types";
 type Tab = "overview" | "products" | "orders" | "settings";
 type ProdFilter = "instock" | "oos";
 type CatFilter = Category | "all";
-type OrderFilter = "all" | "unpaid" | "paid" | "ready" | "booked" | "delivered" | "pickup" | "return";
+type OrderFilter = "all" | "unpaid" | "paid" | "packing" | "booked" | "delivered" | "pickup" | "return";
 type FulfillmentFilter = "all" | "delivery" | "pickup";
 
 const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
@@ -189,7 +189,7 @@ function Overview({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="In stock" value={inStock} tone="green" onClick={() => openProducts("instock")} />
         <StatCard label="Out of stock" value={oos} tone="red" onClick={() => openProducts("oos")} />
-        <StatCard label="Ready to ship" value={readyToShip} tone="amber" onClick={() => openOrders("ready")} />
+        <StatCard label="Packing done" value={readyToShip} tone="amber" onClick={() => openOrders("packing")} />
         <StatCard label="Total orders" value={orders.length} onClick={() => openOrders("all")} />
       </div>
 
@@ -229,7 +229,7 @@ function Overview({
         <div className="flex flex-wrap gap-2">
           <button onClick={() => openProducts("instock")} className="chip chip-off">In stock</button>
           <button onClick={() => openProducts("oos")} className="chip chip-off">Out of stock</button>
-          <button onClick={() => openOrders("ready")} className="chip chip-off">Ready for delivery</button>
+          <button onClick={() => openOrders("packing")} className="chip chip-off">Packing done</button>
         </div>
       </div>
     </div>
@@ -741,31 +741,31 @@ function OrdersTab({
   }
 
   const shown = orders.filter((o) => {
-    // Mutually exclusive stages - order can only be in one stage
+    // Mutually exclusive funnel stages - order can only be in one stage
     if (filter === "unpaid") {
-      // Unpaid: waiting for payment
+      // Stage 1: Waiting for payment
       if (o.payment_status !== "pending") return false;
     } else if (filter === "paid") {
-      // Paid: payment received, but not yet in delivery/pickup process
+      // Stage 2: Payment received, not yet in dispatch/packing
       if (o.payment_status !== "paid" || o.delivery_status !== "unbooked") return false;
+    } else if (filter === "packing") {
+      // Stage 3: Packing Done (delivery items being packed, not yet booked)
+      if (o.delivery_status !== "out_for_delivery" || o.fulfillment !== "delivery") return false;
     } else if (filter === "booked") {
-      // Booked: delivery partner booked (delivery orders only)
-      if (o.delivery_status !== "booked") return false;
-    } else if (filter === "ready") {
-      // Ready to Dispatch: dispatched (out for delivery, delivery orders only)
-      if (o.fulfillment !== "delivery" || o.delivery_status !== "out_for_delivery") return false;
+      // Stage 4: Booked (delivery items only, after packing)
+      if (o.delivery_status !== "booked" || o.fulfillment !== "delivery") return false;
     } else if (filter === "pickup") {
-      // Customer Pickup: ready for pickup (pickup orders only, not yet delivered)
+      // Stage 4 (pickup path): Customer ready to pickup
       if (o.fulfillment !== "pickup" || o.delivery_status !== "out_for_delivery") return false;
     } else if (filter === "delivered") {
-      // Delivered: order completed (no return initiated)
+      // Stage 5: Order delivered, no returns
       if (o.delivery_status !== "delivered" || o.return_status !== "none") return false;
     } else if (filter === "return") {
-      // Return: return/refund initiated
+      // Return initiated
       if (o.return_status === "none") return false;
     }
 
-    // Filter by fulfillment (delivery/pickup)
+    // Filter by fulfillment (delivery/pickup) - applied on top of stage
     if (fulfillmentFilter === "delivery" && o.fulfillment !== "delivery") return false;
     if (fulfillmentFilter === "pickup" && o.fulfillment !== "pickup") return false;
 
@@ -813,10 +813,10 @@ function OrdersTab({
   const filters: { id: OrderFilter; label: string }[] = [
     { id: "unpaid", label: "Unpaid" },
     { id: "paid", label: "Paid" },
-    { id: "ready", label: "Ready to Dispatch" },
+    { id: "packing", label: "Packing Done" },
     { id: "booked", label: "Booked" },
-    { id: "delivered", label: "Delivered" },
     { id: "pickup", label: "Customer Pickup" },
+    { id: "delivered", label: "Delivered" },
     { id: "return", label: "Return" },
   ];
 
@@ -944,59 +944,85 @@ function OrdersTab({
                     </div>
                   )}
 
-                  {/* Step 2: Mark Customer Picked Up (only for pickup orders, after payment received) */}
-                  {o.fulfillment === "pickup" && o.payment_status === "paid" && !dispatched && !delivered && (
+                  {/* Step 3 (pickup): Mark Packing Done (only for pickup orders, after payment received) */}
+                  {o.fulfillment === "pickup" && o.payment_status === "paid" && o.delivery_status === "unbooked" && (
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="rounded-xl border border-purple-300 bg-purple-50 px-4 py-2 text-sm text-purple-700 disabled:opacity-50"
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
                       >
-                        ② Customer picked up
+                        ③ Mark packing done
                       </button>
                     </div>
                   )}
 
-                  {/* Step 3: Mark Dispatched (only for delivery orders, after payment received) */}
-                  {o.fulfillment === "delivery" && o.payment_status === "paid" && !dispatched && !delivered && (
+                  {/* Step 3: Mark Packing Done (only for delivery orders, after payment received) */}
+                  {o.fulfillment === "delivery" && o.payment_status === "paid" && o.delivery_status === "unbooked" && (
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
                       >
-                        ③ Mark dispatched
+                        ③ Mark packing done
                       </button>
                     </div>
                   )}
 
-                  {/* Step 4/3: Mark Delivered (after dispatched/pickup) */}
-                  {dispatched && !delivered && (
+                  {/* Step 4 (delivery): Mark Booked (after packing done) */}
+                  {o.fulfillment === "delivery" && o.delivery_status === "out_for_delivery" && !delivered && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { delivery_status: "booked" })}
+                      >
+                        ④ Mark booked
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 5 (delivery): Mark Delivered (after booked) */}
+                  {o.fulfillment === "delivery" && o.delivery_status === "booked" && !delivered && (
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { delivery_status: "delivered" })}
                       >
-                        {o.fulfillment === "delivery" ? "④ Mark delivered" : "③ Mark delivered"}
+                        ⑤ Mark delivered
                       </button>
                     </div>
                   )}
 
-                  {/* Step 5/4: Mark Return Requested (after dispatched/pickup) */}
-                  {dispatched && o.return_status === "none" && (
+                  {/* Step 4 (pickup): Mark Delivered (after packing done) */}
+                  {o.fulfillment === "pickup" && o.delivery_status === "out_for_delivery" && !delivered && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => update(o.id, { delivery_status: "delivered" })}
+                      >
+                        ④ Mark delivered
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Return flow: Mark Return Requested (after delivered) */}
+                  {o.delivery_status === "delivered" && o.return_status === "none" && (
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2 text-sm text-orange-700 disabled:opacity-50"
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { return_status: "requested" })}
                       >
-                        {o.fulfillment === "delivery" ? "⑤ Mark return requested" : "④ Mark return requested"}
+                        ⑥ Mark return requested
                       </button>
                     </div>
                   )}
 
-                  {/* Step 6/5: Accept Return */}
+                  {/* Return flow: Accept Return */}
                   {o.return_status === "requested" && (
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -1004,12 +1030,12 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { return_status: "accepted" })}
                       >
-                        {o.fulfillment === "delivery" ? "⑥ Accept return" : "⑤ Accept return"}
+                        ⑦ Accept return
                       </button>
                     </div>
                   )}
 
-                  {/* Step 7/6: Mark Refund Requested */}
+                  {/* Return flow: Mark Refund Requested */}
                   {o.return_status === "accepted" && o.refund_status === "none" && (
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -1017,12 +1043,12 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { refund_status: "requested" })}
                       >
-                        {o.fulfillment === "delivery" ? "⑦ Mark refund requested" : "⑥ Mark refund requested"}
+                        ⑧ Mark refund requested
                       </button>
                     </div>
                   )}
 
-                  {/* Step 8/7: Mark Refunded */}
+                  {/* Return flow: Mark Refunded */}
                   {o.refund_status === "requested" && (
                     <div className="flex flex-wrap gap-2">
                       <input
@@ -1044,7 +1070,7 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { refund_status: "completed" })}
                       >
-                        {o.fulfillment === "delivery" ? "⑧ Mark refunded" : "⑦ Mark refunded"}
+                        ⑨ Mark refunded
                       </button>
                     </div>
                   )}
