@@ -923,6 +923,7 @@ function OrdersTab({
                   <div>
                     <p className="font-medium">{o.customer_name}</p>
                     <p className="text-sm text-neutral-500">{o.phone}</p>
+                    <p className="mt-0.5 font-mono text-xs text-neutral-400">#{o.id.slice(0, 8).toUpperCase()}</p>
                   </div>
                   <p className="text-lg font-semibold">{rupees(o.total)}</p>
                 </div>
