@@ -45,7 +45,6 @@ export default function ShopClient({
   // Start with server-rendered data, then immediately refresh client-side.
   // This bypasses all Next.js / Vercel CDN caching — always shows live products.
   const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [loadingProducts, setLoadingProducts] = useState<boolean>(initialProducts.length === 0);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
   const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
@@ -62,7 +61,6 @@ export default function ShopClient({
       .then(({ data, error }) => {
         if (error) console.error("[shop] product fetch error:", error.message);
         if (data) setProducts(data as Product[]);
-        setLoadingProducts(false);
       });
   }, []);
 
@@ -200,40 +198,29 @@ export default function ShopClient({
     );
   }
 
-  // Empty / loading state — shown inside the client so it auto-refreshes
-  // on tab focus, visibility change, or the initial live fetch landing.
+  // Silently auto-retry in the background while the list is empty so the
+  // moment a product is added it appears without the customer doing anything.
+  useEffect(() => {
+    if (products.length > 0) return;
+    const interval = setInterval(() => {
+      supabaseBrowser()
+        .from(T.products)
+        .select("*")
+        .gt("stock", 0)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => { if (data && data.length > 0) setProducts(data as Product[]); });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [products.length]);
+
+  // Empty / loading state — soft, branded, no asks of the customer.
   if (products.length === 0) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-24 text-center text-neutral-500">
-        {loadingProducts ? (
-          <>
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-brand" />
-            <p className="text-sm">Loading products...</p>
-          </>
-        ) : (
-          <>
-            <p className="text-lg font-medium text-neutral-700">No products yet</p>
-            <p className="mt-1 text-sm">New items appear here as soon as they are added.</p>
-            <button
-              onClick={() => {
-                setLoadingProducts(true);
-                supabaseBrowser()
-                  .from(T.products)
-                  .select("*")
-                  .gt("stock", 0)
-                  .eq("is_active", true)
-                  .order("created_at", { ascending: false })
-                  .then(({ data }) => {
-                    if (data) setProducts(data as Product[]);
-                    setLoadingProducts(false);
-                  });
-              }}
-              className="mt-6 rounded-xl border border-neutral-300 bg-white px-5 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              Refresh
-            </button>
-          </>
-        )}
+      <div className="mx-auto max-w-2xl px-4 py-24 text-center">
+        <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-2 border-neutral-200 border-t-brand" />
+        <p className="text-lg font-medium text-neutral-700">Fresh arrivals on the way</p>
+        <p className="mt-1 text-sm text-neutral-500">New thrift finds are added daily. Check back shortly.</p>
       </div>
     );
   }
