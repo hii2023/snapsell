@@ -904,16 +904,14 @@ function OrdersTab({
                   </Badge>
                   <Badge
                     tone={
-                      delivered ? "green" : dispatched ? "blue" : o.payment_status === "paid" ? "blue" : "amber"
+                      delivered ? "green" : dispatched ? "blue" : "blue"
                     }
                   >
                     {delivered
                       ? "Delivered"
                       : dispatched
                         ? "Dispatched"
-                        : o.payment_status === "paid"
-                          ? "Ready to dispatch"
-                          : "Awaiting payment"}
+                        : "Ready to dispatch"}
                   </Badge>
                 </div>
 
