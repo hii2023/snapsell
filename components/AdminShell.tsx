@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import OrdersClient from "./OrdersClient";
@@ -71,13 +70,14 @@ export default function AdminShell({
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <LogoLink />
           <div className="flex items-center gap-2">
-            <Link
-              href="/"
+            <a
+              href="https://store.indiarecycles.org"
               target="_blank"
-              className="rounded-full border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700"
+              rel="noopener noreferrer"
+              className="rounded-full border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
             >
               View store
-            </Link>
+            </a>
             <button
               onClick={startAdd}
               className="flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white active:scale-95"
