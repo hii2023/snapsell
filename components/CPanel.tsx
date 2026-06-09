@@ -72,19 +72,20 @@ export default function CPanel({ initial }: { initial: Settings }) {
     }
   }
 
-  async function clearProcessedOrders() {
-    if (!confirm("Delete all orders that are NOT in Unpaid stage? This cannot be undone.")) return;
+  async function clearAllOrders() {
+    if (!confirm("⚠️ DELETE ALL ORDERS? This cannot be undone!")) return;
+    if (!confirm("Are you absolutely sure? All order data will be permanently deleted.")) return;
 
     setOpStatus("clearing");
     setOpMsg("");
     try {
-      const res = await fetch("/api/orders/clear-processed", {
+      const res = await fetch("/api/orders/clear-all", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
       const json = await res.json();
       if (res.ok) {
-        setOpMsg(`✅ Deleted ${json.deletedCount} orders`);
+        setOpMsg(`✅ Deleted ALL ${json.deletedCount} orders`);
       } else {
         throw new Error(json.error || "Could not clear orders");
       }
@@ -188,18 +189,21 @@ export default function CPanel({ initial }: { initial: Settings }) {
       <section>
         <h3 className="mb-3 text-lg font-semibold">Data Management</h3>
         <div className="space-y-3">
-          <div className="card border-orange-200 bg-orange-50 p-4">
-            <p className="mb-3 text-sm text-neutral-700">
-              <strong>Clear Processed Orders:</strong> Delete all orders that have moved past the Unpaid stage (Paid, Packing Done, Booked, Delivered, Return, etc.). Only Unpaid orders will remain.
+          <div className="card border-red-200 bg-red-50 p-4">
+            <p className="mb-3 text-sm font-semibold text-red-700">
+              ⚠️ DELETE ALL ORDERS
+            </p>
+            <p className="mb-3 text-sm text-red-600">
+              Permanently delete ALL orders: Paid, Packing Done, Booked, Delivered, Customer Pickup, Return, and Unpaid. This cannot be undone.
             </p>
             <button
-              onClick={clearProcessedOrders}
+              onClick={clearAllOrders}
               disabled={opStatus === "clearing"}
-              className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 active:scale-[0.98] disabled:opacity-50"
+              className="rounded-lg border border-red-500 bg-red-600 px-4 py-2 text-sm font-bold text-white active:scale-[0.98] disabled:opacity-50 hover:bg-red-700"
             >
-              {opStatus === "clearing" ? "Clearing..." : "🗑️ Clear Processed Orders"}
+              {opStatus === "clearing" ? "Deleting all orders..." : "🗑️ DELETE ALL ORDERS NOW"}
             </button>
-            {opMsg && <p className={`mt-2 text-sm ${opMsg.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>{opMsg}</p>}
+            {opMsg && <p className={`mt-3 text-sm font-semibold ${opMsg.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>{opMsg}</p>}
           </div>
         </div>
       </section>
