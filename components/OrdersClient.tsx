@@ -936,9 +936,6 @@ function OrdersTab({
                   <Badge tone={o.fulfillment === "pickup" ? "gray" : "blue"}>
                     {o.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                   </Badge>
-                  <Badge tone={o.payment_status === "paid" ? "green" : "amber"}>
-                    {o.payment_status === "paid" ? "Payment received" : "Payment pending"}
-                  </Badge>
                   <Badge
                     tone={
                       delivered ? "green" : dispatched ? "blue" : "blue"
