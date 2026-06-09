@@ -105,7 +105,7 @@ export default async function ShopPage() {
           {/* Top row: contact + socials */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm">
-              <span className="font-semibold uppercase tracking-wider text-emerald-700">Delivering in Ahmedabad</span>
+              <span className="font-semibold uppercase tracking-wider text-emerald-700">Delivering Pan India</span>
               <span className="text-neutral-300">·</span>
               <a href="tel:+917202035700" className="font-semibold text-ink hover:text-emerald-700">
                 72020 35700
