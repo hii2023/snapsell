@@ -4,12 +4,28 @@ import { useState } from "react";
 
 const name = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
-// Shows /logo.png if present, otherwise falls back to the shop name as text.
-export default function Logo({ className = "h-28 w-auto" }: { className?: string }) {
+// Logo is displayed by zooming into the brand-mark area and cropping the
+// built-in whitespace padding from the PNG.
+// backgroundSize: 148% zooms so the content fills the container.
+// backgroundPosition: 50% 40% centers horizontally, slightly above middle
+// vertically so the green dot and Hindi text are visible.
+export default function Logo({ className = "" }: { className?: string }) {
   const [ok, setOk] = useState(true);
-  if (!ok) return <span className="text-lg font-semibold">{name}</span>;
+  if (!ok) return <span className="text-xl font-bold">{name}</span>;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo.png" alt={name} className={className} style={{ objectFit: "contain" }} onError={() => setOk(false)} />
+    <div
+      role="img"
+      aria-label={name}
+      className={className}
+      style={{
+        width: "120px",
+        height: "90px",
+        backgroundImage: "url(/logo.png)",
+        backgroundSize: "148%",
+        backgroundPosition: "50% 40%",
+        backgroundRepeat: "no-repeat",
+        flexShrink: 0,
+      }}
+    />
   );
 }
