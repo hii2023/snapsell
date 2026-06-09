@@ -1,6 +1,5 @@
-import Link from "next/link";
-import Logo from "@/components/Logo";
 import { supabaseConfigured } from "@/lib/supabase";
+import LogoLink from "@/components/LogoLink";
 import { supabaseServer } from "@/lib/supabase-server";
 import { T } from "@/lib/db";
 import type { Product } from "@/lib/types";
@@ -50,9 +49,7 @@ export default async function ShopPage() {
     <main className="min-h-screen">
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-4">
-          <Link href="/">
-            <Logo />
-          </Link>
+          <LogoLink />
         </div>
       </header>
 

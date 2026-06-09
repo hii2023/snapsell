@@ -6,7 +6,7 @@ import { T } from "@/lib/db";
 import { rupees, categoryLabel } from "@/lib/constants";
 import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
-import Logo from "@/components/Logo";
+import LogoLink from "@/components/LogoLink";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +55,7 @@ export default async function ProductPage({
     <main className="min-h-screen">
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-4">
-          <Link href="/">
-            <Logo />
-          </Link>
+          <LogoLink />
           {p?.code ? (
             <span className="rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-500">
               {p.code}

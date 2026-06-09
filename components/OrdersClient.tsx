@@ -741,20 +741,27 @@ function OrdersTab({
   }
 
   const shown = orders.filter((o) => {
-    // Filter by order stage
+    // Mutually exclusive stages - order can only be in one stage
     if (filter === "unpaid") {
+      // Unpaid: waiting for payment
       if (o.payment_status !== "pending") return false;
     } else if (filter === "paid") {
-      if (o.payment_status !== "paid") return false;
-    } else if (filter === "ready") {
-      if (o.delivery_status !== "out_for_delivery") return false;
+      // Paid: payment received, but not yet in delivery/pickup process
+      if (o.payment_status !== "paid" || o.delivery_status !== "unbooked") return false;
     } else if (filter === "booked") {
+      // Booked: delivery partner booked (delivery orders only)
       if (o.delivery_status !== "booked") return false;
-    } else if (filter === "delivered") {
-      if (o.delivery_status !== "delivered") return false;
+    } else if (filter === "ready") {
+      // Ready to Dispatch: dispatched (out for delivery, delivery orders only)
+      if (o.fulfillment !== "delivery" || o.delivery_status !== "out_for_delivery") return false;
     } else if (filter === "pickup") {
-      if (o.fulfillment !== "pickup" || o.delivery_status === "delivered") return false;
+      // Customer Pickup: ready for pickup (pickup orders only, not yet delivered)
+      if (o.fulfillment !== "pickup" || o.delivery_status !== "out_for_delivery") return false;
+    } else if (filter === "delivered") {
+      // Delivered: order completed (no return initiated)
+      if (o.delivery_status !== "delivered" || o.return_status !== "none") return false;
     } else if (filter === "return") {
+      // Return: return/refund initiated
       if (o.return_status === "none") return false;
     }
 
