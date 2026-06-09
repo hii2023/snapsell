@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import * as XLSX from "xlsx";
 import { rupees, CATEGORY_META } from "@/lib/constants";
@@ -719,8 +720,36 @@ function OrdersTab({
   fulfillmentFilter: FulfillmentFilter;
   setFulfillmentFilter: (f: FulfillmentFilter) => void;
 }) {
+  const router = useRouter();
   const [busy, setBusy] = useState("");
   const [search, setSearch] = useState("");
+
+  const STORE_WA = "917202035700";
+
+  // Build a WhatsApp URL to message the customer based on current order stage
+  function customerWaUrl(o: Order): string {
+    const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+    const amt = `₹${o.total}`;
+    let msg = "";
+    if (o.return_status !== "none") {
+      msg = `Hi ${o.customer_name}, we have received your return request for order ${ref}. We will get back to you shortly.`;
+    } else if (o.delivery_status === "delivered") {
+      msg = `Hi ${o.customer_name}, your order ${ref} has been delivered. Thank you for shopping with India Recycle!`;
+    } else if (o.delivery_status === "booked") {
+      msg = `Hi ${o.customer_name}, your order ${ref} has been dispatched and is on the way!`;
+    } else if (o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup") {
+      msg = `Hi ${o.customer_name}, your order ${ref} is ready for pickup. Please collect it at your convenience.`;
+    } else if (o.delivery_status === "out_for_delivery") {
+      msg = `Hi ${o.customer_name}, your order ${ref} has been packed and will be dispatched soon.`;
+    } else if (o.payment_status === "paid") {
+      msg = `Hi ${o.customer_name}, we have received your payment for order ${ref}. We are now processing your order.`;
+    } else {
+      msg = `Hi ${o.customer_name}, your order ${ref} is awaiting payment of ${amt}. Please complete the payment to confirm your order.`;
+    }
+    const phone = o.phone.replace(/\D/g, "");
+    const wa = phone.startsWith("91") ? phone : `91${phone}`;
+    return `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
+  }
 
   function exportToExcel() {
     const data = shown.map((o) => ({
@@ -835,6 +864,8 @@ function OrdersTab({
       if (res.ok) {
         // Confirm with server's authoritative data
         patch(json.order);
+        // Refresh server component data in background (keeps scroll position)
+        router.refresh();
       } else {
         // Revert on failure
         patch(original);
@@ -976,7 +1007,20 @@ function OrdersTab({
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium">{o.customer_name}</p>
-                    <p className="text-sm text-neutral-500">{o.phone}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-neutral-500">{o.phone}</p>
+                      <a
+                        href={customerWaUrl(o)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="WhatsApp customer"
+                        className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-green-100 text-green-700 transition-colors hover:bg-green-200"
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                      </a>
+                    </div>
                     <p className="mt-0.5 font-mono text-xs text-neutral-400">#{o.id.slice(0, 8).toUpperCase()}</p>
                   </div>
                   <p className="text-lg font-semibold">{rupees(o.total)}</p>
