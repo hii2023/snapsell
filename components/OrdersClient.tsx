@@ -720,6 +720,7 @@ function OrdersTab({
   setFulfillmentFilter: (f: FulfillmentFilter) => void;
 }) {
   const [busy, setBusy] = useState("");
+  const [search, setSearch] = useState("");
 
   function exportToExcel() {
     const data = shown.map((o) => ({
@@ -768,7 +769,17 @@ function OrdersTab({
     XLSX.writeFile(wb, `all-orders-${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
+  const q = search.trim().toLowerCase();
+
   const shown = orders.filter((o) => {
+    // Search filter — matches order ID, phone, or name
+    if (q) {
+      const matchesId = o.id.toLowerCase().includes(q);
+      const matchesPhone = o.phone.toLowerCase().includes(q);
+      const matchesName = o.customer_name.toLowerCase().includes(q);
+      if (!matchesId && !matchesPhone && !matchesName) return false;
+    }
+
     // Mutually exclusive funnel stages - order can only be in one stage
     if (filter === "unpaid") {
       // Stage 1: Waiting for payment
@@ -886,6 +897,33 @@ function OrdersTab({
             {f.label}
           </button>
         ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <svg
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, phone or order ID..."
+          className="input pl-9 pr-9 text-sm"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Export buttons */}
