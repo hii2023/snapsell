@@ -944,8 +944,8 @@ function OrdersTab({
                     </div>
                   )}
 
-                  {/* Step 3 (pickup): Mark Packing Done (only for pickup orders, after payment received) */}
-                  {o.fulfillment === "pickup" && o.payment_status === "paid" && o.delivery_status === "unbooked" && (
+                  {/* Step 3 (pickup): Mark Packing Done (pickup orders, after payment or from unpaid) */}
+                  {o.fulfillment === "pickup" && o.delivery_status === "unbooked" && (
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="rounded-xl border border-purple-300 bg-purple-50 px-4 py-2 text-sm text-purple-700 disabled:opacity-50"
@@ -957,8 +957,8 @@ function OrdersTab({
                     </div>
                   )}
 
-                  {/* Step 3: Mark Packing Done (only for delivery orders, after payment received) */}
-                  {o.fulfillment === "delivery" && o.payment_status === "paid" && o.delivery_status === "unbooked" && (
+                  {/* Step 3: Mark Packing Done (delivery orders, after payment or from unpaid) */}
+                  {o.fulfillment === "delivery" && o.delivery_status === "unbooked" && (
                     <div className="flex flex-wrap gap-2">
                       <button
                         className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
@@ -970,7 +970,7 @@ function OrdersTab({
                     </div>
                   )}
 
-                  {/* Step 4 (delivery): Mark Booked (after packing done) */}
+                  {/* Step 4 (delivery): Delivery Booked (after packing done) */}
                   {o.fulfillment === "delivery" && o.delivery_status === "out_for_delivery" && !delivered && (
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -978,7 +978,7 @@ function OrdersTab({
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { delivery_status: "booked" })}
                       >
-                        ④ Mark booked
+                        ④ Delivery booked
                       </button>
                     </div>
                   )}
