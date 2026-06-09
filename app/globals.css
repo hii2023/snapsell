@@ -13,6 +13,11 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Remove 300ms tap delay on all interactive elements */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
 /* Big, finger-friendly defaults for the seller flow. */
 .btn {
   @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-medium transition active:scale-[0.98];
@@ -24,7 +29,7 @@ body {
   @apply btn border border-neutral-300 bg-white text-ink hover:bg-neutral-50;
 }
 .chip {
-  @apply inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition active:scale-95;
+  @apply inline-flex cursor-pointer items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-150 active:scale-95;
 }
 .chip-on {
   @apply border-brand bg-brand text-white;

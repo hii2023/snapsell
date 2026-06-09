@@ -149,7 +149,7 @@ function StatCard({ label, value, onClick, tone = "default" }: { label: string; 
     <button
       onClick={onClick}
       disabled={!onClick}
-      className={`rounded-2xl border p-4 text-left ${tones[tone]} ${onClick ? "active:scale-[0.98]" : "cursor-default"}`}
+      className={`rounded-2xl border p-4 text-left transition-shadow duration-150 ${tones[tone]} ${onClick ? "cursor-pointer active:scale-[0.98] hover:shadow-md" : "cursor-default"}`}
     >
       <p className="text-3xl font-bold tabular-nums">{value}</p>
       <p className="mt-1 text-sm text-neutral-600">{label}</p>
@@ -840,6 +840,7 @@ function OrdersTab({
 
 
   const filters: { id: OrderFilter; label: string }[] = [
+    { id: "all", label: "All" },
     { id: "unpaid", label: "Unpaid" },
     { id: "paid", label: "Paid" },
     { id: "packing", label: "Packing Done" },
@@ -857,47 +858,54 @@ function OrdersTab({
 
   return (
     <div>
+      {/* Stage filter — horizontally scrollable on mobile */}
       <p className="mb-2 text-sm font-semibold text-neutral-700">Order Status</p>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {filters.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`chip ${filter === f.id ? "chip-on" : "chip-off"}`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto">
+        <div className="flex gap-2 pb-1" style={{ width: "max-content" }}>
+          {filters.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`chip cursor-pointer whitespace-nowrap ${filter === f.id ? "chip-on" : "chip-off"}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Fulfillment filter */}
       <p className="mb-2 text-sm font-semibold text-neutral-700">Fulfillment Type</p>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex gap-2">
         {fulfillmentFilters.map((f) => (
           <button
             key={f.id}
             onClick={() => setFulfillmentFilter(f.id)}
-            className={`chip ${fulfillmentFilter === f.id ? "chip-on" : "chip-off"}`}
+            className={`chip cursor-pointer ${fulfillmentFilter === f.id ? "chip-on" : "chip-off"}`}
           >
             {f.label}
           </button>
         ))}
       </div>
 
+      {/* Export buttons */}
       <div className="mb-4 flex justify-end gap-2">
         {shown.length > 0 && (
           <button
             onClick={exportToExcel}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 active:scale-[0.98]"
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition-colors duration-150 hover:bg-neutral-50 active:scale-[0.98]"
           >
-            📊 Export Filtered
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Export Filtered
           </button>
         )}
         {orders.length > 0 && (
           <button
             onClick={exportAllToExcel}
-            className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 active:scale-[0.98]"
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-brand bg-brand/5 px-4 py-2 text-sm font-medium text-brand transition-colors duration-150 hover:bg-brand/10 active:scale-[0.98]"
           >
-            📋 Export All Orders
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Export All
           </button>
         )}
       </div>
@@ -936,185 +944,140 @@ function OrdersTab({
                   <Badge tone={o.fulfillment === "pickup" ? "gray" : "blue"}>
                     {o.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                   </Badge>
+                  <Badge tone={o.payment_status === "paid" ? "green" : "amber"}>
+                    {o.payment_status === "paid" ? "Paid" : "Unpaid"}
+                  </Badge>
                   <Badge
                     tone={
-                      delivered ? "green" : dispatched ? "blue" : "blue"
+                      delivered ? "green"
+                      : o.delivery_status === "booked" ? "blue"
+                      : dispatched ? "blue"
+                      : "gray"
                     }
                   >
-                    {delivered
-                      ? "Delivered"
+                    {delivered ? "Delivered"
+                      : o.delivery_status === "booked" ? "Delivery Booked"
                       : dispatched
-                        ? "Dispatched"
-                        : "Ready to dispatch"}
+                        ? (o.fulfillment === "pickup" ? "Ready for Pickup" : "Packing Done")
+                        : "Awaiting Packing"}
                   </Badge>
+                  {o.return_status !== "none" && (
+                    <Badge tone={o.return_status === "accepted" ? "green" : "amber"}>
+                      {o.return_status === "requested" ? "Return Requested"
+                        : o.return_status === "accepted" ? "Return Accepted"
+                        : "Returned"}
+                    </Badge>
+                  )}
+                  {o.refund_status !== "none" && (
+                    <Badge tone={o.refund_status === "completed" ? "green" : "amber"}>
+                      {o.refund_status === "requested" ? "Refund Pending"
+                        : `Refunded ₹${o.refund_amount || o.total}`}
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="mt-3 space-y-2">
-                  {/* Step 1: Payment Received */}
+                  {/* Payment received */}
                   {o.payment_status !== "paid" && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { payment_status: "paid" })}
-                      >
-                        ① Payment received
-                      </button>
-                    </div>
+                    <button
+                      className="btn-primary w-full cursor-pointer px-4 py-2 text-sm transition-colors duration-150 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { payment_status: "paid" })}
+                    >
+                      Mark payment received
+                    </button>
                   )}
 
-                  {/* Step 2: Book Delivery (only for delivery orders, after payment received) */}
-                  {o.fulfillment === "delivery" && o.payment_status === "paid" && !dispatched && !delivered && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => bookDelivery(o.id)}
-                      >
-                        ② Book delivery
-                      </button>
-                    </div>
+                  {/* Packing done — shows for any unbooked order, no payment required */}
+                  {o.delivery_status === "unbooked" && (
+                    <button
+                      className="w-full cursor-pointer rounded-xl border border-purple-300 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 transition-colors duration-150 hover:bg-purple-100 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
+                    >
+                      Mark packing done
+                    </button>
                   )}
 
-                  {/* Step 3 (pickup): Mark Packing Done (pickup orders, after payment or from unpaid) */}
-                  {o.fulfillment === "pickup" && o.delivery_status === "unbooked" && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="rounded-xl border border-purple-300 bg-purple-50 px-4 py-2 text-sm text-purple-700 disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
-                      >
-                        ③ Mark packing done
-                      </button>
-                    </div>
+                  {/* Delivery booked — only for delivery orders, after packing done */}
+                  {o.fulfillment === "delivery" && o.delivery_status === "out_for_delivery" && (
+                    <button
+                      className="w-full cursor-pointer rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors duration-150 hover:bg-blue-100 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { delivery_status: "booked" })}
+                    >
+                      Mark delivery booked
+                    </button>
                   )}
 
-                  {/* Step 3: Mark Packing Done (delivery orders, after payment or from unpaid) */}
-                  {o.fulfillment === "delivery" && o.delivery_status === "unbooked" && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { delivery_status: "out_for_delivery" })}
-                      >
-                        ③ Mark packing done
-                      </button>
-                    </div>
+                  {/* Mark delivered — delivery orders after booked, pickup orders after packing done */}
+                  {!delivered && (
+                    (o.fulfillment === "delivery" && o.delivery_status === "booked") ||
+                    (o.fulfillment === "pickup" && o.delivery_status === "out_for_delivery")
+                  ) && (
+                    <button
+                      className="btn-primary w-full cursor-pointer px-4 py-2 text-sm transition-colors duration-150 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { delivery_status: "delivered" })}
+                    >
+                      Mark delivered
+                    </button>
                   )}
 
-                  {/* Step 4 (delivery): Delivery Booked (after packing done) */}
-                  {o.fulfillment === "delivery" && o.delivery_status === "out_for_delivery" && !delivered && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { delivery_status: "booked" })}
-                      >
-                        ④ Delivery booked
-                      </button>
-                    </div>
+                  {/* Return requested — only after delivered */}
+                  {delivered && o.return_status === "none" && (
+                    <button
+                      className="w-full cursor-pointer rounded-xl border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 transition-colors duration-150 hover:bg-orange-100 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { return_status: "requested" })}
+                    >
+                      Mark return requested
+                    </button>
                   )}
 
-                  {/* Step 5 (delivery): Mark Delivered (after booked) */}
-                  {o.fulfillment === "delivery" && o.delivery_status === "booked" && !delivered && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { delivery_status: "delivered" })}
-                      >
-                        ⑤ Mark delivered
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Step 4 (pickup): Mark Delivered (after packing done) */}
-                  {o.fulfillment === "pickup" && o.delivery_status === "out_for_delivery" && !delivered && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { delivery_status: "delivered" })}
-                      >
-                        ④ Mark delivered
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Return flow: Mark Return Requested (after delivered) */}
-                  {o.delivery_status === "delivered" && o.return_status === "none" && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2 text-sm text-orange-700 disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { return_status: "requested" })}
-                      >
-                        ⑥ Mark return requested
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Return flow: Accept Return */}
+                  {/* Accept return */}
                   {o.return_status === "requested" && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { return_status: "accepted" })}
-                      >
-                        ⑦ Accept return
-                      </button>
-                    </div>
+                    <button
+                      className="w-full cursor-pointer rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 transition-colors duration-150 hover:bg-green-100 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { return_status: "accepted" })}
+                    >
+                      Accept return
+                    </button>
                   )}
 
-                  {/* Return flow: Mark Refund Requested */}
+                  {/* Mark refund requested */}
                   {o.return_status === "accepted" && o.refund_status === "none" && (
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm text-blue-700 disabled:opacity-50"
-                        disabled={busy === o.id}
-                        onClick={() => update(o.id, { refund_status: "requested" })}
-                      >
-                        ⑧ Mark refund requested
-                      </button>
-                    </div>
+                    <button
+                      className="w-full cursor-pointer rounded-xl border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors duration-150 hover:bg-blue-100 disabled:opacity-50"
+                      disabled={busy === o.id}
+                      onClick={() => update(o.id, { refund_status: "requested" })}
+                    >
+                      Mark refund requested
+                    </button>
                   )}
 
-                  {/* Return flow: Mark Refunded */}
+                  {/* Mark refunded */}
                   {o.refund_status === "requested" && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex gap-2">
                       <input
                         type="number"
-                        value={o.refund_amount || o.total}
-                        onChange={(e) => {
+                        defaultValue={o.refund_amount || o.total}
+                        onBlur={(e) => {
                           const amount = Number(e.target.value);
-                          if (amount > 0 && amount <= o.total) {
-                            update(o.id, { refund_amount: amount });
-                          }
+                          if (amount > 0) update(o.id, { refund_amount: amount });
                         }}
                         className="input w-28 px-3 py-2 text-sm"
-                        min="0"
-                        max={o.total}
-                        placeholder="Refund amount"
+                        min="1"
+                        placeholder="₹ Amount"
                       />
                       <button
-                        className="rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-700 disabled:opacity-50"
+                        className="flex-1 cursor-pointer rounded-xl border border-green-300 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 transition-colors duration-150 hover:bg-green-100 disabled:opacity-50"
                         disabled={busy === o.id}
                         onClick={() => update(o.id, { refund_status: "completed" })}
                       >
-                        ⑨ Mark refunded
+                        Mark refunded
                       </button>
-                    </div>
-                  )}
-
-                  {/* Status badges */}
-                  {(o.payment_status === "paid" || o.return_status !== "none" || o.refund_status !== "none") && (
-                    <div className="flex flex-wrap gap-2">
-                      {o.payment_status === "paid" && <Badge tone="green">✓ Payment received</Badge>}
-                      {o.return_status === "requested" && <Badge tone="amber">Return requested</Badge>}
-                      {o.return_status === "accepted" && <Badge tone="green">✓ Return accepted</Badge>}
-                      {o.refund_status === "requested" && <Badge tone="amber">Refund requested</Badge>}
-                      {o.refund_status === "completed" && <Badge tone="green">✓ Refunded ₹{o.refund_amount || o.total}</Badge>}
                     </div>
                   )}
                 </div>
