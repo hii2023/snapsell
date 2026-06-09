@@ -60,29 +60,25 @@ export default async function ShopPage() {
   return (
     <main className="min-h-screen bg-neutral-50">
       <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <LogoLink />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700 sm:text-xs">
+              Thrift Shoppers <span className="font-normal text-neutral-400">by</span> India Recycles
+            </p>
+            <h1 className="text-base font-bold tracking-tight text-ink sm:text-xl">
+              Thrift. <span className="text-emerald-700">Discover.</span> Repeat.
+            </h1>
+          </div>
         </div>
       </header>
 
-      {/* Hero banner */}
-      <section className="border-b border-neutral-200 bg-gradient-to-br from-emerald-50 via-white to-amber-50">
-        <div className="mx-auto max-w-4xl px-6 py-10 text-center sm:py-14">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 sm:text-sm">
-            Thrift Shoppers <span className="font-normal text-neutral-500">by</span> India Recycles
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight text-ink sm:text-5xl">
-            Thrift. <span className="text-emerald-700">Discover.</span> Repeat.
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-neutral-600 sm:text-base">
-            Browse handpicked thrift treasures and FMCG deals. Save money, reduce waste, and discover new
-            treasures everyday. Book online, pick up or get it delivered.
-          </p>
-          <p className="mx-auto mt-5 max-w-xl rounded-full bg-white/70 px-5 py-2 text-xs font-medium italic text-emerald-800 ring-1 ring-emerald-200 sm:text-sm">
-            If you love it, book it. If you wait, someone else might.
-          </p>
-        </div>
-      </section>
+      {/* Slim tagline strip */}
+      <div className="border-b border-emerald-100 bg-emerald-50">
+        <p className="mx-auto max-w-4xl px-4 py-2 text-center text-xs font-medium italic text-emerald-800 sm:text-sm">
+          If you love it, book it. If you wait, someone else might.
+        </p>
+      </div>
 
       {/* Always render ShopClient — it does its own live client-side fetch on mount.
           Empty-state is handled inside the client so it can refresh without a reload. */}
