@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentSeller } from "@/lib/auth";
 import { supabaseConfigured } from "@/lib/supabase";
@@ -9,9 +10,12 @@ import type { Order, Product, Settings } from "@/lib/types";
 import AdminShell from "@/components/AdminShell";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 export const metadata: Metadata = { title: "Thrift Store Admin" };
 
 export default async function DashboardPage() {
+  noStore();
   if (!supabaseConfigured()) redirect("/login");
   const seller = await currentSeller();
   if (!seller) redirect("/login");

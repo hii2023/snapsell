@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { supabaseConfigured } from "@/lib/supabase";
 import LogoLink from "@/components/LogoLink";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -6,12 +7,16 @@ import { T } from "@/lib/db";
 import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 
+// Never cache this page — always fetch live products from Supabase
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 export const metadata: Metadata = { title: "Thrift Shoppers" };
 
 const shopName = "Thrift Shoppers";
 
 export default async function ShopPage() {
+  noStore(); // belt-and-suspenders: disables Next.js data cache for this render
   let products: Product[] = [];
 
   let cfg = {
