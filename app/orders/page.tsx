@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentSeller } from "@/lib/auth";
 import { supabaseConfigured } from "@/lib/supabase";
@@ -8,6 +9,7 @@ import type { Order, Product, Settings } from "@/lib/types";
 import AdminShell from "@/components/AdminShell";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Thrift Store Admin" };
 
 export default async function DashboardPage() {
   if (!supabaseConfigured()) redirect("/login");

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { supabaseConfigured } from "@/lib/supabase";
 import LogoLink from "@/components/LogoLink";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -6,8 +7,9 @@ import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Thrift Shoppers" };
 
-const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
+const shopName = "Thrift Shoppers";
 
 export default async function ShopPage() {
   let products: Product[] = [];

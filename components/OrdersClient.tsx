@@ -810,6 +810,12 @@ function OrdersTab({
     return `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
   }
 
+  function fmtDate(iso: string) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+      + " " + d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  }
+
   function exportToExcel() {
     const data = shown.map((o) => ({
       "Order ID": o.id.slice(0, 8),
@@ -821,7 +827,7 @@ function OrdersTab({
       "Fulfillment": o.fulfillment === "pickup" ? "Pickup" : "Delivery",
       "Status": o.delivery_status === "delivered" ? "Delivered" : o.delivery_status === "out_for_delivery" ? "Dispatched" : "Pending",
       "Items": (o.order_items || []).map((i) => `${i.qty}x ${i.name_snapshot}`).join("; "),
-      "Date": new Date(o.created_at).toLocaleDateString(),
+      "Order Date": fmtDate(o.created_at),
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -848,8 +854,7 @@ function OrdersTab({
       "Pickup Date": o.pickup_date || "—",
       "Pickup Time": o.pickup_time || "—",
       "Items": (o.order_items || []).map((i) => `${i.qty}x ${i.name_snapshot} @ ₹${i.price_at_purchase}`).join(" | "),
-      "Created Date": new Date(o.created_at).toLocaleDateString(),
-      "Created Time": new Date(o.created_at).toLocaleTimeString(),
+      "Order Date": fmtDate(o.created_at),
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
