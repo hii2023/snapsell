@@ -139,21 +139,39 @@ function Badge({ tone, children }: { tone: "green" | "amber" | "blue" | "gray" |
 
 /* ---------------- Overview ---------------- */
 
-function StatCard({ label, value, onClick, tone = "default" }: { label: string; value: number; onClick?: () => void; tone?: "default" | "amber" | "red" | "green" }) {
+function OpsCard({
+  tone,
+  title,
+  primary,
+  sub,
+  onClick,
+}: {
+  tone: "amber" | "red" | "blue" | "green" | "purple";
+  title: string;
+  primary: string;
+  sub: string;
+  onClick?: () => void;
+}) {
   const tones = {
-    default: "bg-white border-neutral-200",
-    amber: "bg-amber-50 border-amber-200",
-    red: "bg-red-50 border-red-200",
-    green: "bg-green-50 border-green-200",
+    amber:  { card: "border-amber-200 bg-amber-50",  dot: "bg-amber-400",  text: "text-amber-700" },
+    red:    { card: "border-red-200 bg-red-50",       dot: "bg-red-400",    text: "text-red-700" },
+    blue:   { card: "border-blue-200 bg-blue-50",     dot: "bg-blue-400",   text: "text-blue-700" },
+    green:  { card: "border-green-200 bg-green-50",   dot: "bg-green-400",  text: "text-green-700" },
+    purple: { card: "border-purple-200 bg-purple-50", dot: "bg-purple-400", text: "text-purple-700" },
   };
+  const t = tones[tone];
   return (
     <button
       onClick={onClick}
       disabled={!onClick}
-      className={`rounded-2xl border p-4 text-left transition-shadow duration-150 ${tones[tone]} ${onClick ? "cursor-pointer active:scale-[0.98] hover:shadow-md" : "cursor-default"}`}
+      className={`rounded-2xl border p-4 text-left transition-all duration-150 ${t.card} ${onClick ? "cursor-pointer hover:shadow-md active:scale-[0.98]" : "cursor-default"}`}
     >
-      <p className="text-3xl font-bold tabular-nums">{value}</p>
-      <p className="mt-1 text-sm text-neutral-600">{label}</p>
+      <div className="flex items-center gap-2">
+        <span className={`h-2 w-2 rounded-full ${t.dot}`} />
+        <span className={`text-xs font-semibold uppercase tracking-wide ${t.text}`}>{title}</span>
+      </div>
+      <p className="mt-2 text-3xl font-bold tabular-nums text-ink">{primary}</p>
+      <p className="mt-0.5 text-sm text-neutral-600">{sub}</p>
     </button>
   );
 }
@@ -171,14 +189,19 @@ function Overview({
   openCategory: (c: Category) => void;
   openOrders: (f: OrderFilter) => void;
 }) {
-  const inStock = products.filter((p) => p.stock > 0).length;
-  const oos = products.filter((p) => p.stock === 0).length;
-  const readyToShip = orders.filter(isPendingDispatch).length;
-  const paid = orders.filter((o) => o.payment_status === "paid").length;
-  const unpaid = orders.filter((o) => o.payment_status === "pending").length;
-  const revenue = orders
-    .filter((o) => o.payment_status === "paid")
-    .reduce((s, o) => s + o.total, 0);
+  // Operational buckets
+  const unpaidOrders   = orders.filter((o) => o.payment_status === "pending");
+  const toPackOrders   = orders.filter((o) => o.payment_status === "paid" && o.delivery_status === "unbooked");
+  const toDispatch     = orders.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "delivery");
+  const awaitPickup    = orders.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup");
+  const deliveredToday = orders.filter((o) => o.delivery_status === "delivered" && o.return_status === "none");
+
+  const unpaidTotal    = unpaidOrders.reduce((s, o) => s + o.total, 0);
+  const toPackQty      = toPackOrders.reduce((s, o) => s + (o.order_items || []).reduce((q, i) => q + i.qty, 0), 0);
+
+  // Stock & revenue
+  const inStock  = products.filter((p) => p.stock > 0).length;
+  const revenue  = orders.filter((o) => o.payment_status === "paid").reduce((s, o) => s + o.total, 0);
 
   const perCategory = CATEGORY_META.map((c) => ({
     ...c,
@@ -187,28 +210,72 @@ function Overview({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="In stock" value={inStock} tone="green" onClick={() => openProducts("instock")} />
-        <StatCard label="Out of stock" value={oos} tone="red" onClick={() => openProducts("oos")} />
-        <StatCard label="Packing done" value={readyToShip} tone="amber" onClick={() => openOrders("packing")} />
-        <StatCard label="Total orders" value={orders.length} onClick={() => openOrders("all")} />
-      </div>
 
+      {/* ── Operational pulse ─────────────────────────── */}
       <div>
-        <p className="mb-2 text-sm font-semibold text-neutral-500">Payments</p>
+        <p className="mb-3 text-sm font-semibold text-neutral-500">Needs action</p>
         <div className="grid grid-cols-2 gap-3">
-          <StatCard label="Payment received" value={paid} tone="green" onClick={() => openOrders("paid")} />
-          <StatCard label="Payment pending" value={unpaid} tone="amber" onClick={() => openOrders("unpaid")} />
+          <OpsCard
+            tone="red"
+            title="Pending payment"
+            primary={String(unpaidOrders.length)}
+            sub={unpaidOrders.length === 0 ? "All clear" : `${rupees(unpaidTotal)} awaiting`}
+            onClick={() => openOrders("unpaid")}
+          />
+          <OpsCard
+            tone="amber"
+            title="To be packed"
+            primary={String(toPackOrders.length)}
+            sub={toPackOrders.length === 0 ? "Nothing to pack" : `${toPackQty} item${toPackQty !== 1 ? "s" : ""} total`}
+            onClick={() => openOrders("paid")}
+          />
+          <OpsCard
+            tone="blue"
+            title="To dispatch"
+            primary={String(toDispatch.length)}
+            sub={toDispatch.length === 0 ? "Nothing pending" : "Packed, awaiting dispatch"}
+            onClick={() => openOrders("packing")}
+          />
+          <OpsCard
+            tone="purple"
+            title="Awaiting pickup"
+            primary={String(awaitPickup.length)}
+            sub={awaitPickup.length === 0 ? "None waiting" : "Customer to collect"}
+            onClick={() => openOrders("pickup")}
+          />
         </div>
-        <p className="mt-2 text-sm text-neutral-500">
-          Revenue collected: <span className="font-semibold text-ink">{rupees(revenue)}</span>
-        </p>
       </div>
 
+      {/* ── Revenue & stock ───────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+        <OpsCard
+          tone="green"
+          title="Revenue collected"
+          primary={rupees(revenue)}
+          sub={`${orders.filter((o) => o.payment_status === "paid").length} paid orders`}
+          onClick={() => openOrders("paid")}
+        />
+        <OpsCard
+          tone="green"
+          title="Delivered"
+          primary={String(deliveredToday.length)}
+          sub="No active returns"
+          onClick={() => openOrders("delivered")}
+        />
+      </div>
+
+      {/* ── Stock by category ─────────────────────────── */}
       <div>
-        <p className="mb-2 text-sm font-semibold text-neutral-500">In stock by category</p>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-semibold text-neutral-500">Stock by category</p>
+          <button onClick={() => openProducts("instock")} className="text-xs text-brand underline">
+            {inStock} in stock
+          </button>
+        </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          {perCategory.map((c) => (
+          {perCategory.length === 0 ? (
+            <p className="text-sm text-neutral-400">No stock yet.</p>
+          ) : perCategory.map((c) => (
             <button
               key={c.id}
               onClick={() => openCategory(c.id)}
@@ -225,14 +292,6 @@ function Overview({
         </div>
       </div>
 
-      <div>
-        <p className="mb-2 text-sm font-semibold text-neutral-500">Quick filters</p>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => openProducts("instock")} className="chip chip-off">In stock</button>
-          <button onClick={() => openProducts("oos")} className="chip chip-off">Out of stock</button>
-          <button onClick={() => openOrders("packing")} className="chip chip-off">Packing done</button>
-        </div>
-      </div>
     </div>
   );
 }
