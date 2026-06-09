@@ -737,7 +737,35 @@ function OrdersTab({
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Orders");
-    XLSX.writeFile(wb, `orders-${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `orders-filtered-${new Date().toISOString().split('T')[0]}.xlsx`);
+  }
+
+  function exportAllToExcel() {
+    const data = orders.map((o) => ({
+      "Order ID": o.id,
+      "Short ID": o.id.slice(0, 8),
+      "Customer Name": o.customer_name,
+      "Phone": o.phone,
+      "Address": o.fulfillment === "pickup" ? "Store Pickup" : o.address,
+      "Total Amount": `₹${o.total}`,
+      "Delivery Fee": `₹${o.delivery_fee || 0}`,
+      "Payment Status": o.payment_status === "paid" ? "Received" : "Pending",
+      "Fulfillment Type": o.fulfillment === "pickup" ? "Pickup" : "Delivery",
+      "Delivery Status": o.delivery_status,
+      "Return Status": o.return_status || "none",
+      "Refund Status": o.refund_status || "none",
+      "Refund Amount": o.refund_amount ? `₹${o.refund_amount}` : "—",
+      "Delivery Tracking": o.delivery_tracking || "—",
+      "Pickup Date": o.pickup_date || "—",
+      "Pickup Time": o.pickup_time || "—",
+      "Items": (o.order_items || []).map((i) => `${i.qty}x ${i.name_snapshot} @ ₹${i.price_at_purchase}`).join(" | "),
+      "Created Date": new Date(o.created_at).toLocaleDateString(),
+      "Created Time": new Date(o.created_at).toLocaleTimeString(),
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "All Orders");
+    XLSX.writeFile(wb, `all-orders-${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
   const shown = orders.filter((o) => {
@@ -854,16 +882,24 @@ function OrdersTab({
         ))}
       </div>
 
-      {shown.length > 0 && (
-        <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-end gap-2">
+        {shown.length > 0 && (
           <button
             onClick={exportToExcel}
             className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 active:scale-[0.98]"
           >
-            📊 Export to Excel
+            📊 Export Filtered
           </button>
-        </div>
-      )}
+        )}
+        {orders.length > 0 && (
+          <button
+            onClick={exportAllToExcel}
+            className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 active:scale-[0.98]"
+          >
+            📋 Export All Orders
+          </button>
+        )}
+      </div>
 
       {shown.length === 0 ? (
         <p className="py-16 text-center text-neutral-500">No orders here.</p>
