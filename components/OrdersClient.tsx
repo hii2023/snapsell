@@ -176,6 +176,18 @@ function OpsCard({
   );
 }
 
+type DateRange = "today" | "week" | "month" | "all";
+
+function filterByDate(orders: Order[], range: DateRange): Order[] {
+  if (range === "all") return orders;
+  const now = new Date();
+  const start = new Date();
+  if (range === "today") { start.setHours(0, 0, 0, 0); }
+  else if (range === "week") { start.setDate(now.getDate() - 7); }
+  else if (range === "month") { start.setDate(now.getDate() - 30); }
+  return orders.filter((o) => new Date(o.created_at) >= start);
+}
+
 function Overview({
   products,
   orders,
@@ -189,79 +201,105 @@ function Overview({
   openCategory: (c: Category) => void;
   openOrders: (f: OrderFilter) => void;
 }) {
-  // Operational buckets
-  const unpaidOrders   = orders.filter((o) => o.payment_status === "pending");
-  const toPackOrders   = orders.filter((o) => o.payment_status === "paid" && o.delivery_status === "unbooked");
-  const toDispatch     = orders.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "delivery");
-  const awaitPickup    = orders.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup");
-  const deliveredToday = orders.filter((o) => o.delivery_status === "delivered" && o.return_status === "none");
+  const [dateRange, setDateRange] = useState<DateRange>("today");
+  const filtered = filterByDate(orders, dateRange);
 
-  const unpaidTotal    = unpaidOrders.reduce((s, o) => s + o.total, 0);
-  const toPackQty      = toPackOrders.reduce((s, o) => s + (o.order_items || []).reduce((q, i) => q + i.qty, 0), 0);
+  // Operational buckets (always from ALL orders — live queue)
+  const unpaidOrders = orders.filter((o) => o.payment_status === "pending");
+  const toPackOrders = orders.filter((o) => o.payment_status === "paid" && o.delivery_status === "unbooked");
+  const toDispatch   = orders.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "delivery");
+  const awaitPickup  = orders.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup");
+  const unpaidTotal  = unpaidOrders.reduce((s, o) => s + o.total, 0);
+  const toPackQty    = toPackOrders.reduce((s, o) => s + (o.order_items || []).reduce((q, i) => q + i.qty, 0), 0);
 
-  // Stock & revenue
-  const inStock  = products.filter((p) => p.stock > 0).length;
-  const revenue  = orders.filter((o) => o.payment_status === "paid").reduce((s, o) => s + o.total, 0);
+  // Revenue stats — filtered by date range
+  const paidOrders  = filtered.filter((o) => o.payment_status === "paid");
+  const cashOrders  = paidOrders.filter((o) => o.payment_method === "cash");
+  const upiOrders   = paidOrders.filter((o) => o.payment_method === "upi");
+  const otherPaid   = paidOrders.filter((o) => !o.payment_method);
+  const cashTotal   = cashOrders.reduce((s, o) => s + o.total, 0);
+  const upiTotal    = upiOrders.reduce((s, o) => s + o.total, 0);
+  const totalRev    = paidOrders.reduce((s, o) => s + o.total, 0);
+  const delivered   = filtered.filter((o) => o.delivery_status === "delivered" && o.return_status === "none");
 
+  const inStock = products.filter((p) => p.stock > 0).length;
   const perCategory = CATEGORY_META.map((c) => ({
     ...c,
     count: products.filter((p) => p.category === c.id && p.stock > 0).length,
   })).filter((c) => c.count > 0);
 
+  const dateLabels: { id: DateRange; label: string }[] = [
+    { id: "today", label: "Today" },
+    { id: "week",  label: "7 days" },
+    { id: "month", label: "30 days" },
+    { id: "all",   label: "All time" },
+  ];
+
   return (
     <div className="space-y-6">
 
-      {/* ── Operational pulse ─────────────────────────── */}
+      {/* ── Operational pulse (live queue — ignores date filter) ── */}
       <div>
-        <p className="mb-3 text-sm font-semibold text-neutral-500">Needs action</p>
+        <p className="mb-3 text-sm font-semibold text-neutral-500">Needs action now</p>
         <div className="grid grid-cols-2 gap-3">
-          <OpsCard
-            tone="red"
-            title="Pending payment"
-            primary={String(unpaidOrders.length)}
+          <OpsCard tone="red"    title="Pending payment" primary={String(unpaidOrders.length)}
             sub={unpaidOrders.length === 0 ? "All clear" : `${rupees(unpaidTotal)} awaiting`}
-            onClick={() => openOrders("unpaid")}
-          />
-          <OpsCard
-            tone="amber"
-            title="To be packed"
-            primary={String(toPackOrders.length)}
+            onClick={() => openOrders("unpaid")} />
+          <OpsCard tone="amber"  title="To be packed"    primary={String(toPackOrders.length)}
             sub={toPackOrders.length === 0 ? "Nothing to pack" : `${toPackQty} item${toPackQty !== 1 ? "s" : ""} total`}
-            onClick={() => openOrders("paid")}
-          />
-          <OpsCard
-            tone="blue"
-            title="To dispatch"
-            primary={String(toDispatch.length)}
+            onClick={() => openOrders("paid")} />
+          <OpsCard tone="blue"   title="To dispatch"     primary={String(toDispatch.length)}
             sub={toDispatch.length === 0 ? "Nothing pending" : "Packed, awaiting dispatch"}
-            onClick={() => openOrders("packing")}
-          />
-          <OpsCard
-            tone="purple"
-            title="Awaiting pickup"
-            primary={String(awaitPickup.length)}
+            onClick={() => openOrders("packing")} />
+          <OpsCard tone="purple" title="Awaiting pickup" primary={String(awaitPickup.length)}
             sub={awaitPickup.length === 0 ? "None waiting" : "Customer to collect"}
-            onClick={() => openOrders("pickup")}
-          />
+            onClick={() => openOrders("pickup")} />
         </div>
       </div>
 
-      {/* ── Revenue & stock ───────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3">
-        <OpsCard
-          tone="green"
-          title="Revenue collected"
-          primary={rupees(revenue)}
-          sub={`${orders.filter((o) => o.payment_status === "paid").length} paid orders`}
-          onClick={() => openOrders("paid")}
-        />
-        <OpsCard
-          tone="green"
-          title="Delivered"
-          primary={String(deliveredToday.length)}
-          sub="No active returns"
-          onClick={() => openOrders("delivered")}
-        />
+      {/* ── Date range selector ───────────────────────── */}
+      <div>
+        <p className="mb-2 text-sm font-semibold text-neutral-500">Revenue summary</p>
+        <div className="mb-3 flex gap-2">
+          {dateLabels.map((d) => (
+            <button key={d.id} onClick={() => setDateRange(d.id)}
+              className={`chip text-xs ${dateRange === d.id ? "chip-on" : "chip-off"}`}>
+              {d.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Total revenue */}
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-green-600">Total collected</p>
+              <p className="mt-1 text-3xl font-bold tabular-nums text-ink">{rupees(totalRev)}</p>
+              <p className="text-sm text-neutral-500">{paidOrders.length} paid order{paidOrders.length !== 1 ? "s" : ""}</p>
+            </div>
+            <button onClick={() => openOrders("delivered")}
+              className="rounded-xl bg-green-600 px-3 py-1.5 text-xs font-semibold text-white">
+              {delivered.length} delivered
+            </button>
+          </div>
+        </div>
+
+        {/* Cash / UPI split */}
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">UPI</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">{rupees(upiTotal)}</p>
+            <p className="text-xs text-neutral-500">{upiOrders.length} order{upiOrders.length !== 1 ? "s" : ""}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Cash</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">{rupees(cashTotal)}</p>
+            <p className="text-xs text-neutral-500">{cashOrders.length} order{cashOrders.length !== 1 ? "s" : ""}</p>
+          </div>
+        </div>
+        {otherPaid.length > 0 && (
+          <p className="mt-1 text-xs text-neutral-400 text-right">{otherPaid.length} older order{otherPaid.length !== 1 ? "s" : ""} without method tag</p>
+        )}
       </div>
 
       {/* ── Stock by category ─────────────────────────── */}
@@ -782,6 +820,8 @@ function OrdersTab({
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [search, setSearch] = useState("");
+  // payPick holds the order id currently showing the Cash/UPI selector; null = none open
+  const [payPick, setPayPick] = useState<string | null>(null);
 
   const STORE_WA = "917202035700";
 
@@ -824,6 +864,7 @@ function OrdersTab({
       "Address": o.fulfillment === "pickup" ? "Store Pickup" : o.address,
       "Total": `₹${o.total}`,
       "Payment": o.payment_status === "paid" ? "Received" : "Pending",
+      "Payment Method": o.payment_method || "—",
       "Fulfillment": o.fulfillment === "pickup" ? "Pickup" : "Delivery",
       "Status": o.delivery_status === "delivered" ? "Delivered" : o.delivery_status === "out_for_delivery" ? "Dispatched" : "Pending",
       "Items": (o.order_items || []).map((i) => `${i.qty}x ${i.name_snapshot}`).join("; "),
@@ -845,6 +886,7 @@ function OrdersTab({
       "Total Amount": `₹${o.total}`,
       "Delivery Fee": `₹${o.delivery_fee || 0}`,
       "Payment Status": o.payment_status === "paid" ? "Received" : "Pending",
+      "Payment Method": o.payment_method || "—",
       "Fulfillment Type": o.fulfillment === "pickup" ? "Pickup" : "Delivery",
       "Delivery Status": o.delivery_status,
       "Return Status": o.return_status || "none",
@@ -1108,7 +1150,11 @@ function OrdersTab({
                     {o.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                   </Badge>
                   <Badge tone={o.payment_status === "paid" ? "green" : "amber"}>
-                    {o.payment_status === "paid" ? "Paid" : "Unpaid"}
+                    {o.payment_status === "paid"
+                      ? o.payment_method === "upi" ? "Paid (UPI)"
+                      : o.payment_method === "cash" ? "Paid (Cash)"
+                      : "Paid"
+                      : "Unpaid"}
                   </Badge>
                   <Badge
                     tone={
@@ -1140,15 +1186,43 @@ function OrdersTab({
                 </div>
 
                 <div className="mt-3 space-y-2">
-                  {/* Payment received */}
+                  {/* Payment received — Cash / UPI inline selector */}
                   {o.payment_status !== "paid" && (
-                    <button
-                      className="btn-primary w-full cursor-pointer px-4 py-2 text-sm transition-colors duration-150 disabled:opacity-50"
-                      disabled={busy === o.id}
-                      onClick={() => update(o.id, { payment_status: "paid" })}
-                    >
-                      Mark payment received
-                    </button>
+                    payPick === o.id ? (
+                      <div className="rounded-xl border border-green-300 bg-green-50 p-3">
+                        <p className="mb-2 text-center text-xs font-semibold text-green-700">How was payment received?</p>
+                        <div className="flex gap-2">
+                          <button
+                            className="flex-1 cursor-pointer rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                            disabled={busy === o.id}
+                            onClick={() => { setPayPick(null); update(o.id, { payment_status: "paid", payment_method: "upi" }); }}
+                          >
+                            UPI
+                          </button>
+                          <button
+                            className="flex-1 cursor-pointer rounded-xl bg-amber-500 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+                            disabled={busy === o.id}
+                            onClick={() => { setPayPick(null); update(o.id, { payment_status: "paid", payment_method: "cash" }); }}
+                          >
+                            Cash
+                          </button>
+                          <button
+                            className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-500 hover:bg-neutral-100"
+                            onClick={() => setPayPick(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className="btn-primary w-full cursor-pointer px-4 py-2 text-sm transition-colors duration-150 disabled:opacity-50"
+                        disabled={busy === o.id}
+                        onClick={() => setPayPick(o.id)}
+                      >
+                        Mark payment received
+                      </button>
+                    )
                   )}
 
                   {/* Packing done — shows for any unbooked order, no payment required */}

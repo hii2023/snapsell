@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import QRCode from "qrcode";
 import { rupees, CATEGORY_META, PICKUP_ADDRESS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
 import type { Category, CartLine, Product } from "@/lib/types";
@@ -556,83 +555,76 @@ function BookingConfirm({
   onDone: () => void;
 }) {
   const ref = "IR-" + bookingId.slice(0, 8).toUpperCase();
-  const [qr, setQr] = useState("");
-
-  const upi = cfg.upiId;
-  const upiName = cfg.upiName || shopName;
-  const wa = cfg.whatsapp;
-  const upiUrl =
-    upi && amount > 0
-      ? `upi://pay?pa=${upi}&pn=${encodeURIComponent(upiName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(ref)}`
-      : "";
-  // GPay-specific scheme (falls back to the generic upi: link on the QR / button).
-  const gpayUrl = upiUrl ? upiUrl.replace("upi://pay", "tez://upi/pay") : "";
-
-  useEffect(() => {
-    if (!upiUrl) return;
-    QRCode.toDataURL(upiUrl, { width: 240, margin: 1 }).then(setQr).catch(() => {});
-  }, [upiUrl]);
-
-  const items = cart.map((l) => `${l.qty} x ${l.name}${l.size ? ` (${l.size})` : ""}`).join(", ");
-  const msg = `${shopName} booking ${ref}\nName: ${name} (${phone})\nItems: ${items}\nFulfilment: ${fulfillment}\nAmount: ${amount > 0 ? "₹" + amount : "Free"}\nI have paid by UPI. My payment reference: `;
-  const waUrl = (wa ? `https://wa.me/${wa}` : "https://wa.me/") + `?text=${encodeURIComponent(msg)}`;
+  const storeWa = cfg.whatsapp || "917202035700";
+  const items = cart.map((l) => `${l.qty}x ${l.name}${l.size ? ` (${l.size})` : ""}`).join(", ");
+  const waMsg = `Hi, I have made the payment for my order.\n\nOrder ID: ${ref}\nName: ${name}\nItems: ${items}\nAmount: ${amount > 0 ? "₹" + amount : "Free"}\n\nPlease find my payment screenshot attached.`;
+  const waUrl = `https://wa.me/${storeWa}?text=${encodeURIComponent(waMsg)}`;
 
   return (
     <div className="mx-auto max-w-md px-4 py-8 text-center">
+      {/* Confirmation tick */}
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand text-white">
         <CheckIcon className="h-9 w-9" />
       </div>
-      <h2 className="text-2xl font-semibold">Booking confirmed</h2>
-      <p className="mt-1 text-neutral-600">
-        Your booking ID is <span className="font-semibold text-ink">{ref}</span>
-      </p>
+      <h2 className="text-2xl font-semibold">Order placed!</h2>
+      <p className="mt-1 text-neutral-500">Your order has been received.</p>
 
+      {/* Order ID */}
+      <div className="mt-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+        <p className="text-sm text-neutral-500">Your Order ID</p>
+        <p className="mt-1 text-2xl font-bold tracking-wider text-ink">{ref}</p>
+        <p className="mt-1 text-xs text-neutral-400">Save this for reference</p>
+      </div>
+
+      {/* Items summary */}
+      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4 text-left">
+        <p className="mb-2 text-sm font-semibold text-neutral-500">Order summary</p>
+        {cart.map((l) => (
+          <div key={l.product_id} className="flex justify-between py-1 text-sm">
+            <span className="text-neutral-700">{l.qty}x {l.name}{l.size ? ` (${l.size})` : ""}</span>
+            <span className="font-medium">₹{l.price * l.qty}</span>
+          </div>
+        ))}
+        {amount > 0 && (
+          <div className="mt-2 flex justify-between border-t border-neutral-100 pt-2 text-sm font-semibold">
+            <span>Total</span><span>₹{amount}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Payment instructions */}
       {amount > 0 ? (
-        <div className="mt-6 card p-5">
-          <p className="text-lg font-semibold">Pay {rupees(amount)} by UPI</p>
-          {qr ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={qr} alt="UPI QR" className="mx-auto mt-3 h-56 w-56" />
-          ) : upi ? (
-            <p className="mt-3 text-sm text-neutral-500">Generating QR...</p>
-          ) : (
-            <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-              Payment QR is being set up. Tap the WhatsApp button below and the team will
-              share UPI details.
-            </p>
-          )}
-          {upi ? <p className="mt-2 text-sm text-neutral-500">UPI: {upi}</p> : null}
-          <p className="mt-3 text-sm text-neutral-600">
-            Scan the QR, or on your phone tap below to open your UPI app with the amount
-            filled in. After paying, send proof to the team.
-          </p>
-          {upiUrl && (
-            <div className="mt-3 space-y-2">
-              <a href={gpayUrl} className="flex w-full items-center justify-center rounded-2xl bg-brand py-3 text-base font-semibold text-white">
-                Pay {rupees(amount)} in GPay
-              </a>
-              <a href={upiUrl} className="flex w-full items-center justify-center rounded-2xl border border-brand py-3 text-base font-semibold text-brand">
-                Pay in other UPI app
-              </a>
-            </div>
-          )}
+        <div className="mt-5 rounded-2xl border border-green-200 bg-green-50 p-4 text-left">
+          <p className="font-semibold text-green-800">How to pay</p>
+          <ol className="mt-2 space-y-1.5 text-sm text-green-700">
+            <li>1. Pay <strong>₹{amount}</strong> via UPI / Cash to our team</li>
+            <li>2. Take a screenshot of your payment</li>
+            <li>3. Send the screenshot on WhatsApp with your <strong>Order ID: {ref}</strong></li>
+          </ol>
         </div>
       ) : (
-        <p className="mt-6 rounded-xl bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
-          This is a free item. {fulfillment === "pickup" ? "Collect it from the store." : "Arrange transport with the team."}
+        <p className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+          {fulfillment === "pickup" ? "Come collect your item from the store." : "Our team will be in touch."}
         </p>
       )}
 
-      <a
-        href={waUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-green-600 py-4 text-lg font-semibold text-white"
-      >
-        Send payment proof on WhatsApp
-      </a>
+      {/* WhatsApp CTA */}
+      {amount > 0 && (
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-green-600 py-4 text-base font-semibold text-white active:scale-[0.98]"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          Send payment screenshot on WhatsApp
+        </a>
+      )}
+
       <button onClick={onDone} className="btn-ghost mt-3 w-full py-3">
-        Done
+        Back to shop
       </button>
     </div>
   );

@@ -28,6 +28,7 @@ export type Product = {
 
 export type PaymentMode = "online" | "cod" | "qr";
 export type PaymentStatus = "pending" | "paid" | "failed";
+export type PaymentMethod = "cash" | "upi" | null;
 export type Fulfillment = "delivery" | "pickup";
 export type DeliveryProvider = "manual" | "porter";
 export type DeliveryStatus =
@@ -68,6 +69,7 @@ export type Order = {
   return_status: string;
   refund_status: string;
   refund_amount: number;
+  payment_method: "cash" | "upi" | null;
   created_at: string;
   order_items?: OrderItem[];
 };

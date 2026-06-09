@@ -6,6 +6,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { T } from "@/lib/db";
 import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
+import StoreContact from "@/components/StoreContact";
 
 // Never cache this page — always fetch live products from Supabase
 export const dynamic = "force-dynamic";
@@ -72,6 +73,7 @@ export default async function ShopPage() {
       ) : (
         <ShopClient products={products} shopName={shopName} cfg={cfg} />
       )}
+      <StoreContact />
     </main>
   );
 }

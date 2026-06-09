@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase-server";
 import { requireSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
-import type { DeliveryStatus, PaymentStatus, ReturnStatus, RefundStatus } from "@/lib/types";
+import type { DeliveryStatus, PaymentStatus, ReturnStatus, RefundStatus, PaymentMethod } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -31,6 +31,7 @@ export async function PATCH(req: NextRequest) {
     return_status?: ReturnStatus;
     refund_status?: RefundStatus;
     refund_amount?: number;
+    payment_method?: PaymentMethod;
   };
   if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
@@ -49,6 +50,9 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof body.refund_amount === "number" && body.refund_amount >= 0) {
     patch.refund_amount = body.refund_amount;
+  }
+  if (body.payment_method === "cash" || body.payment_method === "upi") {
+    patch.payment_method = body.payment_method;
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
