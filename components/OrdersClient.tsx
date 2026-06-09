@@ -30,7 +30,7 @@ export default function OrdersClient({
   initialProducts: Product[];
   settings: Settings;
 }) {
-  const [tab, setTab] = useState<Tab>("orders");
+  const [tab, setTab] = useState<Tab>("overview");
   const [orders, setOrders] = useState(initialOrders);
   const [products, setProducts] = useState(initialProducts);
 

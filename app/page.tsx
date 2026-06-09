@@ -115,7 +115,7 @@ export default async function ShopPage() {
             <div className="flex items-center gap-3">
               {/* Instagram */}
               <a
-                href="https://www.instagram.com/indiarecycles"
+                href="https://www.instagram.com/india.recycles"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
