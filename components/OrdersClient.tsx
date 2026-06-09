@@ -189,7 +189,7 @@ function Overview({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="In stock" value={inStock} tone="green" onClick={() => openProducts("instock")} />
         <StatCard label="Out of stock" value={oos} tone="red" onClick={() => openProducts("oos")} />
-        <StatCard label="Ready to ship" value={readyToShip} tone="amber" onClick={() => openOrders("dispatch")} />
+        <StatCard label="Ready to ship" value={readyToShip} tone="amber" onClick={() => openOrders("ready")} />
         <StatCard label="Total orders" value={orders.length} onClick={() => openOrders("all")} />
       </div>
 
@@ -229,7 +229,7 @@ function Overview({
         <div className="flex flex-wrap gap-2">
           <button onClick={() => openProducts("instock")} className="chip chip-off">In stock</button>
           <button onClick={() => openProducts("oos")} className="chip chip-off">Out of stock</button>
-          <button onClick={() => openOrders("dispatch")} className="chip chip-off">Ready for delivery</button>
+          <button onClick={() => openOrders("ready")} className="chip chip-off">Ready for delivery</button>
         </div>
       </div>
     </div>
