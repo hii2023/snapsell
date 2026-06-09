@@ -4,6 +4,8 @@ import { useState } from "react";
 import { CATEGORY_META } from "@/lib/constants";
 import type { Settings } from "@/lib/types";
 
+type OperationStatus = "idle" | "clearing";
+
 function slug(s: string) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "cat";
 }
@@ -14,6 +16,8 @@ export default function CPanel({ initial }: { initial: Settings }) {
   const [msg, setMsg] = useState("");
   const [newCat, setNewCat] = useState("");
   const [newSub, setNewSub] = useState<Record<string, string>>({});
+  const [opStatus, setOpStatus] = useState<OperationStatus>("idle");
+  const [opMsg, setOpMsg] = useState("");
 
   function set<K extends keyof Settings>(k: K, v: Settings[K]) {
     setS((prev) => ({ ...prev, [k]: v }));
@@ -65,6 +69,29 @@ export default function CPanel({ initial }: { initial: Settings }) {
       setMsg(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function clearProcessedOrders() {
+    if (!confirm("Delete all orders that are NOT in Unpaid stage? This cannot be undone.")) return;
+
+    setOpStatus("clearing");
+    setOpMsg("");
+    try {
+      const res = await fetch("/api/orders/clear-processed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setOpMsg(`✅ Deleted ${json.deletedCount} orders`);
+      } else {
+        throw new Error(json.error || "Could not clear orders");
+      }
+    } catch (e) {
+      setOpMsg(e instanceof Error ? e.message : "Error clearing orders");
+    } finally {
+      setOpStatus("idle");
     }
   }
 
@@ -154,6 +181,25 @@ export default function CPanel({ initial }: { initial: Settings }) {
             <button onClick={addCategory} className="btn-primary px-5">
               Add
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 className="mb-3 text-lg font-semibold">Data Management</h3>
+        <div className="space-y-3">
+          <div className="card border-orange-200 bg-orange-50 p-4">
+            <p className="mb-3 text-sm text-neutral-700">
+              <strong>Clear Processed Orders:</strong> Delete all orders that have moved past the Unpaid stage (Paid, Packing Done, Booked, Delivered, Return, etc.). Only Unpaid orders will remain.
+            </p>
+            <button
+              onClick={clearProcessedOrders}
+              disabled={opStatus === "clearing"}
+              className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 active:scale-[0.98] disabled:opacity-50"
+            >
+              {opStatus === "clearing" ? "Clearing..." : "🗑️ Clear Processed Orders"}
+            </button>
+            {opMsg && <p className={`mt-2 text-sm ${opMsg.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>{opMsg}</p>}
           </div>
         </div>
       </section>
