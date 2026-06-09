@@ -304,6 +304,8 @@ function Overview({
 
 /* ---------------- Insight ---------------- */
 
+type InsightDrill = null | "sellers" | "customers";
+
 function Insight({
   products,
   orders,
@@ -315,9 +317,10 @@ function Insight({
   openProducts: (f: ProdFilter) => void;
   openCategory: (c: Category) => void;
 }) {
+  const [drill, setDrill] = useState<InsightDrill>(null);
   const [custQuery, setCustQuery] = useState("");
 
-  // Inventory
+  // ── Inventory ─────────────────────────────────────────
   const inStock = products.filter((p) => p.stock > 0).length;
   const outOfStock = products.filter((p) => p.stock === 0).length;
   const totalInventoryUnits = products.reduce((s, p) => s + p.stock, 0);
@@ -334,24 +337,42 @@ function Insight({
       .reduce((s, p) => s + p.price * p.stock, 0),
   })).filter((c) => c.count > 0 || c.units > 0);
 
-  // Sales — paid orders only
+  // ── Sales totals (cheap, always computed) ─────────────
   const paidOrders = orders.filter((o) => o.payment_status === "paid");
+  const totalOrders = orders.length;
   let totalProductsSold = 0;
   let totalRevenue = 0;
-  const soldByProduct = new Map<string, { name: string; qty: number; revenue: number }>();
   paidOrders.forEach((o) => {
     (o.order_items || []).forEach((i) => {
       totalProductsSold += i.qty;
       totalRevenue += i.qty * i.price_at_purchase;
-      const cur = soldByProduct.get(i.product_id) || { name: i.name_snapshot, qty: 0, revenue: 0 };
-      cur.qty += i.qty;
-      cur.revenue += i.qty * i.price_at_purchase;
-      soldByProduct.set(i.product_id, cur);
     });
   });
-  const topSellers = Array.from(soldByProduct.values()).sort((a, b) => b.qty - a.qty).slice(0, 5);
 
-  // Customers — keyed by phone (cleaned)
+  // ── Unique customers (count only — cheap) ─────────────
+  const cleanPhone = (p: string) => p.replace(/\D/g, "");
+  const uniquePhones = new Set<string>();
+  orders.forEach((o) => {
+    const k = cleanPhone(o.phone);
+    if (k) uniquePhones.add(k);
+  });
+  const uniqueCustomerCount = uniquePhones.size;
+
+  // ── Drill-in: top sellers (computed only on demand) ───
+  function computeTopSellers() {
+    const map = new Map<string, { name: string; qty: number; revenue: number }>();
+    paidOrders.forEach((o) =>
+      (o.order_items || []).forEach((i) => {
+        const cur = map.get(i.product_id) || { name: i.name_snapshot, qty: 0, revenue: 0 };
+        cur.qty += i.qty;
+        cur.revenue += i.qty * i.price_at_purchase;
+        map.set(i.product_id, cur);
+      })
+    );
+    return Array.from(map.values()).sort((a, b) => b.qty - a.qty);
+  }
+
+  // ── Drill-in: customers (computed only on demand) ─────
   type CustStat = {
     phone: string;
     name: string;
@@ -360,44 +381,164 @@ function Insight({
     productsBought: number;
     lastOrderAt: string;
   };
-  const cleanPhone = (p: string) => p.replace(/\D/g, "");
-  const custMap = new Map<string, CustStat>();
-  orders.forEach((o) => {
-    const key = cleanPhone(o.phone);
-    if (!key) return;
-    const cur = custMap.get(key) || {
-      phone: o.phone,
-      name: o.customer_name,
-      orderCount: 0,
-      totalSpent: 0,
-      productsBought: 0,
-      lastOrderAt: o.created_at,
-    };
-    cur.orderCount += 1;
-    if (o.payment_status === "paid") cur.totalSpent += o.total;
-    cur.productsBought += (o.order_items || []).reduce((s, i) => s + i.qty, 0);
-    if (new Date(o.created_at) > new Date(cur.lastOrderAt)) {
-      cur.lastOrderAt = o.created_at;
-      cur.name = o.customer_name;
-    }
-    custMap.set(key, cur);
-  });
-  const customers = Array.from(custMap.values()).sort((a, b) => b.totalSpent - a.totalSpent);
-  const cq = custQuery.trim().toLowerCase();
-  const filteredCustomers = cq
-    ? customers.filter((c) =>
-        cleanPhone(c.phone).includes(cleanPhone(custQuery)) ||
-        c.name.toLowerCase().includes(cq)
-      )
-    : customers;
-  const topCustomers = filteredCustomers.slice(0, 10);
+  function computeCustomers(): CustStat[] {
+    const map = new Map<string, CustStat>();
+    orders.forEach((o) => {
+      const key = cleanPhone(o.phone);
+      if (!key) return;
+      const cur = map.get(key) || {
+        phone: o.phone,
+        name: o.customer_name,
+        orderCount: 0,
+        totalSpent: 0,
+        productsBought: 0,
+        lastOrderAt: o.created_at,
+      };
+      cur.orderCount += 1;
+      if (o.payment_status === "paid") cur.totalSpent += o.total;
+      cur.productsBought += (o.order_items || []).reduce((s, i) => s + i.qty, 0);
+      if (new Date(o.created_at) > new Date(cur.lastOrderAt)) {
+        cur.lastOrderAt = o.created_at;
+        cur.name = o.customer_name;
+      }
+      map.set(key, cur);
+    });
+    return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+  }
 
+  // ── DRILL VIEWS ───────────────────────────────────────
+  if (drill === "sellers") {
+    const sellers = computeTopSellers();
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setDrill(null)}
+          className="flex items-center gap-2 text-sm font-medium text-brand hover:underline"
+        >
+          <span>‹</span> Back to insights
+        </button>
+        <div>
+          <p className="text-sm font-semibold text-neutral-500">Top sellers</p>
+          <p className="text-xs text-neutral-400">{sellers.length} products sold across paid orders</p>
+        </div>
+        {sellers.length === 0 ? (
+          <p className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-400">
+            No paid orders yet.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {sellers.map((s, i) => (
+              <div key={s.name + i} className="card flex items-center gap-3 p-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">
+                  {i + 1}
+                </span>
+                <span className="flex-1 truncate font-medium">{s.name}</span>
+                <span className="text-sm text-neutral-500">{s.qty} sold</span>
+                <span className="text-sm font-semibold tabular-nums">{rupees(s.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (drill === "customers") {
+    const all = computeCustomers();
+    const cq = custQuery.trim().toLowerCase();
+    const filtered = cq
+      ? all.filter((c) =>
+          cleanPhone(c.phone).includes(cleanPhone(custQuery)) ||
+          c.name.toLowerCase().includes(cq)
+        )
+      : all;
+    const shown = filtered.slice(0, 50);
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setDrill(null)}
+          className="flex items-center gap-2 text-sm font-medium text-brand hover:underline"
+        >
+          <span>‹</span> Back to insights
+        </button>
+        <div>
+          <p className="text-sm font-semibold text-neutral-500">Customer dashboard</p>
+          <p className="text-xs text-neutral-400">{all.length} unique customers</p>
+        </div>
+
+        <div className="relative">
+          <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={custQuery}
+            onChange={(e) => setCustQuery(e.target.value)}
+            placeholder="Search by phone or name..."
+            className="input pl-9 pr-9 text-sm"
+          />
+          {custQuery && (
+            <button
+              onClick={() => setCustQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 hover:text-neutral-700"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {shown.length === 0 ? (
+          <p className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-400">
+            {cq ? "No customer matched your search." : "No customers yet."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {shown.map((c) => (
+              <div key={c.phone} className="card p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{c.name}</p>
+                    <p className="font-mono text-xs text-neutral-500">{c.phone}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold tabular-nums">{rupees(c.totalSpent)}</p>
+                    <p className="text-xs text-neutral-400">spent</p>
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-4 text-xs text-neutral-600">
+                  <span><b className="text-ink">{c.orderCount}</b> order{c.orderCount !== 1 ? "s" : ""}</span>
+                  <span><b className="text-ink">{c.productsBought}</b> product{c.productsBought !== 1 ? "s" : ""}</span>
+                  <span className="ml-auto text-neutral-400">
+                    Last: {new Date(c.lastOrderAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {filtered.length > shown.length && (
+              <p className="pt-1 text-center text-xs text-neutral-400">
+                Showing 50 of {filtered.length}. Search to narrow down.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── SUMMARY VIEW (default — numbers only, no heavy lists) ──
   return (
     <div className="space-y-7">
-      {/* Sales headline */}
+      {/* Lifetime sales — 4 boxes */}
       <div>
         <p className="mb-3 text-sm font-semibold text-neutral-500">Lifetime sales</p>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Total orders</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{totalOrders}</p>
+          </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Products sold</p>
             <p className="mt-1 text-2xl font-bold tabular-nums">{totalProductsSold}</p>
@@ -408,7 +549,7 @@ function Insight({
           </div>
           <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Customers</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums">{customers.length}</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{uniqueCustomerCount}</p>
           </div>
         </div>
       </div>
@@ -441,7 +582,7 @@ function Insight({
         </div>
       </div>
 
-      {/* Stock by category */}
+      {/* Category wise products */}
       <div>
         <p className="mb-2 text-sm font-semibold text-neutral-500">Category wise products</p>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -467,94 +608,31 @@ function Insight({
         </div>
       </div>
 
-      {/* Top sellers */}
+      {/* Drill-in entry tiles */}
       <div>
-        <p className="mb-2 text-sm font-semibold text-neutral-500">Top sellers</p>
-        {topSellers.length === 0 ? (
-          <p className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-400">
-            No paid orders yet. Top sellers will appear here.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {topSellers.map((s, i) => (
-              <div key={s.name + i} className="card flex items-center gap-3 p-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">
-                  {i + 1}
-                </span>
-                <span className="flex-1 truncate font-medium">{s.name}</span>
-                <span className="text-sm text-neutral-500">{s.qty} sold</span>
-                <span className="text-sm font-semibold tabular-nums">{rupees(s.revenue)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Customer dashboard */}
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-semibold text-neutral-500">Customer dashboard</p>
-          <p className="text-xs text-neutral-400">{customers.length} unique</p>
+        <p className="mb-3 text-sm font-semibold text-neutral-500">Explore</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setDrill("sellers")}
+            className="card flex items-center justify-between gap-3 p-4 text-left active:scale-[0.99] hover:border-amber-300"
+          >
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Top sellers</p>
+              <p className="mt-1 text-lg font-bold">View ranking ›</p>
+            </div>
+            <div className="text-3xl">🏆</div>
+          </button>
+          <button
+            onClick={() => setDrill("customers")}
+            className="card flex items-center justify-between gap-3 p-4 text-left active:scale-[0.99] hover:border-indigo-300"
+          >
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Customer dashboard</p>
+              <p className="mt-1 text-lg font-bold">Search & view ›</p>
+            </div>
+            <div className="text-3xl">👥</div>
+          </button>
         </div>
-
-        <div className="relative mb-3">
-          <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-          </svg>
-          <input
-            type="text"
-            value={custQuery}
-            onChange={(e) => setCustQuery(e.target.value)}
-            placeholder="Search by phone or name..."
-            className="input pl-9 pr-9 text-sm"
-          />
-          {custQuery && (
-            <button
-              onClick={() => setCustQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 hover:text-neutral-700"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {topCustomers.length === 0 ? (
-          <p className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-400">
-            {cq ? "No customer matched your search." : "No customers yet."}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {topCustomers.map((c) => (
-              <div key={c.phone} className="card p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{c.name}</p>
-                    <p className="font-mono text-xs text-neutral-500">{c.phone}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold tabular-nums">{rupees(c.totalSpent)}</p>
-                    <p className="text-xs text-neutral-400">spent</p>
-                  </div>
-                </div>
-                <div className="mt-2 flex gap-4 text-xs text-neutral-600">
-                  <span><b className="text-ink">{c.orderCount}</b> order{c.orderCount !== 1 ? "s" : ""}</span>
-                  <span><b className="text-ink">{c.productsBought}</b> product{c.productsBought !== 1 ? "s" : ""}</span>
-                  <span className="ml-auto text-neutral-400">
-                    Last: {new Date(c.lastOrderAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {filteredCustomers.length > topCustomers.length && (
-              <p className="pt-1 text-center text-xs text-neutral-400">
-                Showing top 10 of {filteredCustomers.length}. Search to narrow down.
-              </p>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
