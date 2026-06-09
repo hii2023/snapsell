@@ -838,6 +838,27 @@ function OrdersTab({
     }
   }
 
+  async function clearProcessedOrders() {
+    if (!confirm("Delete all orders that are NOT in Unpaid stage? This cannot be undone.")) return;
+
+    setBusy("clearing");
+    try {
+      const res = await fetch("/api/orders/clear-processed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (res.ok) {
+        alert(`✅ Deleted ${json.deletedCount} orders`);
+        setOrders(orders.filter(o => o.payment_status === "pending"));
+      } else {
+        alert(json.error || "Could not clear orders");
+      }
+    } finally {
+      setBusy("");
+    }
+  }
+
   const filters: { id: OrderFilter; label: string }[] = [
     { id: "unpaid", label: "Unpaid" },
     { id: "paid", label: "Paid" },
@@ -856,17 +877,29 @@ function OrdersTab({
 
   return (
     <div>
-      <p className="mb-2 text-sm font-semibold text-neutral-700">Order Status</p>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {filters.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`chip ${filter === f.id ? "chip-on" : "chip-off"}`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="mb-2 text-sm font-semibold text-neutral-700">Order Status</p>
+          <div className="flex flex-wrap gap-2">
+            {filters.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                className={`chip ${filter === f.id ? "chip-on" : "chip-off"}`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={clearProcessedOrders}
+          disabled={busy === "clearing"}
+          className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 active:scale-[0.98] disabled:opacity-50"
+          title="Delete all orders in Paid, Packing Done, Booked, Delivered, and Return stages"
+        >
+          🗑️ Clear Processed
+        </button>
       </div>
 
       <p className="mb-2 text-sm font-semibold text-neutral-700">Fulfillment Type</p>
