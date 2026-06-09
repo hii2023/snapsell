@@ -2,20 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 // Subdomain → path mapping for custom domains:
-//   admin.indiarecycles.org  →  /orders  (admin dashboard)
-//   store.indiarecycles.org  →  /        (customer shop)
+//   admin.indiarecycles.org  →  rewrites root to /orders, otherwise passes through
+//   store.indiarecycles.org  →  blocks admin paths, passes through the rest
 function subdomainRewrite(req: NextRequest): NextResponse | null {
   const hostname = req.headers.get("host") || "";
   const pathname = req.nextUrl.pathname;
 
   if (hostname.startsWith("admin.indiarecycles.org")) {
-    // Already on an /orders path — don't double-rewrite
-    if (pathname.startsWith("/orders") || pathname.startsWith("/sell") || pathname.startsWith("/auth") || pathname.startsWith("/api")) {
-      return null;
+    // Only rewrite the root path. All other paths (including /orders, /sell,
+    // /login, /auth, /api, etc.) pass through untouched so they render the
+    // real Next.js route. Previously we rewrote anything not in a skip list
+    // which sent /login → /orders/login (404).
+    if (pathname === "/") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/orders";
+      return NextResponse.rewrite(url);
     }
-    const url = req.nextUrl.clone();
-    url.pathname = "/orders" + (pathname === "/" ? "" : pathname);
-    return NextResponse.rewrite(url);
+    return null;
   }
 
   if (hostname.startsWith("store.indiarecycles.org")) {
