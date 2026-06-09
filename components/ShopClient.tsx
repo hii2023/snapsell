@@ -45,6 +45,7 @@ export default function ShopClient({
   // Start with server-rendered data, then immediately refresh client-side.
   // This bypasses all Next.js / Vercel CDN caching — always shows live products.
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(initialProducts.length === 0);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
   const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
@@ -58,9 +59,32 @@ export default function ShopClient({
       .gt("stock", 0)
       .eq("is_active", true)
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length >= 0) setProducts(data as Product[]);
+      .then(({ data, error }) => {
+        if (error) console.error("[shop] product fetch error:", error.message);
+        if (data) setProducts(data as Product[]);
+        setLoadingProducts(false);
       });
+  }, []);
+
+  // Refresh products whenever the tab regains focus (covers offline → online,
+  // app switching, returning from background) so it always shows live state.
+  useEffect(() => {
+    function refresh() {
+      const sb = supabaseBrowser();
+      sb.from(T.products)
+        .select("*")
+        .gt("stock", 0)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => { if (data) setProducts(data as Product[]); });
+    }
+    function onVis() { if (document.visibilityState === "visible") refresh(); }
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 
   // Persist the cart so it survives page switches (shop <-> product pages).
@@ -173,6 +197,44 @@ export default function ShopClient({
           setStep("shop");
         }}
       />
+    );
+  }
+
+  // Empty / loading state — shown inside the client so it auto-refreshes
+  // on tab focus, visibility change, or the initial live fetch landing.
+  if (products.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-24 text-center text-neutral-500">
+        {loadingProducts ? (
+          <>
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-brand" />
+            <p className="text-sm">Loading products...</p>
+          </>
+        ) : (
+          <>
+            <p className="text-lg font-medium text-neutral-700">No products yet</p>
+            <p className="mt-1 text-sm">New items appear here as soon as they are added.</p>
+            <button
+              onClick={() => {
+                setLoadingProducts(true);
+                supabaseBrowser()
+                  .from(T.products)
+                  .select("*")
+                  .gt("stock", 0)
+                  .eq("is_active", true)
+                  .order("created_at", { ascending: false })
+                  .then(({ data }) => {
+                    if (data) setProducts(data as Product[]);
+                    setLoadingProducts(false);
+                  });
+              }}
+              className="mt-6 rounded-xl border border-neutral-300 bg-white px-5 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              Refresh
+            </button>
+          </>
+        )}
+      </div>
     );
   }
 

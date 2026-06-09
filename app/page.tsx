@@ -65,17 +65,11 @@ export default async function ShopPage() {
         </div>
       </header>
 
-      {products.length === 0 ? (
-        <div className="mx-auto max-w-2xl px-4 py-24 text-center text-neutral-500">
-          <p className="text-lg">No products yet.</p>
-          <p className="mt-1 text-sm">
-            {supabaseConfigured()
-              ? "Check back soon."
-              : "Connect Supabase to start listing."}
-          </p>
-        </div>
-      ) : (
-        <ShopClient products={products} shopName={shopName} cfg={cfg} />
+      {/* Always render ShopClient — it does its own live client-side fetch on mount.
+          Empty-state is handled inside the client so it can refresh without a reload. */}
+      <ShopClient products={products} shopName={shopName} cfg={cfg} />
+      {!supabaseConfigured() && (
+        <p className="mt-6 text-center text-sm text-neutral-400">Connect Supabase to start listing.</p>
       )}
       <StoreContact />
     </main>
