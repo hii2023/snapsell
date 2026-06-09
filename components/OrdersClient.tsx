@@ -315,50 +315,121 @@ function Insight({
   openProducts: (f: ProdFilter) => void;
   openCategory: (c: Category) => void;
 }) {
+  const [custQuery, setCustQuery] = useState("");
+
+  // Inventory
   const inStock = products.filter((p) => p.stock > 0).length;
   const outOfStock = products.filter((p) => p.stock === 0).length;
-  const totalStockValue = products
+  const totalInventoryUnits = products.reduce((s, p) => s + p.stock, 0);
+  const totalInventoryValue = products
     .filter((p) => p.stock > 0)
     .reduce((s, p) => s + p.price * p.stock, 0);
 
   const perCategory = CATEGORY_META.map((c) => ({
     ...c,
     count: products.filter((p) => p.category === c.id && p.stock > 0).length,
+    units: products.filter((p) => p.category === c.id).reduce((s, p) => s + p.stock, 0),
     value: products
       .filter((p) => p.category === c.id && p.stock > 0)
       .reduce((s, p) => s + p.price * p.stock, 0),
-  })).filter((c) => c.count > 0);
+  })).filter((c) => c.count > 0 || c.units > 0);
 
-  // Top sellers — count delivered/paid orders per product
+  // Sales — paid orders only
+  const paidOrders = orders.filter((o) => o.payment_status === "paid");
+  let totalProductsSold = 0;
+  let totalRevenue = 0;
   const soldByProduct = new Map<string, { name: string; qty: number; revenue: number }>();
-  orders
-    .filter((o) => o.payment_status === "paid")
-    .forEach((o) =>
-      (o.order_items || []).forEach((i) => {
-        const cur = soldByProduct.get(i.product_id) || { name: i.name_snapshot, qty: 0, revenue: 0 };
-        cur.qty += i.qty;
-        cur.revenue += i.qty * i.price_at_purchase;
-        soldByProduct.set(i.product_id, cur);
-      })
-    );
-  const topSellers = Array.from(soldByProduct.values())
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5);
+  paidOrders.forEach((o) => {
+    (o.order_items || []).forEach((i) => {
+      totalProductsSold += i.qty;
+      totalRevenue += i.qty * i.price_at_purchase;
+      const cur = soldByProduct.get(i.product_id) || { name: i.name_snapshot, qty: 0, revenue: 0 };
+      cur.qty += i.qty;
+      cur.revenue += i.qty * i.price_at_purchase;
+      soldByProduct.set(i.product_id, cur);
+    });
+  });
+  const topSellers = Array.from(soldByProduct.values()).sort((a, b) => b.qty - a.qty).slice(0, 5);
+
+  // Customers — keyed by phone (cleaned)
+  type CustStat = {
+    phone: string;
+    name: string;
+    orderCount: number;
+    totalSpent: number;
+    productsBought: number;
+    lastOrderAt: string;
+  };
+  const cleanPhone = (p: string) => p.replace(/\D/g, "");
+  const custMap = new Map<string, CustStat>();
+  orders.forEach((o) => {
+    const key = cleanPhone(o.phone);
+    if (!key) return;
+    const cur = custMap.get(key) || {
+      phone: o.phone,
+      name: o.customer_name,
+      orderCount: 0,
+      totalSpent: 0,
+      productsBought: 0,
+      lastOrderAt: o.created_at,
+    };
+    cur.orderCount += 1;
+    if (o.payment_status === "paid") cur.totalSpent += o.total;
+    cur.productsBought += (o.order_items || []).reduce((s, i) => s + i.qty, 0);
+    if (new Date(o.created_at) > new Date(cur.lastOrderAt)) {
+      cur.lastOrderAt = o.created_at;
+      cur.name = o.customer_name;
+    }
+    custMap.set(key, cur);
+  });
+  const customers = Array.from(custMap.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+  const cq = custQuery.trim().toLowerCase();
+  const filteredCustomers = cq
+    ? customers.filter((c) =>
+        cleanPhone(c.phone).includes(cleanPhone(custQuery)) ||
+        c.name.toLowerCase().includes(cq)
+      )
+    : customers;
+  const topCustomers = filteredCustomers.slice(0, 10);
 
   return (
-    <div className="space-y-6">
-      {/* Stock summary */}
+    <div className="space-y-7">
+      {/* Sales headline */}
+      <div>
+        <p className="mb-3 text-sm font-semibold text-neutral-500">Lifetime sales</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Products sold</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{totalProductsSold}</p>
+          </div>
+          <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-green-600">Revenue</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{rupees(totalRevenue)}</p>
+          </div>
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Customers</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{customers.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Inventory summary */}
       <div>
         <p className="mb-3 text-sm font-semibold text-neutral-500">Inventory summary</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <button
             onClick={() => openProducts("instock")}
             className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left"
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">In stock</p>
             <p className="mt-1 text-2xl font-bold tabular-nums">{inStock}</p>
-            <p className="text-xs text-neutral-500">{rupees(totalStockValue)} value</p>
+            <p className="text-xs text-neutral-500">{totalInventoryUnits} units total</p>
           </button>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Inventory value</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{rupees(totalInventoryValue)}</p>
+            <p className="text-xs text-neutral-500">in-stock items</p>
+          </div>
           <button
             onClick={() => openProducts("oos")}
             className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left"
@@ -372,7 +443,7 @@ function Insight({
 
       {/* Stock by category */}
       <div>
-        <p className="mb-2 text-sm font-semibold text-neutral-500">Stock by category</p>
+        <p className="mb-2 text-sm font-semibold text-neutral-500">Category wise products</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {perCategory.length === 0 ? (
             <p className="text-sm text-neutral-400">No stock yet.</p>
@@ -387,7 +458,7 @@ function Insight({
               </span>
               <span className="flex-1">
                 <span className="block font-medium">{c.label}</span>
-                <span className="block text-xs text-neutral-500">{rupees(c.value)} value</span>
+                <span className="block text-xs text-neutral-500">{c.units} units · {rupees(c.value)}</span>
               </span>
               <span className="text-lg font-semibold tabular-nums">{c.count}</span>
               <span className="text-neutral-300">›</span>
@@ -415,6 +486,73 @@ function Insight({
                 <span className="text-sm font-semibold tabular-nums">{rupees(s.revenue)}</span>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Customer dashboard */}
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-semibold text-neutral-500">Customer dashboard</p>
+          <p className="text-xs text-neutral-400">{customers.length} unique</p>
+        </div>
+
+        <div className="relative mb-3">
+          <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={custQuery}
+            onChange={(e) => setCustQuery(e.target.value)}
+            placeholder="Search by phone or name..."
+            className="input pl-9 pr-9 text-sm"
+          />
+          {custQuery && (
+            <button
+              onClick={() => setCustQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 hover:text-neutral-700"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {topCustomers.length === 0 ? (
+          <p className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-400">
+            {cq ? "No customer matched your search." : "No customers yet."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {topCustomers.map((c) => (
+              <div key={c.phone} className="card p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{c.name}</p>
+                    <p className="font-mono text-xs text-neutral-500">{c.phone}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold tabular-nums">{rupees(c.totalSpent)}</p>
+                    <p className="text-xs text-neutral-400">spent</p>
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-4 text-xs text-neutral-600">
+                  <span><b className="text-ink">{c.orderCount}</b> order{c.orderCount !== 1 ? "s" : ""}</span>
+                  <span><b className="text-ink">{c.productsBought}</b> product{c.productsBought !== 1 ? "s" : ""}</span>
+                  <span className="ml-auto text-neutral-400">
+                    Last: {new Date(c.lastOrderAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {filteredCustomers.length > topCustomers.length && (
+              <p className="pt-1 text-center text-xs text-neutral-400">
+                Showing top 10 of {filteredCustomers.length}. Search to narrow down.
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -908,6 +1046,7 @@ function OrdersTab({
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [search, setSearch] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange>("all");
   // payPick holds the order id currently showing the Cash/UPI selector; null = none open
   const [payPick, setPayPick] = useState<string | null>(null);
 
@@ -993,8 +1132,9 @@ function OrdersTab({
   }
 
   const q = search.trim().toLowerCase();
+  const dateScoped = filterByDate(orders, dateRange);
 
-  const shown = orders.filter((o) => {
+  const shown = dateScoped.filter((o) => {
     // Search filter — matches order ID, phone, or name
     if (q) {
       const matchesId = o.id.toLowerCase().includes(q);
@@ -1138,6 +1278,26 @@ function OrdersTab({
             {f.label}
           </button>
         ))}
+      </div>
+
+      {/* Date range filter */}
+      <p className="mb-2 text-sm font-semibold text-neutral-700">Date Range</p>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {([
+          { id: "today" as DateRange, label: "Today" },
+          { id: "week"  as DateRange, label: "7 days" },
+          { id: "month" as DateRange, label: "30 days" },
+          { id: "all"   as DateRange, label: "All time" },
+        ]).map((d) => (
+          <button
+            key={d.id}
+            onClick={() => setDateRange(d.id)}
+            className={`chip cursor-pointer text-xs ${dateRange === d.id ? "chip-on" : "chip-off"}`}
+          >
+            {d.label}
+          </button>
+        ))}
+        <span className="ml-auto self-center text-xs text-neutral-400">{shown.length} of {dateScoped.length} matching</span>
       </div>
 
       {/* Search */}
