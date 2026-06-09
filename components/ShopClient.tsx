@@ -267,59 +267,71 @@ export default function ShopClient({
           These items are free. Transportation should be arranged by the buyer.
         </p>
       )}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {visible.map((p) => {
           const line = cart.find((l) => l.product_id === p.id);
+          const hasDiscount = p.mrp > p.price && !p.giveaway;
+          const discountPct = hasDiscount ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
           return (
             <div key={p.id} className="card overflow-hidden">
-              <div className="aspect-square bg-neutral-100">
+              <div className="relative aspect-[4/5] bg-neutral-100">
                 {p.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={p.image_url}
                     alt={p.name}
                     className="h-full w-full object-cover"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-neutral-300">
-                    <BagIcon className="h-10 w-10" />
+                    <BagIcon className="h-8 w-8" />
                   </div>
                 )}
+                {p.giveaway && (
+                  <span className="absolute left-1.5 top-1.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                    FREE
+                  </span>
+                )}
+                {hasDiscount && (
+                  <span className="absolute left-1.5 top-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                    {discountPct}% OFF
+                  </span>
+                )}
+                {p.code && (
+                  <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
+                    {p.code}
+                  </span>
+                )}
               </div>
-              <div className="p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate font-medium">{p.name}</p>
-                  {p.code ? (
-                    <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500">
-                      {p.code}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-sm text-neutral-500">
-                  {[p.size, p.color].filter(Boolean).join(" · ")}
-                  {(p.size || p.color) ? " · " : ""}
+              <div className="p-2 sm:p-2.5">
+                <p className="line-clamp-1 text-[13px] font-medium leading-tight">{p.name}</p>
+                <p className="mt-0.5 line-clamp-1 text-[11px] text-neutral-500">
+                  {[p.size, p.color].filter(Boolean).join(" · ") || " "}
+                </p>
+                <div className="mt-1.5 flex items-baseline gap-1.5">
                   {p.giveaway ? (
-                    <span className="font-semibold text-emerald-700">Give away · Free</span>
+                    <span className="text-sm font-bold text-emerald-700">Free</span>
                   ) : (
                     <>
-                      <span className="font-semibold text-ink">{rupees(p.price)}</span>
-                      {p.mrp > p.price ? (
-                        <span className="ml-1 text-neutral-400 line-through">{rupees(p.mrp)}</span>
-                      ) : null}
+                      <span className="text-sm font-bold text-ink">{rupees(p.price)}</span>
+                      {hasDiscount && (
+                        <span className="text-[11px] text-neutral-400 line-through">{rupees(p.mrp)}</span>
+                      )}
                     </>
                   )}
-                </p>
+                </div>
                 {line ? (
-                  <div className="mt-2 flex items-center justify-between">
+                  <div className="mt-2 flex items-center justify-between gap-1">
                     <button
-                      className="h-9 w-9 rounded-full border border-neutral-300 text-xl"
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 text-base leading-none hover:bg-neutral-50 active:scale-95"
                       onClick={() => setQty(p.id, line.qty - 1)}
                     >
-                      -
+                      −
                     </button>
-                    <span className="font-semibold tabular-nums">{line.qty}</span>
+                    <span className="text-sm font-semibold tabular-nums">{line.qty}</span>
                     <button
-                      className="h-9 w-9 rounded-full border border-neutral-300 text-xl disabled:opacity-40"
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 text-base leading-none hover:bg-neutral-50 active:scale-95 disabled:opacity-40"
                       disabled={line.qty >= p.stock}
                       onClick={() => setQty(p.id, line.qty + 1)}
                     >
@@ -328,7 +340,7 @@ export default function ShopClient({
                   </div>
                 ) : (
                   <button
-                    className="btn-primary mt-2 w-full py-2 text-sm"
+                    className="btn-primary mt-2 w-full py-1.5 text-xs"
                     onClick={() => add(p)}
                   >
                     Add
