@@ -1124,7 +1124,6 @@ function OrdersTab({
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [search, setSearch] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange>("all");
   // payPick holds the order id currently showing the Cash/UPI selector; null = none open
   const [payPick, setPayPick] = useState<string | null>(null);
 
@@ -1210,9 +1209,8 @@ function OrdersTab({
   }
 
   const q = search.trim().toLowerCase();
-  const dateScoped = filterByDate(orders, dateRange);
 
-  const shown = dateScoped.filter((o) => {
+  const shown = orders.filter((o) => {
     // Search filter — matches order ID, phone, or name
     if (q) {
       const matchesId = o.id.toLowerCase().includes(q);
@@ -1358,25 +1356,6 @@ function OrdersTab({
         ))}
       </div>
 
-      {/* Date range filter */}
-      <p className="mb-2 text-sm font-semibold text-neutral-700">Date Range</p>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {([
-          { id: "today" as DateRange, label: "Today" },
-          { id: "week"  as DateRange, label: "7 days" },
-          { id: "month" as DateRange, label: "30 days" },
-          { id: "all"   as DateRange, label: "All time" },
-        ]).map((d) => (
-          <button
-            key={d.id}
-            onClick={() => setDateRange(d.id)}
-            className={`chip cursor-pointer text-xs ${dateRange === d.id ? "chip-on" : "chip-off"}`}
-          >
-            {d.label}
-          </button>
-        ))}
-        <span className="ml-auto self-center text-xs text-neutral-400">{shown.length} of {dateScoped.length} matching</span>
-      </div>
 
       {/* Search */}
       <div className="relative mb-4">
