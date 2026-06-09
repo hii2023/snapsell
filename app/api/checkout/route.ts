@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { placeOrder } from "@/lib/orders";
 
 export const runtime = "nodejs";
@@ -39,6 +40,9 @@ export async function POST(req: NextRequest) {
       pickupDate: body.pickup_date || "",
       pickupTime: body.pickup_time || "",
     });
+    // Bust the shop page cache so stock updates are reflected immediately
+    revalidatePath("/");
+    revalidatePath("/orders");
     return NextResponse.json({ order_id: orderId });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Could not place order";

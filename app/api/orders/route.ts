@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase-server";
 import { requireSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
@@ -61,5 +62,6 @@ export async function PATCH(req: NextRequest) {
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/orders");
   return NextResponse.json({ order: data });
 }

@@ -815,8 +815,16 @@ function OrdersTab({
     setOrders(orders.map((o) => (o.id === updated.id ? updated : o)));
   }
 
+  // Optimistic update: apply the change immediately so the UI responds
+  // instantly, then confirm silently with the server. On error, revert.
   async function update(id: string, body: Record<string, unknown>) {
+    const original = orders.find((o) => o.id === id);
+    if (!original) return;
+
+    // Apply immediately
+    patch({ ...original, ...body } as Order);
     setBusy(id);
+
     try {
       const res = await fetch("/api/orders", {
         method: "PATCH",
@@ -824,7 +832,15 @@ function OrdersTab({
         body: JSON.stringify({ id, ...body }),
       });
       const json = await res.json();
-      if (res.ok) patch(json.order);
+      if (res.ok) {
+        // Confirm with server's authoritative data
+        patch(json.order);
+      } else {
+        // Revert on failure
+        patch(original);
+      }
+    } catch {
+      patch(original);
     } finally {
       setBusy("");
     }
