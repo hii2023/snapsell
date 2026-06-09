@@ -64,6 +64,23 @@ export default function ShopClient({
       });
   }, []);
 
+  // Silently auto-retry in the background while the list is empty so the
+  // moment a product is added it appears without the customer doing anything.
+  // Must live above any conditional return (Rules of Hooks).
+  useEffect(() => {
+    if (products.length > 0) return;
+    const interval = setInterval(() => {
+      supabaseBrowser()
+        .from(T.products)
+        .select("*")
+        .gt("stock", 0)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => { if (data && data.length > 0) setProducts(data as Product[]); });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [products.length]);
+
   // Refresh products whenever the tab regains focus (covers offline → online,
   // app switching, returning from background) so it always shows live state.
   useEffect(() => {
@@ -198,23 +215,9 @@ export default function ShopClient({
     );
   }
 
-  // Silently auto-retry in the background while the list is empty so the
-  // moment a product is added it appears without the customer doing anything.
-  useEffect(() => {
-    if (products.length > 0) return;
-    const interval = setInterval(() => {
-      supabaseBrowser()
-        .from(T.products)
-        .select("*")
-        .gt("stock", 0)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .then(({ data }) => { if (data && data.length > 0) setProducts(data as Product[]); });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [products.length]);
-
   // Empty / loading state — soft, branded, no asks of the customer.
+  // (The auto-retry polling for empty lists lives in a useEffect at the top
+  //  of this component, before any conditional returns — Rules of Hooks.)
   if (products.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-24 text-center">
