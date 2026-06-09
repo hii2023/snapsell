@@ -10,7 +10,7 @@ import ProductEdit from "./ProductEdit";
 import CPanel from "./CPanel";
 import type { Category, Order, Product, Settings } from "@/lib/types";
 
-type Tab = "overview" | "products" | "orders" | "settings";
+type Tab = "overview" | "products" | "orders" | "insight" | "settings";
 type ProdFilter = "instock" | "oos";
 type CatFilter = Category | "all";
 type OrderFilter = "all" | "unpaid" | "paid" | "packing" | "booked" | "delivered" | "pickup" | "return";
@@ -60,14 +60,15 @@ export default function OrdersClient({
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
-    { id: "products", label: "Products" },
     { id: "orders", label: "Orders" },
+    { id: "products", label: "Products" },
+    { id: "insight", label: "Insight" },
     { id: "settings", label: "Settings" },
   ];
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-      <div className="mb-5 grid grid-cols-4 gap-2">
+      <div className="mb-5 grid grid-cols-5 gap-2">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -93,8 +94,6 @@ export default function OrdersClient({
             <Overview
               products={products}
               orders={orders}
-              openProducts={openProducts}
-              openCategory={openCategory}
               openOrders={openOrders}
             />
           )}
@@ -117,6 +116,14 @@ export default function OrdersClient({
               setFilter={setOrderFilter}
               fulfillmentFilter={fulfillmentFilter}
               setFulfillmentFilter={setFulfillmentFilter}
+            />
+          )}
+          {tab === "insight" && (
+            <Insight
+              products={products}
+              orders={orders}
+              openProducts={openProducts}
+              openCategory={openCategory}
             />
           )}
           {tab === "settings" && <CPanel initial={settings} />}
@@ -189,16 +196,11 @@ function filterByDate(orders: Order[], range: DateRange): Order[] {
 }
 
 function Overview({
-  products,
   orders,
-  openProducts,
-  openCategory,
   openOrders,
 }: {
   products: Product[];
   orders: Order[];
-  openProducts: (f: ProdFilter) => void;
-  openCategory: (c: Category) => void;
   openOrders: (f: OrderFilter) => void;
 }) {
   const [dateRange, setDateRange] = useState<DateRange>("today");
@@ -221,12 +223,6 @@ function Overview({
   const upiTotal    = upiOrders.reduce((s, o) => s + o.total, 0);
   const totalRev    = paidOrders.reduce((s, o) => s + o.total, 0);
   const delivered   = filtered.filter((o) => o.delivery_status === "delivered" && o.return_status === "none");
-
-  const inStock = products.filter((p) => p.stock > 0).length;
-  const perCategory = CATEGORY_META.map((c) => ({
-    ...c,
-    count: products.filter((p) => p.category === c.id && p.stock > 0).length,
-  })).filter((c) => c.count > 0);
 
   const dateLabels: { id: DateRange; label: string }[] = [
     { id: "today", label: "Today" },
@@ -302,14 +298,81 @@ function Overview({
         )}
       </div>
 
-      {/* ── Stock by category ─────────────────────────── */}
+    </div>
+  );
+}
+
+/* ---------------- Insight ---------------- */
+
+function Insight({
+  products,
+  orders,
+  openProducts,
+  openCategory,
+}: {
+  products: Product[];
+  orders: Order[];
+  openProducts: (f: ProdFilter) => void;
+  openCategory: (c: Category) => void;
+}) {
+  const inStock = products.filter((p) => p.stock > 0).length;
+  const outOfStock = products.filter((p) => p.stock === 0).length;
+  const totalStockValue = products
+    .filter((p) => p.stock > 0)
+    .reduce((s, p) => s + p.price * p.stock, 0);
+
+  const perCategory = CATEGORY_META.map((c) => ({
+    ...c,
+    count: products.filter((p) => p.category === c.id && p.stock > 0).length,
+    value: products
+      .filter((p) => p.category === c.id && p.stock > 0)
+      .reduce((s, p) => s + p.price * p.stock, 0),
+  })).filter((c) => c.count > 0);
+
+  // Top sellers — count delivered/paid orders per product
+  const soldByProduct = new Map<string, { name: string; qty: number; revenue: number }>();
+  orders
+    .filter((o) => o.payment_status === "paid")
+    .forEach((o) =>
+      (o.order_items || []).forEach((i) => {
+        const cur = soldByProduct.get(i.product_id) || { name: i.name_snapshot, qty: 0, revenue: 0 };
+        cur.qty += i.qty;
+        cur.revenue += i.qty * i.price_at_purchase;
+        soldByProduct.set(i.product_id, cur);
+      })
+    );
+  const topSellers = Array.from(soldByProduct.values())
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      {/* Stock summary */}
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-semibold text-neutral-500">Stock by category</p>
-          <button onClick={() => openProducts("instock")} className="text-xs text-brand underline">
-            {inStock} in stock
+        <p className="mb-3 text-sm font-semibold text-neutral-500">Inventory summary</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => openProducts("instock")}
+            className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">In stock</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{inStock}</p>
+            <p className="text-xs text-neutral-500">{rupees(totalStockValue)} value</p>
+          </button>
+          <button
+            onClick={() => openProducts("oos")}
+            className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Out of stock</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{outOfStock}</p>
+            <p className="text-xs text-neutral-500">Needs restocking</p>
           </button>
         </div>
+      </div>
+
+      {/* Stock by category */}
+      <div>
+        <p className="mb-2 text-sm font-semibold text-neutral-500">Stock by category</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {perCategory.length === 0 ? (
             <p className="text-sm text-neutral-400">No stock yet.</p>
@@ -322,7 +385,10 @@ function Overview({
               <span className="text-neutral-500">
                 <CategoryIcon id={c.id} className="h-6 w-6" />
               </span>
-              <span className="flex-1 font-medium">{c.label}</span>
+              <span className="flex-1">
+                <span className="block font-medium">{c.label}</span>
+                <span className="block text-xs text-neutral-500">{rupees(c.value)} value</span>
+              </span>
               <span className="text-lg font-semibold tabular-nums">{c.count}</span>
               <span className="text-neutral-300">›</span>
             </button>
@@ -330,6 +396,28 @@ function Overview({
         </div>
       </div>
 
+      {/* Top sellers */}
+      <div>
+        <p className="mb-2 text-sm font-semibold text-neutral-500">Top sellers</p>
+        {topSellers.length === 0 ? (
+          <p className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-400">
+            No paid orders yet. Top sellers will appear here.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {topSellers.map((s, i) => (
+              <div key={s.name + i} className="card flex items-center gap-3 p-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">
+                  {i + 1}
+                </span>
+                <span className="flex-1 truncate font-medium">{s.name}</span>
+                <span className="text-sm text-neutral-500">{s.qty} sold</span>
+                <span className="text-sm font-semibold tabular-nums">{rupees(s.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
