@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { requireSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
-import type { DeliveryStatus, PaymentStatus } from "@/lib/types";
+import type { DeliveryStatus, PaymentStatus, ReturnStatus, RefundStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -13,9 +13,10 @@ const DELIVERY: DeliveryStatus[] = [
   "delivered",
 ];
 const PAYMENT: PaymentStatus[] = ["pending", "paid", "failed"];
+const RETURN: ReturnStatus[] = ["none", "requested", "accepted", "completed"];
+const REFUND: RefundStatus[] = ["none", "requested", "completed"];
 
-// Seller updates an order's delivery or payment status (e.g. mark COD collected,
-// mark delivered).
+// Seller updates an order's delivery, payment, return, or refund status
 export async function PATCH(req: NextRequest) {
   const seller = await requireSeller();
   if (!seller.ok) {
@@ -26,6 +27,9 @@ export async function PATCH(req: NextRequest) {
     id?: string;
     delivery_status?: DeliveryStatus;
     payment_status?: PaymentStatus;
+    return_status?: ReturnStatus;
+    refund_status?: RefundStatus;
+    refund_amount?: number;
   };
   if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
@@ -35,6 +39,15 @@ export async function PATCH(req: NextRequest) {
   }
   if (body.payment_status && PAYMENT.includes(body.payment_status)) {
     patch.payment_status = body.payment_status;
+  }
+  if (body.return_status && RETURN.includes(body.return_status)) {
+    patch.return_status = body.return_status;
+  }
+  if (body.refund_status && REFUND.includes(body.refund_status)) {
+    patch.refund_status = body.refund_status;
+  }
+  if (typeof body.refund_amount === "number" && body.refund_amount >= 0) {
+    patch.refund_amount = body.refund_amount;
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
