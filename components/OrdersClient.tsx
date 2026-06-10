@@ -1160,45 +1160,41 @@ function OrdersTab({
   // Bulk select state
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [waMenuFor, setWaMenuFor] = useState<string | null>(null);
-  // Cancel-with-refund picker for paid orders
+  // Cancel picker: Move Back to Store or Not Available
   const [cancelPickerFor, setCancelPickerFor] = useState<string | null>(null);
-  // Move back to store vs Not Available picker after cancel
-  const [postCancelPickerFor, setPostCancelPickerFor] = useState<string | null>(null);
 
-  const STORE_WA = "917202035700";
-
-  // WhatsApp templates from settings (configured in CPanel)
-  const WA_TEMPLATES = settings?.wa_templates || [];
-
-  // Pick the template ID that best matches the current order stage
-  function defaultTemplateId(o: Order): string {
-    if (o.cancelled_at) return "cancelled";
-    if (o.return_status !== "none") return "return_received";
-    if (o.delivery_status === "delivered") return "delivered";
-    if (o.delivery_status === "booked") return "dispatched";
-    if (o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup") return "ready_for_pickup";
-    if (o.payment_status === "paid") return "payment_confirmed";
-    return "payment_reminder";
-  }
-
-  function buildWaUrl(o: Order, templateId: string): string {
-    const tpl = WA_TEMPLATES.find((t: WaTemplate) => t.id === templateId);
-    if (!tpl) return `https://wa.me/${STORE_WA}?text=${encodeURIComponent("Hi, I have a question about order " + o.id.slice(0, 8).toUpperCase())}`;
-    // Interpolate variables in the template message
+  // Hard-coded stage-based WhatsApp messages
+  function buildWaUrl(o: Order): string {
     const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-    const msg = tpl.message
-      .replace(/{orderid}/g, ref)
-      .replace(/{customername}/g, o.customer_name)
-      .replace(/{amount}/g, String(o.total));
+    const amt = `₹${o.total}`;
+    let msg = "";
+
+    if (o.cancelled_at) {
+      msg = `Hi ${o.customer_name}, your order ${ref} has been cancelled. If a payment was made, the refund will be processed within 3-5 working days. Please reach out if you have any questions.`;
+    } else if (o.return_status !== "none") {
+      msg = `Hi ${o.customer_name}, we have received your return request for order ${ref}. Our team will reach out shortly to arrange the next steps. Thank you for your patience.`;
+    } else if (o.delivery_status === "delivered") {
+      msg = `Hi ${o.customer_name}, your order ${ref} has been delivered. Thank you for shopping with India Recycles!`;
+    } else if (o.delivery_status === "booked") {
+      msg = `Hi ${o.customer_name}, your order ${ref} has been dispatched and is on the way!`;
+    } else if (o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup") {
+      msg = `Hi ${o.customer_name}, your order ${ref} is ready for pickup. Please collect it at your convenience.`;
+    } else if (o.delivery_status === "out_for_delivery") {
+      msg = `Hi ${o.customer_name}, your order ${ref} has been packed and will be dispatched soon.`;
+    } else if (o.payment_status === "paid") {
+      msg = `Hi ${o.customer_name}, we have received your payment for order ${ref}. We are now processing your order.`;
+    } else {
+      msg = `Hi ${o.customer_name}, your order ${ref} is awaiting payment of ${amt}. Please complete the payment to confirm your order.`;
+    }
+
     const phone = o.phone.replace(/\D/g, "");
     const wa = phone.startsWith("91") ? phone : `91${phone}`;
     return `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
   }
 
-  // Single-tap WA URL using the default template for the order's current stage
+  // Alias for compatibility
   function customerWaUrl(o: Order): string {
-    return buildWaUrl(o, defaultTemplateId(o));
+    return buildWaUrl(o);
   }
 
   function fmtDate(iso: string) {
@@ -1372,7 +1368,6 @@ function OrdersTab({
     // "not_available" does nothing extra — items are just gone
 
     setCancelPickerFor(null);
-    setPostCancelPickerFor(null);
   }
 
   // Move back to store — restocks the items (re-adds qty to product stock)
@@ -1788,46 +1783,22 @@ function OrdersTab({
                     </button>
                   )}
 
-                  {/* WhatsApp templates menu */}
-                  {waMenuFor === o.id ? (
-                    <div className="rounded-xl border border-green-300 bg-green-50 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">Send WhatsApp template</p>
-                      <div className="space-y-1.5">
-                        {WA_TEMPLATES.map((t: WaTemplate) => (
-                          <a
-                            key={t.id}
-                            href={buildWaUrl(o, t.id)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => setWaMenuFor(null)}
-                            className="block rounded-lg bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-green-100"
-                          >
-                            {t.label}
-                          </a>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setWaMenuFor(null)}
-                        className="mt-2 w-full text-center text-xs text-neutral-500 hover:text-neutral-700"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setWaMenuFor(o.id)}
-                      className="w-full cursor-pointer rounded-xl border border-green-200 bg-white px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-50"
-                    >
-                      WhatsApp templates ▾
-                    </button>
-                  )}
+                  {/* Quick WhatsApp button */}
+                  <a
+                    href={buildWaUrl(o)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-50"
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.9 1.448c-.667.396-1.288.922-1.815 1.545-1.055 1.221-1.654 2.778-1.654 4.434 0 1.566.412 3.07 1.215 4.368l-1.29 4.71 4.839-1.271c1.259.713 2.747 1.129 4.325 1.129 5.498 0 9.97-4.41 9.97-9.842 0-2.608-.902-5.041-2.588-7.018-1.686-1.977-4.047-3.124-6.497-3.124" />
+                    </svg>
+                    WhatsApp
+                  </a>
 
-                  {/* Cancel + Restock (lifecycle actions). Admins can cancel
-                      any order at any stage. If the customer had already paid,
-                      we prompt for refund mode (Cash / UPI / No refund) so the
-                      cashflow stays accurate. */}
+                  {/* Cancel order: ask Move Back to Store or Not Available */}
                   {!o.cancelled_at && (
-                    postCancelPickerFor === o.id ? (
+                    cancelPickerFor === o.id ? (
                       <div className="rounded-xl border border-amber-300 bg-amber-50 p-3">
                         <p className="mb-2 text-center text-xs font-semibold text-amber-700">
                           What about the items?
@@ -1835,12 +1806,9 @@ function OrdersTab({
                         <div className="flex gap-2">
                           <button
                             disabled={busy === o.id}
-                            onClick={async () => {
-                              await cancelOrder(
-                                o.id,
-                                cancelPickerFor === o.id ? { method: "cash", amount: 0 } : undefined,
-                                "restock"
-                              );
+                            onClick={() => {
+                              update(o.id, { action: "cancel" }).then(() => restockOrder(o.id));
+                              setCancelPickerFor(null);
                             }}
                             className="flex-1 cursor-pointer rounded-xl bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                           >
@@ -1848,61 +1816,13 @@ function OrdersTab({
                           </button>
                           <button
                             disabled={busy === o.id}
-                            onClick={async () => {
-                              await cancelOrder(
-                                o.id,
-                                cancelPickerFor === o.id ? { method: "cash", amount: 0 } : undefined,
-                                "not_available"
-                              );
+                            onClick={() => {
+                              update(o.id, { action: "cancel" });
+                              setCancelPickerFor(null);
                             }}
                             className="flex-1 cursor-pointer rounded-xl bg-red-600 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                           >
                             Not Available
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => setPostCancelPickerFor(null)}
-                          className="mt-2 w-full text-center text-xs text-neutral-500 hover:text-neutral-700"
-                        >
-                          Back
-                        </button>
-                      </div>
-                    ) : cancelPickerFor === o.id && o.payment_status === "paid" ? (
-                      <div className="rounded-xl border border-red-300 bg-red-50 p-3">
-                        <p className="mb-2 text-center text-xs font-semibold text-red-700">
-                          Cancel & how was the refund handled?
-                        </p>
-                        <div className="grid grid-cols-3 gap-2">
-                          <button
-                            disabled={busy === o.id}
-                            onClick={() => {
-                              // Update with refund, then show post-cancel picker
-                              update(o.id, { action: "cancel", refund_status: "completed", refund_method: "upi", refund_amount: o.total }).then(() => setPostCancelPickerFor(o.id));
-                              setCancelPickerFor(null);
-                            }}
-                            className="cursor-pointer rounded-xl bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            Refund UPI
-                          </button>
-                          <button
-                            disabled={busy === o.id}
-                            onClick={() => {
-                              update(o.id, { action: "cancel", refund_status: "completed", refund_method: "cash", refund_amount: o.total }).then(() => setPostCancelPickerFor(o.id));
-                              setCancelPickerFor(null);
-                            }}
-                            className="cursor-pointer rounded-xl bg-amber-500 py-2 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
-                          >
-                            Refund Cash
-                          </button>
-                          <button
-                            disabled={busy === o.id}
-                            onClick={() => {
-                              update(o.id, { action: "cancel" }).then(() => setPostCancelPickerFor(o.id));
-                              setCancelPickerFor(null);
-                            }}
-                            className="cursor-pointer rounded-xl border border-neutral-300 bg-white py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
-                          >
-                            No Refund
                           </button>
                         </div>
                         <button
@@ -1914,10 +1834,7 @@ function OrdersTab({
                       </div>
                     ) : (
                       <button
-                        onClick={() => {
-                          if (o.payment_status === "paid") setCancelPickerFor(o.id);
-                          else setPostCancelPickerFor(o.id);
-                        }}
+                        onClick={() => setCancelPickerFor(o.id)}
                         disabled={busy === o.id}
                         className="w-full cursor-pointer rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
                       >
