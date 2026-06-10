@@ -855,31 +855,13 @@ function BookingConfirm({
             </div>
           )}
 
-          {/* WhatsApp section */}
-          {cfg.whatsapp && (
-            <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-green-600 mb-2">Send order details on WhatsApp</p>
-              <p className="text-sm text-neutral-600 mb-3">WhatsApp number: <span className="font-semibold text-ink">{cfg.whatsapp}</span></p>
-              <a
-                href={`https://wa.me/${cfg.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I have placed an order (ID: ${ref}) for ₹${amount}. I will send the payment screenshot shortly. Thank you!`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 transition-colors"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.9 1.448c-.667.396-1.288.922-1.815 1.545-1.055 1.221-1.654 2.778-1.654 4.434 0 1.566.412 3.07 1.215 4.368l-1.29 4.71 4.839-1.271c1.259.713 2.747 1.129 4.325 1.129 5.498 0 9.97-4.41 9.97-9.842 0-2.608-.902-5.041-2.588-7.018-1.686-1.977-4.047-3.124-6.497-3.124" />
-                </svg>
-                Send on WhatsApp
-              </a>
-            </div>
-          )}
-
-          {/* Steps */}
-          <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left">
-            <ol className="space-y-1.5 text-sm text-neutral-600">
-              {cfg.upiId && <li>1. Scan the QR or copy the UPI ID and pay <strong>₹{amount}</strong></li>}
-              <li>{cfg.upiId ? "2." : "1."} Take a screenshot of your payment confirmation</li>
-              <li>{cfg.upiId ? "3." : "2."} Send the screenshot on WhatsApp with Order ID <strong>{ref}</strong></li>
+          {/* Steps with integrated WhatsApp link */}
+          <div className="mt-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-600">Next steps</p>
+            <ol className="space-y-2.5 text-sm text-neutral-700">
+              {cfg.upiId && <li className="flex gap-3"><span className="font-semibold text-neutral-600 min-w-5">1.</span><span>Scan the QR or copy the UPI ID and pay <strong className="text-ink">₹{amount}</strong></span></li>}
+              <li className="flex gap-3"><span className="font-semibold text-neutral-600 min-w-5">{cfg.upiId ? "2." : "1."}</span><span>Take a screenshot of your payment confirmation</span></li>
+              <li className="flex gap-3"><span className="font-semibold text-neutral-600 min-w-5">{cfg.upiId ? "3." : "2."}</span><span>Send the screenshot on <a href={`https://wa.me/${cfg.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I have placed an order (ID: ${ref}) for ₹${amount}. I will send the payment screenshot shortly. Thank you!`)}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-green-700 hover:text-green-800 underline">WhatsApp</a> with Order ID <strong>{ref}</strong></span></li>
             </ol>
           </div>
 

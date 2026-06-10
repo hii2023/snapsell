@@ -1600,41 +1600,40 @@ function OrdersTab({
                   </p>
                 )}
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium">{o.customer_name}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-neutral-500">{o.phone}</p>
-                      <a
-                        href={customerWaUrl(o)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="WhatsApp customer"
-                        className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-green-100 text-green-700 transition-colors hover:bg-green-200"
-                      >
-                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                        </svg>
-                      </a>
-                    </div>
+                    <p className="text-sm text-neutral-500">{o.phone}</p>
                     <p className="mt-0.5 font-mono text-xs text-neutral-400">#{o.id.slice(0, 8).toUpperCase()}</p>
                   </div>
-                  <p className="text-lg font-semibold">{rupees(o.total)}</p>
+                  <div className="text-right">
+                    <p className="text-lg font-semibold">{rupees(o.total)}</p>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      {new Date(o.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="mt-1 text-sm text-neutral-600">
-                  {o.fulfillment === "pickup" ? "Store pickup" : o.address}
+                <div className="mt-2 rounded-lg bg-neutral-50 p-2.5 text-sm text-neutral-700">
+                  <p className="text-xs font-semibold text-neutral-600 mb-1.5">Items:</p>
+                  <ul className="space-y-0.5">
+                    {(o.order_items || []).map((i) => (
+                      <li key={i.id} className="flex items-start gap-2">
+                        <span className="text-neutral-500 min-w-6">{i.qty}x</span>
+                        <span>{i.name_snapshot}</span>
+                        {i.size_snapshot && <span className="text-neutral-500 text-xs">({i.size_snapshot})</span>}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                <ul className="mt-2 text-sm text-neutral-700">
-                  {(o.order_items || []).map((i) => (
-                    <li key={i.id}>
-                      {i.qty} x {i.name_snapshot}
-                      {i.size_snapshot ? ` (${i.size_snapshot})` : ""}
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-blue-50 px-2.5 py-1.5 text-sm text-blue-700">
+                  <svg className="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                  <span className="text-xs">{o.fulfillment === "pickup" ? "Store pickup" : o.address}</span>
+                </div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
                   <Badge tone={o.fulfillment === "pickup" ? "gray" : "blue"}>
                     {o.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                   </Badge>
@@ -1782,19 +1781,6 @@ function OrdersTab({
                       Mark refund requested
                     </button>
                   )}
-
-                  {/* Quick WhatsApp button */}
-                  <a
-                    href={buildWaUrl(o)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-50"
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.9 1.448c-.667.396-1.288.922-1.815 1.545-1.055 1.221-1.654 2.778-1.654 4.434 0 1.566.412 3.07 1.215 4.368l-1.29 4.71 4.839-1.271c1.259.713 2.747 1.129 4.325 1.129 5.498 0 9.97-4.41 9.97-9.842 0-2.608-.902-5.041-2.588-7.018-1.686-1.977-4.047-3.124-6.497-3.124" />
-                    </svg>
-                    WhatsApp
-                  </a>
 
                   {/* Cancel order: ask Move Back to Store or Not Available */}
                   {!o.cancelled_at && (
