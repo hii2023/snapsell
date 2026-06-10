@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import QRCode from "qrcode";
 import { supabaseBrowser } from "@/lib/supabase";
 import { T } from "@/lib/db";
 import { rupees, CATEGORY_META, PICKUP_ADDRESS } from "@/lib/constants";
@@ -29,10 +30,12 @@ export default function ShopClient({
   products: initialProducts,
   shopName,
   cfg,
+  subcats,
 }: {
   products: Product[];
   shopName: string;
   cfg?: ShopCfg;
+  subcats?: Record<string, string[]>;
 }) {
   const c: ShopCfg = cfg ?? {
     upiId: process.env.NEXT_PUBLIC_UPI_ID || "",
@@ -49,7 +52,15 @@ export default function ShopClient({
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
   const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
+  const [subcatFilter, setSubcatFilter] = useState<string>("all");
+  const [pageSize, setPageSize] = useState<number>(10);
   const [hydrated, setHydrated] = useState(false);
+
+  // Reset subcategory + pagination when the category changes
+  useEffect(() => {
+    setSubcatFilter("all");
+    setPageSize(10);
+  }, [catFilter]);
 
   // Live fetch on mount — guarantees fresh products regardless of server cache
   useEffect(() => {
@@ -126,12 +137,24 @@ export default function ShopClient({
     products.some((p) => p.category === c.id)
   );
   const hasGiveaway = products.some((p) => p.giveaway);
-  const visible =
+
+  // Sub-categories available for the currently selected category
+  const subcatList: string[] =
+    catFilter === "all" || catFilter === "giveaway"
+      ? []
+      : (subcats?.[catFilter] || []).filter((sc) =>
+          products.some((p) => p.category === catFilter && p.subcategory === sc)
+        );
+
+  const fullyFiltered =
     catFilter === "all"
       ? products
       : catFilter === "giveaway"
         ? products.filter((p) => p.giveaway)
-        : products.filter((p) => p.category === catFilter);
+        : products.filter((p) => p.category === catFilter && (subcatFilter === "all" || p.subcategory === subcatFilter));
+
+  const visible = fullyFiltered.slice(0, pageSize);
+  const hasMore = fullyFiltered.length > visible.length;
 
   const total = useMemo(
     () => cart.reduce((s, l) => s + l.price * l.qty, 0),
@@ -268,6 +291,28 @@ export default function ShopClient({
           These items are free. Transportation should be arranged by the buyer.
         </p>
       )}
+
+      {/* Sub-category chips */}
+      {subcatList.length > 0 && (
+        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <button
+            onClick={() => setSubcatFilter("all")}
+            className={`chip shrink-0 text-xs ${subcatFilter === "all" ? "chip-on" : "chip-off"}`}
+          >
+            All
+          </button>
+          {subcatList.map((sc) => (
+            <button
+              key={sc}
+              onClick={() => setSubcatFilter(sc)}
+              className={`chip shrink-0 text-xs ${subcatFilter === sc ? "chip-on" : "chip-off"}`}
+            >
+              {sc}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {visible.map((p) => {
           const line = cart.find((l) => l.product_id === p.id);
@@ -363,6 +408,18 @@ export default function ShopClient({
           );
         })}
       </div>
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={() => setPageSize((n) => n + 10)}
+            className="rounded-full border border-neutral-300 bg-white px-6 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 active:scale-95"
+          >
+            Load more ({fullyFiltered.length - visible.length} left)
+          </button>
+        </div>
+      )}
 
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
@@ -656,6 +713,15 @@ function BookingConfirm({
   const waUrl = `https://wa.me/${storeWa}?text=${encodeURIComponent(waMsg)}`;
 
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  useEffect(() => {
+    if (!cfg.upiId) return;
+    const upiLink = `upi://pay?pa=${encodeURIComponent(cfg.upiId)}&pn=${encodeURIComponent(cfg.upiName || "Thrift Shoppers")}&am=${amount}&cu=INR&tn=${encodeURIComponent(ref)}`;
+    QRCode.toDataURL(upiLink, { width: 260, margin: 1 })
+      .then((url) => setQrDataUrl(url))
+      .catch(() => setQrDataUrl(""));
+  }, [cfg.upiId, cfg.upiName, amount, ref]);
+
   async function copyUpi() {
     if (!cfg.upiId) return;
     try {
@@ -708,10 +774,20 @@ function BookingConfirm({
       {/* Payment section */}
       {amount > 0 ? (
         <>
+          {/* QR code */}
+          {cfg.upiId && qrDataUrl && (
+            <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Scan to Pay ₹{amount}</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qrDataUrl} alt="UPI QR" className="mx-auto mt-2 h-48 w-48" />
+              <p className="text-[11px] text-neutral-400">Works with any UPI app</p>
+            </div>
+          )}
+
           {/* Copy UPI ID card */}
           {cfg.upiId && (
-            <div className="mt-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-left">
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Pay to UPI ID</p>
+            <div className="mt-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Or pay to UPI ID</p>
               <div className="mt-2 flex items-center gap-2">
                 <p className="flex-1 truncate font-mono text-sm font-bold text-ink sm:text-base">{cfg.upiId}</p>
                 <button
@@ -749,7 +825,7 @@ function BookingConfirm({
           {/* Steps */}
           <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left">
             <ol className="space-y-1.5 text-sm text-neutral-600">
-              {cfg.upiId && <li>1. Copy the UPI ID above and pay <strong>₹{amount}</strong> from any UPI app</li>}
+              {cfg.upiId && <li>1. Scan the QR or copy the UPI ID and pay <strong>₹{amount}</strong></li>}
               <li>{cfg.upiId ? "2." : "1."} Take a screenshot of your payment confirmation</li>
               <li>{cfg.upiId ? "3." : "2."} Send the screenshot on WhatsApp with Order ID <strong>{ref}</strong></li>
             </ol>

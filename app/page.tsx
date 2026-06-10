@@ -23,6 +23,7 @@ export default async function ShopPage() {
   const h = await headers();
   void h; // accessed to mark dynamic; Next.js sees headers() and forces no-cache
   let products: Product[] = [];
+  let subcats: Record<string, string[]> = {};
 
   let cfg = {
     upiId: process.env.NEXT_PUBLIC_UPI_ID || "",
@@ -54,6 +55,9 @@ export default async function ShopPage() {
         deliveryFee: row.delivery_fee_amount ?? 100,
         freeAbove: row.delivery_free_above ?? 1000,
       };
+      if (row.subcats && typeof row.subcats === "object") {
+        subcats = row.subcats as Record<string, string[]>;
+      }
     }
   }
 
@@ -93,7 +97,7 @@ export default async function ShopPage() {
 
       {/* Always render ShopClient — it does its own live client-side fetch on mount.
           Empty-state is handled inside the client so it can refresh without a reload. */}
-      <ShopClient products={products} shopName={shopName} cfg={cfg} />
+      <ShopClient products={products} shopName={shopName} cfg={cfg} subcats={subcats} />
       {!supabaseConfigured() && (
         <p className="mt-6 text-center text-sm text-neutral-400">Connect Supabase to start listing.</p>
       )}

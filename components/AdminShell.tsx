@@ -7,6 +7,7 @@ import OrdersClient from "./OrdersClient";
 import SellForm from "./SellForm";
 import CameraCapture from "./CameraCapture";
 import LogoLink from "./LogoLink";
+import NewOrderAlert from "./NewOrderAlert";
 import type { Order, Product, Settings } from "@/lib/types";
 
 const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
@@ -66,6 +67,7 @@ export default function AdminShell({
 
   return (
     <>
+      <NewOrderAlert />
       <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <LogoLink />

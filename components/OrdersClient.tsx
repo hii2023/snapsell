@@ -40,7 +40,7 @@ export default function OrdersClient({
 
   const [prodFilter, setProdFilter] = useState<ProdFilter>("instock");
   const [catFilter, setCatFilter] = useState<CatFilter>("all");
-  const [orderFilter, setOrderFilter] = useState<OrderFilter>("unpaid");
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const [fulfillmentFilter, setFulfillmentFilter] = useState<FulfillmentFilter>("all");
 
   function openProducts(f: ProdFilter) {
@@ -238,7 +238,7 @@ function Overview({
       <div>
         <p className="mb-3 text-sm font-semibold text-neutral-500">Needs action now</p>
         <div className="grid grid-cols-2 gap-3">
-          <OpsCard tone="red"    title="Pending payment" primary={String(unpaidOrders.length)}
+          <OpsCard tone="red"    title="Order Received" primary={String(unpaidOrders.length)}
             sub={unpaidOrders.length === 0 ? "All clear" : `${rupees(unpaidTotal)} awaiting`}
             onClick={() => openOrders("unpaid")} />
           <OpsCard tone="amber"  title="To be packed"    primary={String(toPackOrders.length)}
@@ -1309,7 +1309,7 @@ function OrdersTab({
 
   const filters: { id: OrderFilter; label: string }[] = [
     { id: "all", label: "All" },
-    { id: "unpaid", label: "Unpaid" },
+    { id: "unpaid", label: "Order Received" },
     { id: "paid", label: "Paid" },
     { id: "packing", label: "Packing Done" },
     { id: "booked", label: "Delivery Booked" },
@@ -1459,7 +1459,7 @@ function OrdersTab({
                       ? o.payment_method === "upi" ? "Paid (UPI)"
                       : o.payment_method === "cash" ? "Paid (Cash)"
                       : "Paid"
-                      : "Unpaid"}
+                      : "Order Received"}
                   </Badge>
                   <Badge
                     tone={

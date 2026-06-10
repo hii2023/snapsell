@@ -24,6 +24,21 @@ async function getProduct(code: string): Promise<Product | null> {
   return (data as Product) || null;
 }
 
+async function getRelated(currentId: string, category: string): Promise<Product[]> {
+  if (!supabaseConfigured()) return [];
+  const supabase = await supabaseServer();
+  const { data } = await supabase
+    .from(T.products)
+    .select("*")
+    .eq("category", category)
+    .eq("is_active", true)
+    .gt("stock", 0)
+    .neq("id", currentId)
+    .order("created_at", { ascending: false })
+    .limit(6);
+  return (data as Product[]) || [];
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -51,6 +66,7 @@ export default async function ProductPage({
 }) {
   const { code } = await params;
   const p = await getProduct(code);
+  const related = p ? await getRelated(p.id, p.category) : [];
 
   return (
     <main className="min-h-screen">
@@ -103,6 +119,41 @@ export default async function ProductPage({
             <div className="mt-6">
               <ShopClient products={[p]} shopName={shopName} />
             </div>
+          )}
+
+          {related.length > 0 && (
+            <section className="mt-12 border-t border-neutral-200 pt-8">
+              <h2 className="mb-4 text-lg font-semibold text-ink">
+                More from {categoryLabel(p.category)}
+              </h2>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+                {related.map((r) => (
+                  <Link
+                    key={r.id}
+                    href={`/p/${r.code}`}
+                    className="card overflow-hidden hover:shadow-md transition-shadow"
+                  >
+                    <div className="relative aspect-[4/5] bg-neutral-100">
+                      {r.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={r.image_url} alt={r.name} loading="lazy" className="h-full w-full object-cover" />
+                      ) : null}
+                      {r.code && (
+                        <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
+                          {r.code}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-2 sm:p-2.5">
+                      <p className="line-clamp-1 text-[13px] font-medium leading-tight">{r.name}</p>
+                      <p className="mt-1 text-sm font-bold text-ink">
+                        {r.giveaway ? "Free" : rupees(r.price)}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
           )}
         </div>
       )}
