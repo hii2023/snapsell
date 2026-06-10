@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { supabaseBrowser } from "@/lib/supabase";
@@ -56,12 +56,13 @@ export default function ShopClient({
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [pageSize, setPageSize] = useState<number>(10);
   const [hydrated, setHydrated] = useState(false);
+  const loaderRef = useRef<HTMLDivElement>(null);
 
   // Reset subcategory / size / pagination when the category changes
   useEffect(() => {
     setSubcatFilter("all");
     setSizeFilter("all");
-    setPageSize(10);
+    setPageSize(20);
   }, [catFilter]);
 
   // Live fetch on mount — guarantees fresh products regardless of server cache
@@ -94,6 +95,20 @@ export default function ShopClient({
     }, 5000);
     return () => clearInterval(interval);
   }, [products.length]);
+
+  // Infinite scroll — load more products when loader becomes visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore) {
+          setPageSize((n) => n + 20);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [hasMore]);
 
   // Refresh products whenever the tab regains focus (covers offline → online,
   // app switching, returning from background) so it always shows live state.
@@ -446,17 +461,8 @@ export default function ShopClient({
         })}
       </div>
 
-      {/* Load more */}
-      {hasMore && (
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={() => setPageSize((n) => n + 10)}
-            className="rounded-full border border-neutral-300 bg-white px-6 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 active:scale-95"
-          >
-            Load more ({fullyFiltered.length - visible.length} left)
-          </button>
-        </div>
-      )}
+      {/* Infinite scroll loader — triggers when scrolled into view */}
+      {hasMore && <div ref={loaderRef} className="mt-6 h-px" />}
 
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
