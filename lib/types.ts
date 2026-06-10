@@ -89,6 +89,8 @@ export type CartLine = {
 
 export type ExtraCategory = { id: string; label: string; subs: string[] };
 
+export type WaTemplate = { id: string; label: string; message: string };
+
 export type Settings = {
   price_presets: number[];
   upi_id: string;
@@ -99,6 +101,7 @@ export type Settings = {
   delivery_free_above: number;
   extra_categories: ExtraCategory[];
   subcats: Record<string, string[]>;
+  wa_templates: WaTemplate[];
 };
 
 export type VisionResult = {

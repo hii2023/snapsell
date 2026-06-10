@@ -8,7 +8,7 @@ import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon, CheckIcon } from "./icons";
 import ProductEdit from "./ProductEdit";
 import CPanel from "./CPanel";
-import type { Category, Order, Product, Settings } from "@/lib/types";
+import type { Category, Order, Product, Settings, WaTemplate } from "@/lib/types";
 
 type Tab = "overview" | "products" | "orders" | "insight" | "settings";
 type ProdFilter = "instock" | "oos";
@@ -123,6 +123,7 @@ export default function OrdersClient({
               setFilter={setOrderFilter}
               fulfillmentFilter={fulfillmentFilter}
               setFulfillmentFilter={setFulfillmentFilter}
+              settings={settings}
             />
           )}
           {tab === "insight" && (
@@ -1141,6 +1142,7 @@ function OrdersTab({
   setFilter,
   fulfillmentFilter,
   setFulfillmentFilter,
+  settings,
 }: {
   orders: Order[];
   setOrders: (o: Order[]) => void;
@@ -1148,6 +1150,7 @@ function OrdersTab({
   setFilter: (f: OrderFilter) => void;
   fulfillmentFilter: FulfillmentFilter;
   setFulfillmentFilter: (f: FulfillmentFilter) => void;
+  settings?: { wa_templates: { id: string; label: string; message: string }[] };
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState("");
@@ -1160,72 +1163,16 @@ function OrdersTab({
   const [waMenuFor, setWaMenuFor] = useState<string | null>(null);
   // Cancel-with-refund picker for paid orders
   const [cancelPickerFor, setCancelPickerFor] = useState<string | null>(null);
+  // Move back to store vs Not Available picker after cancel
+  const [postCancelPickerFor, setPostCancelPickerFor] = useState<string | null>(null);
 
   const STORE_WA = "917202035700";
 
-  // Predefined WhatsApp templates the admin can pick from per order.
-  // Each template returns the message body (variables get interpolated).
-  const WA_TEMPLATES: { id: string; label: string; build: (o: Order) => string }[] = [
-    {
-      id: "payment_reminder",
-      label: "Payment reminder",
-      build: (o) => {
-        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-        return `Hi ${o.customer_name}, this is a reminder for your order ${ref} of ₹${o.total}. Please complete the payment to confirm your order. Scan the QR or pay to UPI: innovativerevive@idfcbank. Once paid, please share the screenshot here. Thank you!`;
-      },
-    },
-    {
-      id: "payment_confirmed",
-      label: "Payment confirmed",
-      build: (o) => {
-        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-        return `Hi ${o.customer_name}, we have received your payment of ₹${o.total} for order ${ref}. We are now preparing it for ${o.fulfillment === "pickup" ? "pickup" : "dispatch"}. Will keep you posted.`;
-      },
-    },
-    {
-      id: "dispatched",
-      label: "Order dispatched",
-      build: (o) => {
-        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-        return `Hi ${o.customer_name}, your order ${ref} has been dispatched and is on the way. You should receive it shortly. Thank you for shopping with India Recycles!`;
-      },
-    },
-    {
-      id: "ready_for_pickup",
-      label: "Ready for pickup",
-      build: (o) => {
-        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-        return `Hi ${o.customer_name}, your order ${ref} is ready for pickup at our store. Address: Godown # 3, SK Estate, Nr Nagdev Mandir, LJ University Rd, Sarkhej - Gandhinagar Highway, Ahmedabad. Please bring your Order ID.`;
-      },
-    },
-    {
-      id: "delivered",
-      label: "Delivered, ask for feedback",
-      build: (o) => {
-        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-        return `Hi ${o.customer_name}, hope you received your order ${ref} in good condition! We would love your feedback. Please leave a review and follow us on Instagram @india.recycles. Thank you!`;
-      },
-    },
-    {
-      id: "return_received",
-      label: "Return request received",
-      build: (o) => {
-        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-        return `Hi ${o.customer_name}, we have received your return request for order ${ref}. Our team will reach out shortly to arrange the next steps. Thank you for your patience.`;
-      },
-    },
-    {
-      id: "cancelled",
-      label: "Order cancelled / restocked",
-      build: (o) => {
-        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-        return `Hi ${o.customer_name}, your order ${ref} has been cancelled. If a payment was made, the refund will be processed within 3-5 working days. Please reach out if you have any questions.`;
-      },
-    },
-  ];
+  // WhatsApp templates from settings (configured in CPanel)
+  const WA_TEMPLATES = settings?.wa_templates || [];
 
-  // Pick the template that best matches the current order stage as the default
-  function defaultTemplate(o: Order): string {
+  // Pick the template ID that best matches the current order stage
+  function defaultTemplateId(o: Order): string {
     if (o.cancelled_at) return "cancelled";
     if (o.return_status !== "none") return "return_received";
     if (o.delivery_status === "delivered") return "delivered";
@@ -1236,16 +1183,22 @@ function OrdersTab({
   }
 
   function buildWaUrl(o: Order, templateId: string): string {
-    const tpl = WA_TEMPLATES.find((t) => t.id === templateId) || WA_TEMPLATES[0];
-    const msg = tpl.build(o);
+    const tpl = WA_TEMPLATES.find((t: WaTemplate) => t.id === templateId);
+    if (!tpl) return `https://wa.me/${STORE_WA}?text=${encodeURIComponent("Hi, I have a question about order " + o.id.slice(0, 8).toUpperCase())}`;
+    // Interpolate variables in the template message
+    const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+    const msg = tpl.message
+      .replace(/{orderid}/g, ref)
+      .replace(/{customername}/g, o.customer_name)
+      .replace(/{amount}/g, String(o.total));
     const phone = o.phone.replace(/\D/g, "");
     const wa = phone.startsWith("91") ? phone : `91${phone}`;
     return `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
   }
 
-  // Kept for legacy export-helper / single-tap usage — same default template
+  // Single-tap WA URL using the default template for the order's current stage
   function customerWaUrl(o: Order): string {
-    return buildWaUrl(o, defaultTemplate(o));
+    return buildWaUrl(o, defaultTemplateId(o));
   }
 
   function fmtDate(iso: string) {
@@ -1395,23 +1348,31 @@ function OrdersTab({
     }
   }
 
-  // Cancel order — marks cancelled_at, keeps order in DB
-  async function cancelOrder(id: string, refund?: { method: "cash" | "upi" | null; amount: number }) {
+  // Cancel order — marks cancelled_at. After cancel, ask: Move Back to Store or Not Available?
+  async function cancelOrder(
+    id: string,
+    refund?: { method: "cash" | "upi" | null; amount: number },
+    handleStock?: "restock" | "not_available"
+  ) {
     if (!confirm("Cancel this order? This cannot be undone.")) return;
+
+    // First, mark as cancelled + handle refund if applicable
+    const patch: Record<string, unknown> = { action: "cancel" };
     if (refund && refund.method) {
-      await update(id, {
-        action: "cancel",
-        refund_status: "completed",
-        refund_method: refund.method,
-        refund_amount: refund.amount,
-      });
-    } else if (refund && !refund.method) {
-      // "No refund" — still record refund_status=none explicitly
-      await update(id, { action: "cancel" });
-    } else {
-      await update(id, { action: "cancel" });
+      patch.refund_status = "completed";
+      patch.refund_method = refund.method;
+      patch.refund_amount = refund.amount;
     }
+    await update(id, patch);
+
+    // Then, if stock handling was specified, apply it
+    if (handleStock === "restock") {
+      await restockOrder(id);
+    }
+    // "not_available" does nothing extra — items are just gone
+
     setCancelPickerFor(null);
+    setPostCancelPickerFor(null);
   }
 
   // Move back to store — restocks the items (re-adds qty to product stock)
@@ -1832,7 +1793,7 @@ function OrdersTab({
                     <div className="rounded-xl border border-green-300 bg-green-50 p-3">
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">Send WhatsApp template</p>
                       <div className="space-y-1.5">
-                        {WA_TEMPLATES.map((t) => (
+                        {WA_TEMPLATES.map((t: WaTemplate) => (
                           <a
                             key={t.id}
                             href={buildWaUrl(o, t.id)}
@@ -1866,7 +1827,47 @@ function OrdersTab({
                       we prompt for refund mode (Cash / UPI / No refund) so the
                       cashflow stays accurate. */}
                   {!o.cancelled_at && (
-                    cancelPickerFor === o.id && o.payment_status === "paid" ? (
+                    postCancelPickerFor === o.id ? (
+                      <div className="rounded-xl border border-amber-300 bg-amber-50 p-3">
+                        <p className="mb-2 text-center text-xs font-semibold text-amber-700">
+                          What about the items?
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            disabled={busy === o.id}
+                            onClick={async () => {
+                              await cancelOrder(
+                                o.id,
+                                cancelPickerFor === o.id ? { method: "cash", amount: 0 } : undefined,
+                                "restock"
+                              );
+                            }}
+                            className="flex-1 cursor-pointer rounded-xl bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            Move Back to Store
+                          </button>
+                          <button
+                            disabled={busy === o.id}
+                            onClick={async () => {
+                              await cancelOrder(
+                                o.id,
+                                cancelPickerFor === o.id ? { method: "cash", amount: 0 } : undefined,
+                                "not_available"
+                              );
+                            }}
+                            className="flex-1 cursor-pointer rounded-xl bg-red-600 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                          >
+                            Not Available
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setPostCancelPickerFor(null)}
+                          className="mt-2 w-full text-center text-xs text-neutral-500 hover:text-neutral-700"
+                        >
+                          Back
+                        </button>
+                      </div>
+                    ) : cancelPickerFor === o.id && o.payment_status === "paid" ? (
                       <div className="rounded-xl border border-red-300 bg-red-50 p-3">
                         <p className="mb-2 text-center text-xs font-semibold text-red-700">
                           Cancel & how was the refund handled?
@@ -1874,21 +1875,31 @@ function OrdersTab({
                         <div className="grid grid-cols-3 gap-2">
                           <button
                             disabled={busy === o.id}
-                            onClick={() => cancelOrder(o.id, { method: "upi", amount: o.total })}
+                            onClick={() => {
+                              // Update with refund, then show post-cancel picker
+                              update(o.id, { action: "cancel", refund_status: "completed", refund_method: "upi", refund_amount: o.total }).then(() => setPostCancelPickerFor(o.id));
+                              setCancelPickerFor(null);
+                            }}
                             className="cursor-pointer rounded-xl bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                           >
                             Refund UPI
                           </button>
                           <button
                             disabled={busy === o.id}
-                            onClick={() => cancelOrder(o.id, { method: "cash", amount: o.total })}
+                            onClick={() => {
+                              update(o.id, { action: "cancel", refund_status: "completed", refund_method: "cash", refund_amount: o.total }).then(() => setPostCancelPickerFor(o.id));
+                              setCancelPickerFor(null);
+                            }}
                             className="cursor-pointer rounded-xl bg-amber-500 py-2 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
                           >
                             Refund Cash
                           </button>
                           <button
                             disabled={busy === o.id}
-                            onClick={() => cancelOrder(o.id, { method: null, amount: 0 })}
+                            onClick={() => {
+                              update(o.id, { action: "cancel" }).then(() => setPostCancelPickerFor(o.id));
+                              setCancelPickerFor(null);
+                            }}
                             className="cursor-pointer rounded-xl border border-neutral-300 bg-white py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                           >
                             No Refund
@@ -1905,7 +1916,7 @@ function OrdersTab({
                       <button
                         onClick={() => {
                           if (o.payment_status === "paid") setCancelPickerFor(o.id);
-                          else cancelOrder(o.id);
+                          else setPostCancelPickerFor(o.id);
                         }}
                         disabled={busy === o.id}
                         className="w-full cursor-pointer rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"

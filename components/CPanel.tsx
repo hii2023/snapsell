@@ -187,6 +187,57 @@ export default function CPanel({ initial }: { initial: Settings }) {
       </section>
 
       <section>
+        <h3 className="mb-3 text-lg font-semibold">WhatsApp Templates</h3>
+        <p className="mb-3 text-sm text-neutral-500">Configure custom WhatsApp message templates. Use these placeholders: {`{orderid}`}, {`{customername}`}, {`{amount}`}</p>
+        <div className="space-y-3">
+          {(s.wa_templates || []).map((t, i) => (
+            <div key={t.id} className="card p-3">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <input
+                  className="input flex-1 py-1 text-sm font-medium"
+                  placeholder="Template name"
+                  value={t.label}
+                  onChange={(e) => {
+                    const next = [...(s.wa_templates || [])];
+                    next[i].label = e.target.value;
+                    set("wa_templates", next);
+                  }}
+                />
+                <button
+                  onClick={() => set("wa_templates", (s.wa_templates || []).filter((_, idx) => idx !== i))}
+                  className="text-sm text-red-600 hover:text-red-700"
+                >
+                  Remove
+                </button>
+              </div>
+              <textarea
+                className="input w-full py-2 text-sm"
+                placeholder="Template message. Use {orderid}, {customername}, {amount} as variables"
+                value={t.message}
+                onChange={(e) => {
+                  const next = [...(s.wa_templates || [])];
+                  next[i].message = e.target.value;
+                  set("wa_templates", next);
+                }}
+                rows={3}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-3">
+          <button
+            onClick={() => {
+              const id = "tpl-" + Math.random().toString(36).slice(2, 6);
+              set("wa_templates", [...(s.wa_templates || []), { id, label: "New template", message: "" }]);
+            }}
+            className="btn-ghost px-4 py-2 text-sm"
+          >
+            + Add template
+          </button>
+        </div>
+      </section>
+
+      <section>
         <h3 className="mb-3 text-lg font-semibold">Data Management</h3>
         <div className="space-y-3">
           <div className="card border-red-200 bg-red-50 p-4">
