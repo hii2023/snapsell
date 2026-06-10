@@ -155,18 +155,21 @@ export default async function ShopPage() {
                 </svg>
               </a>
 
-              {/* Website */}
+              {/* Website — modern browser window glyph */}
               <a
                 href="https://indiarecycles.org"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Visit indiarecycles.org"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 bg-white text-neutral-700 transition-colors hover:border-emerald-500 hover:text-emerald-700"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white transition-transform hover:scale-105 active:scale-95"
                 title="indiarecycles.org"
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 010 18M12 3a15 15 0 000 18" />
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}>
+                  <rect x="3" y="4.5" width="18" height="15" rx="2.5" />
+                  <path d="M3 9h18" />
+                  <circle cx="6.2" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+                  <circle cx="8.4" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+                  <circle cx="10.6" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
                 </svg>
               </a>
 
