@@ -1155,6 +1155,8 @@ function OrdersTab({
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "grid" | "compact">("list");
+  const [expandedAddresses, setExpandedAddresses] = useState<Set<string>>(new Set());
   // payPick holds the order id currently showing the Cash/UPI selector; null = none open
   const [payPick, setPayPick] = useState<string | null>(null);
   // Bulk select state
@@ -1410,6 +1412,14 @@ function OrdersTab({
     });
   }
 
+  function toggleAddressExpanded(id: string) {
+    setExpandedAddresses((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
   async function bookDelivery(id: string) {
     setBusy(id);
     try {
@@ -1532,46 +1542,85 @@ function OrdersTab({
         </div>
       )}
 
-      {/* Export + Select toggle */}
-      <div className="mb-4 flex justify-end gap-2">
-        <button
-          onClick={() => { setSelectMode((m) => !m); setSelected(new Set()); }}
-          className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-            selectMode
-              ? "border-red-300 bg-red-50 text-red-700"
-              : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-          }`}
-        >
-          {selectMode ? "Done" : "Select"}
-        </button>
-        {shown.length > 0 && !selectMode && (
+      {/* Export + Select toggle + View modes */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1">
           <button
-            onClick={exportToExcel}
-            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition-colors duration-150 hover:bg-neutral-50 active:scale-[0.98]"
+            onClick={() => setViewMode("list")}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              viewMode === "list"
+                ? "bg-brand text-white"
+                : "border border-neutral-300 text-neutral-600 hover:bg-neutral-50"
+            }`}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            Export Filtered
+            List
           </button>
-        )}
-        {orders.length > 0 && !selectMode && (
           <button
-            onClick={exportAllToExcel}
-            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-brand bg-brand/5 px-4 py-2 text-sm font-medium text-brand transition-colors duration-150 hover:bg-brand/10 active:scale-[0.98]"
+            onClick={() => setViewMode("grid")}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              viewMode === "grid"
+                ? "bg-brand text-white"
+                : "border border-neutral-300 text-neutral-600 hover:bg-neutral-50"
+            }`}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Export All
+            Grid
           </button>
-        )}
+          <button
+            onClick={() => setViewMode("compact")}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              viewMode === "compact"
+                ? "bg-brand text-white"
+                : "border border-neutral-300 text-neutral-600 hover:bg-neutral-50"
+            }`}
+          >
+            Compact
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setSelectMode((m) => !m); setSelected(new Set()); }}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+              selectMode
+                ? "border-red-300 bg-red-50 text-red-700"
+                : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+            }`}
+          >
+            {selectMode ? "Done" : "Select"}
+          </button>
+          {shown.length > 0 && !selectMode && (
+            <button
+              onClick={exportToExcel}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition-colors duration-150 hover:bg-neutral-50 active:scale-[0.98]"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              Export Filtered
+            </button>
+          )}
+          {orders.length > 0 && !selectMode && (
+            <button
+              onClick={exportAllToExcel}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-brand bg-brand/5 px-4 py-2 text-sm font-medium text-brand transition-colors duration-150 hover:bg-brand/10 active:scale-[0.98]"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Export All
+            </button>
+          )}
+        </div>
       </div>
 
       {shown.length === 0 ? (
         <p className="py-16 text-center text-neutral-500">No orders here.</p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={`gap-3 ${
+          viewMode === "grid" ? "grid sm:grid-cols-2 lg:grid-cols-3" :
+          viewMode === "compact" ? "space-y-1" :
+          "grid gap-3 sm:grid-cols-2"
+        }`}>
           {shown.map((o) => {
             const dispatched = o.delivery_status === "out_for_delivery";
             const delivered = o.delivery_status === "delivered";
             const isSelected = selected.has(o.id);
+            const addressExpanded = expandedAddresses.has(o.id);
             return (
               <div
                 key={o.id}
@@ -1624,28 +1673,64 @@ function OrdersTab({
                     <p className="text-xs text-neutral-500 mt-1">
                       {new Date(o.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}
                     </p>
+                    <p className="text-xs text-neutral-400">
+                      {new Date(o.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                    </p>
                   </div>
                 </div>
 
-                <div className="mt-2 rounded-lg bg-neutral-50 p-2.5 text-sm text-neutral-700">
-                  <p className="text-xs font-semibold text-neutral-600 mb-1.5">Items:</p>
-                  <ul className="space-y-0.5">
-                    {(o.order_items || []).map((i) => (
-                      <li key={i.id} className="flex items-start gap-2">
-                        <span className="text-neutral-500 min-w-6">{i.qty}x</span>
-                        <span>{i.name_snapshot}</span>
-                        {i.size_snapshot && <span className="text-neutral-500 text-xs">({i.size_snapshot})</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {viewMode !== "compact" && (
+                  <>
+                    {/* Product Images */}
+                    {(o.order_items || []).some(i => i.image_url) && (
+                      <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                        {(o.order_items || []).map((i) => i.image_url && (
+                          <img key={i.id} src={i.image_url} alt={i.name_snapshot} className="h-16 w-16 shrink-0 rounded-lg object-cover border border-neutral-200" />
+                        ))}
+                      </div>
+                    )}
 
-                <div className="mt-2 flex items-center gap-2 rounded-lg bg-blue-50 px-2.5 py-1.5 text-sm text-blue-700">
-                  <svg className="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                  <span className="text-xs">{o.fulfillment === "pickup" ? "Store pickup" : o.address}</span>
-                </div>
+                    <div className="mt-2 rounded-lg bg-neutral-50 p-2.5 text-sm text-neutral-700">
+                      <p className="text-xs font-semibold text-neutral-600 mb-1.5">Items:</p>
+                      <ul className="space-y-0.5">
+                        {(o.order_items || []).map((i) => (
+                          <li key={i.id} className="flex items-start gap-2">
+                            <span className="text-neutral-500 min-w-6">{i.qty}x</span>
+                            <span>{i.name_snapshot}</span>
+                            {i.size_snapshot && <span className="text-neutral-500 text-xs">({i.size_snapshot})</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Collapsible Address */}
+                    <button
+                      onClick={() => toggleAddressExpanded(o.id)}
+                      className="mt-2 w-full flex items-center gap-2 rounded-lg bg-blue-50 px-2.5 py-1.5 text-sm text-blue-700 hover:bg-blue-100 transition-colors"
+                    >
+                      <svg className="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      </svg>
+                      <span className="text-xs flex-1 text-left truncate">{o.fulfillment === "pickup" ? "Store pickup" : o.address}</span>
+                      <svg className={`h-4 w-4 shrink-0 transition-transform ${addressExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                      </svg>
+                    </button>
+
+                    {addressExpanded && !o.cancelled_at && (
+                      <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                        <p className="font-semibold mb-1">Delivery Address</p>
+                        <p>{o.fulfillment === "pickup" ? "Store Pickup" : o.address}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {viewMode === "compact" && (
+                  <div className="mt-1 text-xs text-neutral-500">
+                    {(o.order_items || []).length} item{(o.order_items || []).length !== 1 ? "s" : ""}
+                  </div>
+                )}
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
                   <Badge tone={o.fulfillment === "pickup" ? "gray" : "blue"}>
@@ -1687,6 +1772,7 @@ function OrdersTab({
                   )}
                 </div>
 
+                {viewMode !== "compact" && (
                 <div className="mt-3 space-y-2">
                   {/* Payment received — Cash / UPI inline selector */}
                   {o.payment_status !== "paid" && (
@@ -1867,11 +1953,18 @@ function OrdersTab({
                     </div>
                   )}
                 </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Footer */}
+      <div className="mt-12 border-t border-neutral-200 pt-6 pb-6 text-center text-xs text-neutral-400">
+        <p className="mb-1">SnapSell Admin Dashboard</p>
+        <p>Powered by India Recycles</p>
+      </div>
     </div>
   );
 }
