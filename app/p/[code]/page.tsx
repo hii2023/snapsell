@@ -7,6 +7,7 @@ import { rupees, categoryLabel } from "@/lib/constants";
 import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import LogoLink from "@/components/LogoLink";
+import ProductGallery from "@/components/ProductGallery";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export default async function ProductPage({
         </div>
       ) : (
         <div className="mx-auto max-w-2xl px-4 py-6">
-          <Gallery images={p.images?.length ? p.images : p.image_url ? [p.image_url] : []} name={p.name} />
+          <ProductGallery images={p.images?.length ? p.images : p.image_url ? [p.image_url] : []} name={p.name} />
           <h1 className="mt-4 text-2xl font-semibold">{p.name}</h1>
           <p className="mt-1 text-neutral-500">
             {[p.size, p.color, p.subcategory].filter(Boolean).join(" · ")}
@@ -109,27 +110,3 @@ export default async function ProductPage({
   );
 }
 
-function Gallery({ images, name }: { images: string[]; name: string }) {
-  if (!images.length) return <div className="aspect-square w-full rounded-2xl bg-neutral-100" />;
-  if (images.length === 1) {
-    return (
-      <div className="aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[0]} alt={name} className="h-full w-full object-cover" />
-      </div>
-    );
-  }
-  return (
-    <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
-      {images.map((url, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={i}
-          src={url}
-          alt={name}
-          className="aspect-square w-72 shrink-0 snap-center rounded-2xl object-cover"
-        />
-      ))}
-    </div>
-  );
-}

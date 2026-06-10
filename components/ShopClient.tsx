@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase";
 import { T } from "@/lib/db";
 import { rupees, CATEGORY_META, PICKUP_ADDRESS } from "@/lib/constants";
@@ -272,40 +273,51 @@ export default function ShopClient({
           const line = cart.find((l) => l.product_id === p.id);
           const hasDiscount = p.mrp > p.price && !p.giveaway;
           const discountPct = hasDiscount ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
+          const detailHref = p.code ? `/p/${p.code}` : null;
+          const Wrap = ({ children, className = "" }: { children: React.ReactNode; className?: string }) =>
+            detailHref ? (
+              <Link href={detailHref} className={className}>{children}</Link>
+            ) : (
+              <div className={className}>{children}</div>
+            );
           return (
             <div key={p.id} className="card overflow-hidden">
-              <div className="relative aspect-[4/5] bg-neutral-100">
-                {p.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.image_url}
-                    alt={p.name}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-neutral-300">
-                    <BagIcon className="h-8 w-8" />
-                  </div>
-                )}
-                {p.giveaway && (
-                  <span className="absolute left-1.5 top-1.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
-                    FREE
-                  </span>
-                )}
-                {hasDiscount && (
-                  <span className="absolute left-1.5 top-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
-                    {discountPct}% OFF
-                  </span>
-                )}
-                {p.code && (
-                  <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
-                    {p.code}
-                  </span>
-                )}
-              </div>
+              <Wrap className="block">
+                <div className="relative aspect-[4/5] bg-neutral-100">
+                  {p.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.image_url}
+                      alt={p.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-neutral-300">
+                      <BagIcon className="h-8 w-8" />
+                    </div>
+                  )}
+                  {p.giveaway && (
+                    <span className="absolute left-1.5 top-1.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                      FREE
+                    </span>
+                  )}
+                  {hasDiscount && (
+                    <span className="absolute left-1.5 top-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                      {discountPct}% OFF
+                    </span>
+                  )}
+                  {p.code && (
+                    <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
+                      {p.code}
+                    </span>
+                  )}
+                </div>
+              </Wrap>
               <div className="p-2 sm:p-2.5">
-                <p className="line-clamp-1 text-[13px] font-medium leading-tight">{p.name}</p>
+                <Wrap className="block hover:text-emerald-700">
+                  <p className="line-clamp-1 text-[13px] font-medium leading-tight">{p.name}</p>
+                </Wrap>
                 <p className="mt-0.5 line-clamp-1 text-[11px] text-neutral-500">
                   {[p.size, p.color].filter(Boolean).join(" · ") || " "}
                 </p>
