@@ -13,7 +13,14 @@ import type { Category, Order, Product, Settings } from "@/lib/types";
 type Tab = "overview" | "products" | "orders" | "insight" | "settings";
 type ProdFilter = "instock" | "oos";
 type CatFilter = Category | "all";
-type OrderFilter = "all" | "unpaid" | "paid" | "packing" | "booked" | "delivered" | "pickup" | "return";
+type OrderFilter = "all" | "unpaid" | "paid" | "packing" | "booked" | "delivered" | "pickup" | "return" | "cancelled";
+
+// An order leaves the active funnel once it is cancelled or its items have
+// been returned to store stock. Such orders never show under any active
+// stage filter (Order Received, Paid, Packing, Booked, Pickup, Delivered).
+function isInactive(o: Order): boolean {
+  return Boolean(o.cancelled_at || o.restocked_at);
+}
 type FulfillmentFilter = "all" | "delivery" | "pickup";
 
 const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
@@ -206,11 +213,14 @@ function Overview({
   const [dateRange, setDateRange] = useState<DateRange>("today");
   const filtered = filterByDate(orders, dateRange);
 
-  // Operational buckets (always from ALL orders — live queue)
-  const unpaidOrders = orders.filter((o) => o.payment_status === "pending");
-  const toPackOrders = orders.filter((o) => o.payment_status === "paid" && o.delivery_status === "unbooked");
-  const toDispatch   = orders.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "delivery");
-  const awaitPickup  = orders.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup");
+  // Operational buckets (always from ALL active orders — live queue).
+  // Cancelled / restocked orders are excluded so they don't appear in any
+  // 'needs action' card.
+  const active        = orders.filter((o) => !isInactive(o));
+  const unpaidOrders  = active.filter((o) => o.payment_status === "pending");
+  const toPackOrders  = active.filter((o) => o.payment_status === "paid" && o.delivery_status === "unbooked");
+  const toDispatch    = active.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "delivery");
+  const awaitPickup   = active.filter((o) => o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup");
   const unpaidTotal  = unpaidOrders.reduce((s, o) => s + o.total, 0);
   const toPackQty    = toPackOrders.reduce((s, o) => s + (o.order_items || []).reduce((q, i) => q + i.qty, 0), 0);
 
@@ -1283,28 +1293,42 @@ function OrdersTab({
       if (!matchesId && !matchesPhone && !matchesName) return false;
     }
 
+    // Cancelled / restocked orders are excluded from every active funnel stage
+    // — they only show under the dedicated 'Cancelled' filter (or 'All').
+    const cancelled = isInactive(o);
+
     // Mutually exclusive funnel stages - order can only be in one stage
     if (filter === "unpaid") {
       // Stage 1: Waiting for payment
+      if (cancelled) return false;
       if (o.payment_status !== "pending") return false;
     } else if (filter === "paid") {
       // Stage 2: Payment received, not yet in dispatch/packing
+      if (cancelled) return false;
       if (o.payment_status !== "paid" || o.delivery_status !== "unbooked") return false;
     } else if (filter === "packing") {
       // Stage 3: Packing Done (delivery items being packed, not yet booked)
+      if (cancelled) return false;
       if (o.delivery_status !== "out_for_delivery" || o.fulfillment !== "delivery") return false;
     } else if (filter === "booked") {
       // Stage 4: Booked (delivery items only, after packing)
+      if (cancelled) return false;
       if (o.delivery_status !== "booked" || o.fulfillment !== "delivery") return false;
     } else if (filter === "pickup") {
       // Stage 4 (pickup path): Customer ready to pickup
+      if (cancelled) return false;
       if (o.fulfillment !== "pickup" || o.delivery_status !== "out_for_delivery") return false;
     } else if (filter === "delivered") {
       // Stage 5: Order delivered, no returns
+      if (cancelled) return false;
       if (o.delivery_status !== "delivered" || o.return_status !== "none") return false;
     } else if (filter === "return") {
       // Return initiated
+      if (cancelled) return false;
       if (o.return_status === "none") return false;
+    } else if (filter === "cancelled") {
+      // Cancelled / restocked stage
+      if (!cancelled) return false;
     }
 
     // Filter by fulfillment (delivery/pickup) - applied on top of stage
@@ -1425,6 +1449,7 @@ function OrdersTab({
     { id: "pickup", label: "Customer Pickup" },
     { id: "delivered", label: "Delivered" },
     { id: "return", label: "Return" },
+    { id: "cancelled", label: "Cancelled" },
   ];
 
   const fulfillmentFilters: { id: FulfillmentFilter; label: string }[] = [
