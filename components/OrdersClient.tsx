@@ -1841,15 +1841,6 @@ function OrdersTab({
                       </button>
                     )
                   )}
-                  {!o.restocked_at && (
-                    <button
-                      onClick={() => restockOrder(o.id)}
-                      disabled={busy === o.id}
-                      className="w-full cursor-pointer rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
-                    >
-                      Move back to store
-                    </button>
-                  )}
 
                   {/* Mark refunded */}
                   {o.refund_status === "requested" && (
