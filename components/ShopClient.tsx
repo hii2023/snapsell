@@ -655,10 +655,23 @@ function BookingConfirm({
   const waMsg = `Hi, I have made the payment for my order.\n\nOrder ID: ${ref}\nName: ${name}\nItems: ${items}\nAmount: ${amount > 0 ? "₹" + amount : "Free"}\n\nPlease find my payment screenshot attached.`;
   const waUrl = `https://wa.me/${storeWa}?text=${encodeURIComponent(waMsg)}`;
 
-  // UPI deep link — opens GPay / PhonePe / any UPI app on mobile
-  const upiUrl = cfg.upiId
-    ? `upi://pay?pa=${encodeURIComponent(cfg.upiId)}&pn=${encodeURIComponent(cfg.upiName || "Thrift Shoppers")}&am=${amount}&cu=INR&tn=${encodeURIComponent(ref)}`
-    : null;
+  const [copied, setCopied] = useState(false);
+  async function copyUpi() {
+    if (!cfg.upiId) return;
+    try {
+      await navigator.clipboard.writeText(cfg.upiId);
+    } catch {
+      // Older browsers — fall back to a hidden textarea
+      const ta = document.createElement("textarea");
+      ta.value = cfg.upiId;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   return (
     <div className="mx-auto max-w-md px-4 py-8 text-center">
@@ -695,33 +708,50 @@ function BookingConfirm({
       {/* Payment section */}
       {amount > 0 ? (
         <>
-          {/* UPI pay button — primary CTA */}
-          {upiUrl && (
-            <a
-              href={upiUrl}
-              className="mt-5 flex w-full items-center justify-center gap-3 rounded-2xl bg-indigo-600 py-4 text-base font-semibold text-white active:scale-[0.98] hover:bg-indigo-700"
-            >
-              {/* UPI logo-ish icon */}
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-              Pay ₹{amount} via UPI
-            </a>
+          {/* Copy UPI ID card */}
+          {cfg.upiId && (
+            <div className="mt-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Pay to UPI ID</p>
+              <div className="mt-2 flex items-center gap-2">
+                <p className="flex-1 truncate font-mono text-sm font-bold text-ink sm:text-base">{cfg.upiId}</p>
+                <button
+                  type="button"
+                  onClick={copyUpi}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                    copied
+                      ? "bg-emerald-600 text-white"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  }`}
+                >
+                  {copied ? (
+                    <>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                      </svg>
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-neutral-500">
+                Amount payable: <strong className="text-ink">₹{amount}</strong>
+              </p>
+            </div>
           )}
-
-          {/* Divider */}
-          <div className="mt-4 flex items-center gap-2">
-            <div className="h-px flex-1 bg-neutral-200" />
-            <span className="text-xs text-neutral-400">then confirm your order</span>
-            <div className="h-px flex-1 bg-neutral-200" />
-          </div>
 
           {/* Steps */}
           <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left">
             <ol className="space-y-1.5 text-sm text-neutral-600">
-              {upiUrl && <li>1. Tap <strong>Pay via UPI</strong> above to complete payment</li>}
-              <li>{upiUrl ? "2." : "1."} Take a screenshot of your payment confirmation</li>
-              <li>{upiUrl ? "3." : "2."} Send the screenshot on WhatsApp with Order ID <strong>{ref}</strong></li>
+              {cfg.upiId && <li>1. Copy the UPI ID above and pay <strong>₹{amount}</strong> from any UPI app</li>}
+              <li>{cfg.upiId ? "2." : "1."} Take a screenshot of your payment confirmation</li>
+              <li>{cfg.upiId ? "3." : "2."} Send the screenshot on WhatsApp with Order ID <strong>{ref}</strong></li>
             </ol>
           </div>
 
