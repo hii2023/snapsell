@@ -29,16 +29,22 @@ export default function LogoLink() {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/orders") || pathname?.startsWith("/sell");
 
+  // Both branches use the same link styling so the logo always feels tappable
+  // — cursor pointer + subtle hover/active feedback. Clicking always returns
+  // the user to the canonical home of the section they are in.
+  const linkClass =
+    "inline-block cursor-pointer transition-transform hover:scale-[1.02] active:scale-95";
+
   if (isAdmin) {
     return (
-      <Link href="/orders">
+      <Link href="/orders" aria-label="Go to admin dashboard" className={linkClass}>
         <LogoImg src="/logo.png" alt="India Recycle Admin" />
       </Link>
     );
   }
 
   return (
-    <Link href="/">
+    <Link href="/" aria-label="Go to home" className={linkClass}>
       <LogoImg src="/logo-shop.png" alt="Thrift Shoppers" />
     </Link>
   );
