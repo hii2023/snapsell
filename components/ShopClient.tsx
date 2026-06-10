@@ -100,7 +100,7 @@ export default function ShopClient({
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasMore) {
+        if (entry.isIntersecting) {
           setPageSize((n) => n + 20);
         }
       },
@@ -108,7 +108,7 @@ export default function ShopClient({
     );
     if (loaderRef.current) observer.observe(loaderRef.current);
     return () => observer.disconnect();
-  }, [hasMore]);
+  }, []);
 
   // Refresh products whenever the tab regains focus (covers offline → online,
   // app switching, returning from background) so it always shows live state.
