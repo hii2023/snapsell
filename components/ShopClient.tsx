@@ -5,7 +5,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import { supabaseBrowser } from "@/lib/supabase";
 import { T } from "@/lib/db";
-import { rupees, CATEGORY_META, PICKUP_ADDRESS } from "@/lib/constants";
+import { rupees, CATEGORY_META, PICKUP_ADDRESS, SIZE_OPTIONS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
 import type { Category, CartLine, Product } from "@/lib/types";
 
@@ -53,12 +53,14 @@ export default function ShopClient({
   const [step, setStep] = useState<Step>("shop");
   const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
   const [subcatFilter, setSubcatFilter] = useState<string>("all");
+  const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [pageSize, setPageSize] = useState<number>(10);
   const [hydrated, setHydrated] = useState(false);
 
-  // Reset subcategory + pagination when the category changes
+  // Reset subcategory / size / pagination when the category changes
   useEffect(() => {
     setSubcatFilter("all");
+    setSizeFilter("all");
     setPageSize(10);
   }, [catFilter]);
 
@@ -146,12 +148,25 @@ export default function ShopClient({
           products.some((p) => p.category === catFilter && p.subcategory === sc)
         );
 
+  // Size filter — only meaningful for apparel (Clothing); list the sizes
+  // that are actually in stock for the current category.
+  const sizeList: string[] =
+    catFilter === "apparel"
+      ? SIZE_OPTIONS.apparel.filter((sz) =>
+          products.some((p) => p.category === "apparel" && p.size === sz)
+        )
+      : [];
+
   const fullyFiltered =
     catFilter === "all"
       ? products
       : catFilter === "giveaway"
         ? products.filter((p) => p.giveaway)
-        : products.filter((p) => p.category === catFilter && (subcatFilter === "all" || p.subcategory === subcatFilter));
+        : products.filter((p) =>
+            p.category === catFilter &&
+            (subcatFilter === "all" || p.subcategory === subcatFilter) &&
+            (sizeFilter === "all" || p.size === sizeFilter)
+          );
 
   const visible = fullyFiltered.slice(0, pageSize);
   const hasMore = fullyFiltered.length > visible.length;
@@ -308,6 +323,28 @@ export default function ShopClient({
               className={`chip shrink-0 text-xs ${subcatFilter === sc ? "chip-on" : "chip-off"}`}
             >
               {sc}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Size chips — only for the Clothing category */}
+      {sizeList.length > 0 && (
+        <div className="mb-3 -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1">
+          <span className="shrink-0 text-xs font-semibold text-neutral-500">Size:</span>
+          <button
+            onClick={() => setSizeFilter("all")}
+            className={`chip shrink-0 text-xs ${sizeFilter === "all" ? "chip-on" : "chip-off"}`}
+          >
+            All
+          </button>
+          {sizeList.map((sz) => (
+            <button
+              key={sz}
+              onClick={() => setSizeFilter(sz)}
+              className={`chip shrink-0 text-xs ${sizeFilter === sz ? "chip-on" : "chip-off"}`}
+            >
+              {sz}
             </button>
           ))}
         </div>

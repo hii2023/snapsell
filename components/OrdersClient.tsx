@@ -224,14 +224,21 @@ function Overview({
   const unpaidTotal  = unpaidOrders.reduce((s, o) => s + o.total, 0);
   const toPackQty    = toPackOrders.reduce((s, o) => s + (o.order_items || []).reduce((q, i) => q + i.qty, 0), 0);
 
-  // Revenue stats — filtered by date range
+  // Revenue stats — filtered by date range. Refunds are subtracted so the
+  // numbers reflect actual cash on hand, not gross collections.
   const paidOrders  = filtered.filter((o) => o.payment_status === "paid");
   const cashOrders  = paidOrders.filter((o) => o.payment_method === "cash");
   const upiOrders   = paidOrders.filter((o) => o.payment_method === "upi");
   const otherPaid   = paidOrders.filter((o) => !o.payment_method);
-  const cashTotal   = cashOrders.reduce((s, o) => s + o.total, 0);
-  const upiTotal    = upiOrders.reduce((s, o) => s + o.total, 0);
-  const totalRev    = paidOrders.reduce((s, o) => s + o.total, 0);
+  const refundedInRange = filtered.filter((o) => o.refund_status === "completed");
+  const cashRefund  = refundedInRange.filter((o) => o.refund_method === "cash").reduce((s, o) => s + (o.refund_amount || o.total), 0);
+  const upiRefund   = refundedInRange.filter((o) => o.refund_method === "upi").reduce((s, o) => s + (o.refund_amount || o.total), 0);
+  const totalRefund = cashRefund + upiRefund;
+  const cashGross   = cashOrders.reduce((s, o) => s + o.total, 0);
+  const upiGross    = upiOrders.reduce((s, o) => s + o.total, 0);
+  const cashTotal   = cashGross - cashRefund;
+  const upiTotal    = upiGross - upiRefund;
+  const totalRev    = paidOrders.reduce((s, o) => s + o.total, 0) - totalRefund;
   const delivered   = filtered.filter((o) => o.delivery_status === "delivered" && o.return_status === "none");
 
   const dateLabels: { id: DateRange; label: string }[] = [
@@ -306,6 +313,11 @@ function Overview({
         {otherPaid.length > 0 && (
           <p className="mt-1 text-xs text-neutral-400 text-right">{otherPaid.length} older order{otherPaid.length !== 1 ? "s" : ""} without method tag</p>
         )}
+        {totalRefund > 0 && (
+          <p className="mt-1 text-right text-xs text-red-500">
+            Refunds in range: {rupees(totalRefund)} ({refundedInRange.length})
+          </p>
+        )}
       </div>
 
     </div>
@@ -348,16 +360,22 @@ function Insight({
   })).filter((c) => c.count > 0 || c.units > 0);
 
   // ── Sales totals (cheap, always computed) ─────────────
+  // Refunded orders are netted out of revenue so lifetime totals match
+  // actual cash on hand.
   const paidOrders = orders.filter((o) => o.payment_status === "paid");
   const totalOrders = orders.length;
   let totalProductsSold = 0;
-  let totalRevenue = 0;
+  let grossRevenue = 0;
   paidOrders.forEach((o) => {
     (o.order_items || []).forEach((i) => {
       totalProductsSold += i.qty;
-      totalRevenue += i.qty * i.price_at_purchase;
+      grossRevenue += i.qty * i.price_at_purchase;
     });
   });
+  const totalRefunded = orders
+    .filter((o) => o.refund_status === "completed")
+    .reduce((s, o) => s + (o.refund_amount || o.total), 0);
+  const totalRevenue = grossRevenue - totalRefunded;
 
   // ── Unique customers (count only — cheap) ─────────────
   const cleanPhone = (p: string) => p.replace(/\D/g, "");
@@ -1140,6 +1158,8 @@ function OrdersTab({
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [waMenuFor, setWaMenuFor] = useState<string | null>(null);
+  // Cancel-with-refund picker for paid orders
+  const [cancelPickerFor, setCancelPickerFor] = useState<string | null>(null);
 
   const STORE_WA = "917202035700";
 
@@ -1376,9 +1396,22 @@ function OrdersTab({
   }
 
   // Cancel order — marks cancelled_at, keeps order in DB
-  async function cancelOrder(id: string) {
+  async function cancelOrder(id: string, refund?: { method: "cash" | "upi" | null; amount: number }) {
     if (!confirm("Cancel this order? This cannot be undone.")) return;
-    await update(id, { action: "cancel" });
+    if (refund && refund.method) {
+      await update(id, {
+        action: "cancel",
+        refund_status: "completed",
+        refund_method: refund.method,
+        refund_amount: refund.amount,
+      });
+    } else if (refund && !refund.method) {
+      // "No refund" — still record refund_status=none explicitly
+      await update(id, { action: "cancel" });
+    } else {
+      await update(id, { action: "cancel" });
+    }
+    setCancelPickerFor(null);
   }
 
   // Move back to store — restocks the items (re-adds qty to product stock)
@@ -1603,6 +1636,11 @@ function OrdersTab({
                   <p className="mb-2 rounded bg-red-50 px-2 py-1 text-center text-xs font-semibold text-red-700">
                     Cancelled
                     {o.restocked_at ? " · Restocked" : ""}
+                    {o.refund_status === "completed" && o.refund_method
+                      ? ` · Refunded ${o.refund_method.toUpperCase()} ₹${o.refund_amount || o.total}`
+                      : o.payment_status === "paid" && o.refund_status !== "completed"
+                        ? " · No refund"
+                        : ""}
                   </p>
                 )}
                 <div className="flex items-start justify-between">
@@ -1823,15 +1861,58 @@ function OrdersTab({
                     </button>
                   )}
 
-                  {/* Cancel + Restock (lifecycle actions) */}
+                  {/* Cancel + Restock (lifecycle actions). Admins can cancel
+                      any order at any stage. If the customer had already paid,
+                      we prompt for refund mode (Cash / UPI / No refund) so the
+                      cashflow stays accurate. */}
                   {!o.cancelled_at && (
-                    <button
-                      onClick={() => cancelOrder(o.id)}
-                      disabled={busy === o.id}
-                      className="w-full cursor-pointer rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
-                    >
-                      Cancel order
-                    </button>
+                    cancelPickerFor === o.id && o.payment_status === "paid" ? (
+                      <div className="rounded-xl border border-red-300 bg-red-50 p-3">
+                        <p className="mb-2 text-center text-xs font-semibold text-red-700">
+                          Cancel & how was the refund handled?
+                        </p>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            disabled={busy === o.id}
+                            onClick={() => cancelOrder(o.id, { method: "upi", amount: o.total })}
+                            className="cursor-pointer rounded-xl bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            Refund UPI
+                          </button>
+                          <button
+                            disabled={busy === o.id}
+                            onClick={() => cancelOrder(o.id, { method: "cash", amount: o.total })}
+                            className="cursor-pointer rounded-xl bg-amber-500 py-2 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
+                          >
+                            Refund Cash
+                          </button>
+                          <button
+                            disabled={busy === o.id}
+                            onClick={() => cancelOrder(o.id, { method: null, amount: 0 })}
+                            className="cursor-pointer rounded-xl border border-neutral-300 bg-white py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                          >
+                            No Refund
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setCancelPickerFor(null)}
+                          className="mt-2 w-full text-center text-xs text-neutral-500 hover:text-neutral-700"
+                        >
+                          Back
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (o.payment_status === "paid") setCancelPickerFor(o.id);
+                          else cancelOrder(o.id);
+                        }}
+                        disabled={busy === o.id}
+                        className="w-full cursor-pointer rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Cancel order
+                      </button>
+                    )
                   )}
                   {!o.restocked_at && (
                     <button

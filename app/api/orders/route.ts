@@ -32,6 +32,7 @@ export async function PATCH(req: NextRequest) {
     refund_status?: RefundStatus;
     refund_amount?: number;
     payment_method?: PaymentMethod;
+    refund_method?: PaymentMethod;
     action?: "cancel" | "restock";
   };
   if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
@@ -40,9 +41,20 @@ export async function PATCH(req: NextRequest) {
 
   // Special-case lifecycle actions: cancel + restock
   if (body.action === "cancel") {
+    const patch: Record<string, unknown> = { cancelled_at: new Date().toISOString() };
+    // If the admin is also recording a refund as part of cancellation
+    if (body.refund_status === "completed") {
+      patch.refund_status = "completed";
+      if (body.refund_method === "cash" || body.refund_method === "upi") {
+        patch.refund_method = body.refund_method;
+      }
+      if (typeof body.refund_amount === "number" && body.refund_amount >= 0) {
+        patch.refund_amount = body.refund_amount;
+      }
+    }
     const { data, error } = await supabase
       .from(T.orders)
-      .update({ cancelled_at: new Date().toISOString() })
+      .update(patch)
       .eq("id", body.id)
       .select(ORDER_WITH_ITEMS)
       .single();
@@ -82,6 +94,9 @@ export async function PATCH(req: NextRequest) {
   }
   if (body.payment_method === "cash" || body.payment_method === "upi") {
     patch.payment_method = body.payment_method;
+  }
+  if (body.refund_method === "cash" || body.refund_method === "upi") {
+    patch.refund_method = body.refund_method;
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
