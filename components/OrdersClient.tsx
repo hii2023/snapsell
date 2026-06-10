@@ -1167,6 +1167,7 @@ function OrdersTab({
   function buildWaUrl(o: Order): string {
     const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
     const amt = `₹${o.total}`;
+    const upiId = process.env.NEXT_PUBLIC_UPI_ID || "";
     let msg = "";
 
     if (o.cancelled_at) {
@@ -1184,7 +1185,7 @@ function OrdersTab({
     } else if (o.payment_status === "paid") {
       msg = `Hi ${o.customer_name}, we have received your payment for order ${ref}. We are now processing your order.`;
     } else {
-      msg = `Hi ${o.customer_name}, your order ${ref} is awaiting payment of ${amt}. Please complete the payment to confirm your order.`;
+      msg = `Hi ${o.customer_name}, your order ${ref} is awaiting payment of ${amt}.${upiId ? ` Please pay to UPI: ${upiId}` : ""} Please complete the payment to confirm your order.`;
     }
 
     const phone = o.phone.replace(/\D/g, "");
