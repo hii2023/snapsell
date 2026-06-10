@@ -155,21 +155,26 @@ export default async function ShopPage() {
                 </svg>
               </a>
 
-              {/* Website — modern browser window glyph */}
+              {/* Website — glossy globe on cyan→blue gradient */}
               <a
                 href="https://indiarecycles.org"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Visit indiarecycles.org"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white transition-transform hover:scale-105 active:scale-95"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-300 via-sky-500 to-blue-600 text-white shadow-sm transition-transform hover:scale-105 active:scale-95"
                 title="indiarecycles.org"
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}>
-                  <rect x="3" y="4.5" width="18" height="15" rx="2.5" />
-                  <path d="M3 9h18" />
-                  <circle cx="6.2" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
-                  <circle cx="8.4" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
-                  <circle cx="10.6" cy="6.8" r="0.6" fill="currentColor" stroke="none" />
+                <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  {/* outer globe */}
+                  <circle cx="12" cy="12" r="9" />
+                  {/* equator + parallels */}
+                  <path d="M3 12h18" />
+                  <path d="M4.6 7.5h14.8" />
+                  <path d="M4.6 16.5h14.8" />
+                  {/* meridians */}
+                  <path d="M12 3a13 13 0 010 18" />
+                  <path d="M12 3a13 13 0 000 18" />
+                  <path d="M12 3v18" />
                 </svg>
               </a>
 
