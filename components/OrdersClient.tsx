@@ -1126,32 +1126,96 @@ function OrdersTab({
   const [search, setSearch] = useState("");
   // payPick holds the order id currently showing the Cash/UPI selector; null = none open
   const [payPick, setPayPick] = useState<string | null>(null);
+  // Bulk select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [waMenuFor, setWaMenuFor] = useState<string | null>(null);
 
   const STORE_WA = "917202035700";
 
-  // Build a WhatsApp URL to message the customer based on current order stage
-  function customerWaUrl(o: Order): string {
-    const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
-    const amt = `₹${o.total}`;
-    let msg = "";
-    if (o.return_status !== "none") {
-      msg = `Hi ${o.customer_name}, we have received your return request for order ${ref}. We will get back to you shortly.`;
-    } else if (o.delivery_status === "delivered") {
-      msg = `Hi ${o.customer_name}, your order ${ref} has been delivered. Thank you for shopping with India Recycle!`;
-    } else if (o.delivery_status === "booked") {
-      msg = `Hi ${o.customer_name}, your order ${ref} has been dispatched and is on the way!`;
-    } else if (o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup") {
-      msg = `Hi ${o.customer_name}, your order ${ref} is ready for pickup. Please collect it at your convenience.`;
-    } else if (o.delivery_status === "out_for_delivery") {
-      msg = `Hi ${o.customer_name}, your order ${ref} has been packed and will be dispatched soon.`;
-    } else if (o.payment_status === "paid") {
-      msg = `Hi ${o.customer_name}, we have received your payment for order ${ref}. We are now processing your order.`;
-    } else {
-      msg = `Hi ${o.customer_name}, your order ${ref} is awaiting payment of ${amt}. Please complete the payment to confirm your order.`;
-    }
+  // Predefined WhatsApp templates the admin can pick from per order.
+  // Each template returns the message body (variables get interpolated).
+  const WA_TEMPLATES: { id: string; label: string; build: (o: Order) => string }[] = [
+    {
+      id: "payment_reminder",
+      label: "Payment reminder",
+      build: (o) => {
+        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+        return `Hi ${o.customer_name}, this is a reminder for your order ${ref} of ₹${o.total}. Please complete the payment to confirm your order. Scan the QR or pay to UPI: innovativerevive@idfcbank. Once paid, please share the screenshot here. Thank you!`;
+      },
+    },
+    {
+      id: "payment_confirmed",
+      label: "Payment confirmed",
+      build: (o) => {
+        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+        return `Hi ${o.customer_name}, we have received your payment of ₹${o.total} for order ${ref}. We are now preparing it for ${o.fulfillment === "pickup" ? "pickup" : "dispatch"}. Will keep you posted.`;
+      },
+    },
+    {
+      id: "dispatched",
+      label: "Order dispatched",
+      build: (o) => {
+        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+        return `Hi ${o.customer_name}, your order ${ref} has been dispatched and is on the way. You should receive it shortly. Thank you for shopping with India Recycles!`;
+      },
+    },
+    {
+      id: "ready_for_pickup",
+      label: "Ready for pickup",
+      build: (o) => {
+        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+        return `Hi ${o.customer_name}, your order ${ref} is ready for pickup at our store. Address: Godown # 3, SK Estate, Nr Nagdev Mandir, LJ University Rd, Sarkhej - Gandhinagar Highway, Ahmedabad. Please bring your Order ID.`;
+      },
+    },
+    {
+      id: "delivered",
+      label: "Delivered, ask for feedback",
+      build: (o) => {
+        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+        return `Hi ${o.customer_name}, hope you received your order ${ref} in good condition! We would love your feedback. Please leave a review and follow us on Instagram @india.recycles. Thank you!`;
+      },
+    },
+    {
+      id: "return_received",
+      label: "Return request received",
+      build: (o) => {
+        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+        return `Hi ${o.customer_name}, we have received your return request for order ${ref}. Our team will reach out shortly to arrange the next steps. Thank you for your patience.`;
+      },
+    },
+    {
+      id: "cancelled",
+      label: "Order cancelled / restocked",
+      build: (o) => {
+        const ref = "IR-" + o.id.slice(0, 8).toUpperCase();
+        return `Hi ${o.customer_name}, your order ${ref} has been cancelled. If a payment was made, the refund will be processed within 3-5 working days. Please reach out if you have any questions.`;
+      },
+    },
+  ];
+
+  // Pick the template that best matches the current order stage as the default
+  function defaultTemplate(o: Order): string {
+    if (o.cancelled_at) return "cancelled";
+    if (o.return_status !== "none") return "return_received";
+    if (o.delivery_status === "delivered") return "delivered";
+    if (o.delivery_status === "booked") return "dispatched";
+    if (o.delivery_status === "out_for_delivery" && o.fulfillment === "pickup") return "ready_for_pickup";
+    if (o.payment_status === "paid") return "payment_confirmed";
+    return "payment_reminder";
+  }
+
+  function buildWaUrl(o: Order, templateId: string): string {
+    const tpl = WA_TEMPLATES.find((t) => t.id === templateId) || WA_TEMPLATES[0];
+    const msg = tpl.build(o);
     const phone = o.phone.replace(/\D/g, "");
     const wa = phone.startsWith("91") ? phone : `91${phone}`;
     return `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
+  }
+
+  // Kept for legacy export-helper / single-tap usage — same default template
+  function customerWaUrl(o: Order): string {
+    return buildWaUrl(o, defaultTemplate(o));
   }
 
   function fmtDate(iso: string) {
@@ -1287,6 +1351,51 @@ function OrdersTab({
     }
   }
 
+  // Cancel order — marks cancelled_at, keeps order in DB
+  async function cancelOrder(id: string) {
+    if (!confirm("Cancel this order? This cannot be undone.")) return;
+    await update(id, { action: "cancel" });
+  }
+
+  // Move back to store — restocks the items (re-adds qty to product stock)
+  async function restockOrder(id: string) {
+    if (!confirm("Move items back to store stock? Use only after confirming with the customer.")) return;
+    await update(id, { action: "restock" });
+  }
+
+  // Bulk delete — wipes selected orders from DB
+  async function bulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} order${ids.length === 1 ? "" : "s"} permanently? This cannot be undone.`)) return;
+    setBusy("bulk");
+    try {
+      const res = await fetch("/api/orders", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (res.ok) {
+        setOrders(orders.filter((o) => !selected.has(o.id)));
+        setSelected(new Set());
+        setSelectMode(false);
+        router.refresh();
+      } else {
+        alert("Failed to delete selected orders.");
+      }
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
   async function bookDelivery(id: string) {
     setBusy(id);
     try {
@@ -1384,9 +1493,43 @@ function OrdersTab({
         )}
       </div>
 
-      {/* Export buttons */}
+      {/* Bulk delete bar */}
+      {selectMode && (
+        <div className="mb-3 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+          <p className="text-sm font-medium text-red-700">
+            {selected.size} selected
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelected(new Set(shown.map((o) => o.id)))}
+              className="text-xs font-semibold text-neutral-600 hover:text-neutral-900"
+            >
+              Select all visible
+            </button>
+            <button
+              onClick={bulkDelete}
+              disabled={selected.size === 0 || busy === "bulk"}
+              className="rounded-xl bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              Delete selected
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Export + Select toggle */}
       <div className="mb-4 flex justify-end gap-2">
-        {shown.length > 0 && (
+        <button
+          onClick={() => { setSelectMode((m) => !m); setSelected(new Set()); }}
+          className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+            selectMode
+              ? "border-red-300 bg-red-50 text-red-700"
+              : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+          }`}
+        >
+          {selectMode ? "Done" : "Select"}
+        </button>
+        {shown.length > 0 && !selectMode && (
           <button
             onClick={exportToExcel}
             className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition-colors duration-150 hover:bg-neutral-50 active:scale-[0.98]"
@@ -1395,7 +1538,7 @@ function OrdersTab({
             Export Filtered
           </button>
         )}
-        {orders.length > 0 && (
+        {orders.length > 0 && !selectMode && (
           <button
             onClick={exportAllToExcel}
             className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-brand bg-brand/5 px-4 py-2 text-sm font-medium text-brand transition-colors duration-150 hover:bg-brand/10 active:scale-[0.98]"
@@ -1413,8 +1556,30 @@ function OrdersTab({
           {shown.map((o) => {
             const dispatched = o.delivery_status === "out_for_delivery";
             const delivered = o.delivery_status === "delivered";
+            const isSelected = selected.has(o.id);
             return (
-              <div key={o.id} className="card p-4">
+              <div
+                key={o.id}
+                className={`card p-4 ${o.cancelled_at ? "opacity-60" : ""} ${isSelected ? "ring-2 ring-red-400" : ""}`}
+              >
+                {/* Bulk select checkbox */}
+                {selectMode && (
+                  <label className="mb-3 flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelected(o.id)}
+                      className="h-4 w-4 cursor-pointer accent-red-600"
+                    />
+                    <span className="font-medium text-neutral-700">Select for delete</span>
+                  </label>
+                )}
+                {o.cancelled_at && (
+                  <p className="mb-2 rounded bg-red-50 px-2 py-1 text-center text-xs font-semibold text-red-700">
+                    Cancelled
+                    {o.restocked_at ? " · Restocked" : ""}
+                  </p>
+                )}
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium">{o.customer_name}</p>
@@ -1596,6 +1761,60 @@ function OrdersTab({
                       onClick={() => update(o.id, { refund_status: "requested" })}
                     >
                       Mark refund requested
+                    </button>
+                  )}
+
+                  {/* WhatsApp templates menu */}
+                  {waMenuFor === o.id ? (
+                    <div className="rounded-xl border border-green-300 bg-green-50 p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">Send WhatsApp template</p>
+                      <div className="space-y-1.5">
+                        {WA_TEMPLATES.map((t) => (
+                          <a
+                            key={t.id}
+                            href={buildWaUrl(o, t.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => setWaMenuFor(null)}
+                            className="block rounded-lg bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-green-100"
+                          >
+                            {t.label}
+                          </a>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setWaMenuFor(null)}
+                        className="mt-2 w-full text-center text-xs text-neutral-500 hover:text-neutral-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setWaMenuFor(o.id)}
+                      className="w-full cursor-pointer rounded-xl border border-green-200 bg-white px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-50"
+                    >
+                      WhatsApp templates ▾
+                    </button>
+                  )}
+
+                  {/* Cancel + Restock (lifecycle actions) */}
+                  {!o.cancelled_at && (
+                    <button
+                      onClick={() => cancelOrder(o.id)}
+                      disabled={busy === o.id}
+                      className="w-full cursor-pointer rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+                    >
+                      Cancel order
+                    </button>
+                  )}
+                  {!o.restocked_at && (
+                    <button
+                      onClick={() => restockOrder(o.id)}
+                      disabled={busy === o.id}
+                      className="w-full cursor-pointer rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
+                    >
+                      Move back to store
                     </button>
                   )}
 

@@ -70,6 +70,8 @@ export type Order = {
   refund_status: string;
   refund_amount: number;
   payment_method: "cash" | "upi" | null;
+  cancelled_at: string | null;
+  restocked_at: string | null;
   created_at: string;
   order_items?: OrderItem[];
 };

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase-server";
 import { requireSeller } from "@/lib/auth";
-import { T } from "@/lib/db";
+import { T, ORDER_WITH_ITEMS } from "@/lib/db";
 import type { DeliveryStatus, PaymentStatus, ReturnStatus, RefundStatus, PaymentMethod } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -32,8 +32,37 @@ export async function PATCH(req: NextRequest) {
     refund_status?: RefundStatus;
     refund_amount?: number;
     payment_method?: PaymentMethod;
+    action?: "cancel" | "restock";
   };
   if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  const supabase = await supabaseServer();
+
+  // Special-case lifecycle actions: cancel + restock
+  if (body.action === "cancel") {
+    const { data, error } = await supabase
+      .from(T.orders)
+      .update({ cancelled_at: new Date().toISOString() })
+      .eq("id", body.id)
+      .select(ORDER_WITH_ITEMS)
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    revalidatePath("/orders");
+    return NextResponse.json({ order: data });
+  }
+
+  if (body.action === "restock") {
+    const { error: rpcErr } = await supabase.rpc("snapsell_restock_order", { p_order_id: body.id });
+    if (rpcErr) return NextResponse.json({ error: rpcErr.message }, { status: 500 });
+    const { data, error } = await supabase
+      .from(T.orders)
+      .select(ORDER_WITH_ITEMS)
+      .eq("id", body.id)
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    revalidatePath("/orders");
+    return NextResponse.json({ order: data });
+  }
 
   const patch: Record<string, unknown> = {};
   if (body.delivery_status && DELIVERY.includes(body.delivery_status)) {
@@ -58,14 +87,31 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
-  const supabase = await supabaseServer();
   const { data, error } = await supabase
     .from(T.orders)
     .update(patch)
     .eq("id", body.id)
-    .select()
+    .select(ORDER_WITH_ITEMS)
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/orders");
   return NextResponse.json({ order: data });
+}
+
+// Bulk delete: admin selects orders and deletes them in one call.
+export async function DELETE(req: NextRequest) {
+  const seller = await requireSeller();
+  if (!seller.ok) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+
+  const body = (await req.json()) as { ids?: string[] };
+  if (!body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
+    return NextResponse.json({ error: "ids required" }, { status: 400 });
+  }
+
+  const supabase = await supabaseServer();
+  await supabase.from(T.orderItems).delete().in("order_id", body.ids);
+  const { error } = await supabase.from(T.orders).delete().in("id", body.ids);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/orders");
+  return NextResponse.json({ deleted: body.ids.length });
 }
