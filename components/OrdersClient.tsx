@@ -1681,15 +1681,6 @@ function OrdersTab({
 
                 {viewMode !== "compact" && (
                   <>
-                    {/* Product Images */}
-                    {(o.order_items || []).some(i => i.image_url) && (
-                      <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                        {(o.order_items || []).map((i) => i.image_url && (
-                          <img key={i.id} src={i.image_url} alt={i.name_snapshot} className="h-16 w-16 shrink-0 rounded-lg object-cover border border-neutral-200" />
-                        ))}
-                      </div>
-                    )}
-
                     <div className="mt-2 rounded-lg bg-neutral-50 p-2.5 text-sm text-neutral-700">
                       <p className="text-xs font-semibold text-neutral-600 mb-1.5">Items:</p>
                       <ul className="space-y-0.5">
