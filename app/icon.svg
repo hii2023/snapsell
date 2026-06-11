@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded tile -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+
+  <!-- Chasing arrows (circular economy) -->
+  <g stroke="#ffffff" stroke-width="4.5" fill="none" stroke-linecap="round">
+    <path d="M19 24.5 A15 15 0 0 1 45 24.5"/>
+    <path d="M45 39.5 A15 15 0 0 1 19 39.5"/>
+  </g>
+  <g fill="#ffffff">
+    <path d="M45 24.5 l6.5 -2.2 -3.2 6.2 z"/>
+    <path d="M19 39.5 l-6.5 2.2 3.2 -6.2 z"/>
+  </g>
+
+  <!-- Leaf -->
+  <path d="M32 25.5 C36 28.5 36 35.5 32 38.5 C28 35.5 28 28.5 32 25.5 Z" fill="#ffffff"/>
+</svg>

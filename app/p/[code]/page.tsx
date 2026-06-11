@@ -6,7 +6,7 @@ import { T } from "@/lib/db";
 import { rupees, categoryLabel } from "@/lib/constants";
 import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
-import LogoLink from "@/components/LogoLink";
+import { StoreHeader } from "@/components/StoreHeader";
 import ProductGallery from "@/components/ProductGallery";
 import { Footer } from "@/components/Footer";
 
@@ -71,16 +71,11 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-4">
-          <LogoLink />
-          {p?.code ? (
-            <span className="rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-500">
-              {p.code}
-            </span>
-          ) : null}
-        </div>
-      </header>
+      <StoreHeader right={p?.code ? (
+        <span className="rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-500">
+          {p.code}
+        </span>
+      ) : undefined} />
 
       {!p ? (
         <div className="mx-auto max-w-md px-4 py-24 text-center text-neutral-500">

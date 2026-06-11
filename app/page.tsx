@@ -8,6 +8,7 @@ import { T } from "@/lib/db";
 import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import StoreContact from "@/components/StoreContact";
+import Link from "next/link";
 
 // Never cache this page — always fetch live products from Supabase
 export const dynamic = "force-dynamic";
@@ -74,7 +75,7 @@ export default async function ShopPage() {
         </p>
       </div>
 
-      <header className="border-b border-neutral-200 bg-white">
+      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <LogoLink />
           <div className="min-w-0 flex-1">
@@ -85,6 +86,20 @@ export default async function ShopPage() {
               Thrift. <span className="text-emerald-700">Discover.</span> Repeat.
             </h1>
           </div>
+          <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <Link
+              href="/about"
+              className="hidden rounded-full px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-ink sm:block"
+            >
+              About Us
+            </Link>
+            <Link
+              href="/guide"
+              className="rounded-full border border-emerald-600 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+            >
+              How It Works
+            </Link>
+          </nav>
         </div>
       </header>
 

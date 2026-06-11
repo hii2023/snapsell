@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import LogoLink from "@/components/LogoLink";
+import { StoreHeader } from "@/components/StoreHeader";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
@@ -45,17 +45,7 @@ const values = [
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-paper">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-          <LogoLink />
-          <Link
-            href="/"
-            className="rounded-full border border-neutral-300 px-4 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-emerald-400 hover:text-emerald-700"
-          >
-            Back to shop
-          </Link>
-        </div>
-      </header>
+      <StoreHeader />
 
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-emerald-100 bg-white">
