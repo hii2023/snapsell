@@ -1720,7 +1720,7 @@ function OrdersTab({
                       <svg className="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       </svg>
-                      <span className="text-xs flex-1 text-left truncate">{o.fulfillment === "pickup" ? "Store pickup" : o.address}</span>
+                      <span className="text-xs flex-1 text-left">Address</span>
                       <svg className={`h-4 w-4 shrink-0 transition-transform ${addressExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                       </svg>
