@@ -8,6 +8,7 @@ import { rupees, CATEGORY_META } from "@/lib/constants";
 import { CategoryIcon, CheckIcon } from "./icons";
 import ProductEdit from "./ProductEdit";
 import CPanel from "./CPanel";
+import { Footer } from "./Footer";
 import type { Category, Order, Product, Settings, WaTemplate } from "@/lib/types";
 
 type Tab = "overview" | "products" | "orders" | "insight" | "settings";
@@ -1967,8 +1968,8 @@ function OrdersTab({
       )}
 
       {/* Footer */}
-      <div className="mt-12 border-t border-neutral-200 pt-6 pb-6 text-center text-xs text-neutral-400">
-        <p>Powered by Recycles India Org</p>
+      <div className="mt-12">
+        <Footer />
       </div>
     </div>
   );
