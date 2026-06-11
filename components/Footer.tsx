@@ -33,6 +33,17 @@ export function Footer() {
         </a>
       </div>
 
+      {/* Page links */}
+      <div className="mb-3 flex items-center justify-center gap-4 text-xs">
+        <a href="/about" className="text-neutral-500 transition-colors hover:text-emerald-700">
+          About Us
+        </a>
+        <span className="text-neutral-300">·</span>
+        <a href="/guide" className="text-neutral-500 transition-colors hover:text-emerald-700">
+          How It Works
+        </a>
+      </div>
+
       <a
         href="https://store.indiarecycles.org"
         target="_blank"

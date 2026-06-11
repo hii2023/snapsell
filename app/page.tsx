@@ -202,6 +202,17 @@ export default async function ShopPage() {
             </div>
           </div>
 
+          {/* Page links */}
+          <div className="mt-3 flex items-center gap-4 text-xs sm:text-sm">
+            <a href="/about" className="font-medium text-neutral-600 hover:text-emerald-700">
+              About Us
+            </a>
+            <span className="text-neutral-300">·</span>
+            <a href="/guide" className="font-medium text-neutral-600 hover:text-emerald-700">
+              How It Works
+            </a>
+          </div>
+
           {/* Address row */}
           <a
             href="https://www.google.com/maps/search/?api=1&query=India+Recycles+Godown+3+SK+Estate+Nr+Nagdev+Mandir+LJ+University+Rd+Sarkhej+Gandhinagar+Highway+Ahmedabad+Gujarat+382210"
