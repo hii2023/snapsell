@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 import { supabaseServer } from "@/lib/supabase-server";
 import { requireSeller } from "@/lib/auth";
 import { BUCKET } from "@/lib/db";
@@ -6,6 +7,7 @@ import { BUCKET } from "@/lib/db";
 export const runtime = "nodejs";
 
 // Uploads a product photo to Supabase Storage and returns its public URL.
+// Converts images to WebP format for optimal size and performance.
 // Uses the authenticated seller session (RLS allows authenticated inserts).
 export async function POST(req: NextRequest) {
   const seller = await requireSeller();
@@ -22,19 +24,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Image too large (max 8MB)" }, { status: 400 });
   }
 
-  const ext = (file.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
-  const name = `${crypto.randomUUID()}.${ext}`;
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  try {
+    const buffer = await file.arrayBuffer();
+    const webpBuffer = await sharp(Buffer.from(buffer))
+      .webp({ quality: 80 })
+      .toBuffer();
 
-  const supabase = await supabaseServer();
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(name, bytes, { contentType: file.type, upsert: false });
+    const name = `${crypto.randomUUID()}.webp`;
+    const supabase = await supabaseServer();
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .upload(name, webpBuffer, { contentType: "image/webp", upsert: false });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(name);
+    return NextResponse.json({ url: data.publicUrl });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Image processing failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(name);
-  return NextResponse.json({ url: data.publicUrl });
 }

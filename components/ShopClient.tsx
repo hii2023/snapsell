@@ -389,6 +389,7 @@ export default function ShopClient({
                       alt={p.name}
                       className="h-full w-full object-cover"
                       loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-neutral-300">
