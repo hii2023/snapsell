@@ -1735,8 +1735,10 @@ function OrdersTab({
                   </>
                 )}
 
-                {viewMode !== "compact" && (
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                <div className={`flex flex-wrap gap-1 ${viewMode === "compact" ? "mt-1" : "mt-2.5 gap-1.5"}`}>
+                  {viewMode === "compact" && (
+                    <span className="text-[10px] font-mono text-neutral-400">#{o.id.slice(0, 6).toUpperCase()}</span>
+                  )}
                   <Badge tone={o.fulfillment === "pickup" ? "gray" : "blue"}>
                     {o.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                   </Badge>
@@ -1775,7 +1777,6 @@ function OrdersTab({
                     </Badge>
                   )}
                 </div>
-                )}
 
                 {viewMode !== "compact" && (
                 <div className="mt-3 space-y-2">
