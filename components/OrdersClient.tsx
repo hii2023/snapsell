@@ -1968,8 +1968,7 @@ function OrdersTab({
 
       {/* Footer */}
       <div className="mt-12 border-t border-neutral-200 pt-6 pb-6 text-center text-xs text-neutral-400">
-        <p className="mb-1">SnapSell Admin Dashboard</p>
-        <p>Powered by India Recycles</p>
+        <p>Powered by Recycles India Org</p>
       </div>
     </div>
   );
