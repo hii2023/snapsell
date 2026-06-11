@@ -8,6 +8,7 @@ import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import LogoLink from "@/components/LogoLink";
 import ProductGallery from "@/components/ProductGallery";
+import { Footer } from "@/components/Footer";
 
 export const dynamic = "force-dynamic";
 
@@ -157,6 +158,10 @@ export default async function ProductPage({
           )}
         </div>
       )}
+
+      <div className="mx-auto mt-12 max-w-2xl px-4">
+        <Footer />
+      </div>
     </main>
   );
 }

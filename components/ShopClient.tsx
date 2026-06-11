@@ -7,7 +7,6 @@ import { supabaseBrowser } from "@/lib/supabase";
 import { T } from "@/lib/db";
 import { rupees, CATEGORY_META, PICKUP_ADDRESS, SIZE_OPTIONS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
-import { Footer } from "./Footer";
 import type { Category, CartLine, Product } from "@/lib/types";
 
 type Step = "shop" | "checkout" | "done";
@@ -465,11 +464,6 @@ export default function ShopClient({
 
       {/* Infinite scroll loader — triggers when scrolled into view */}
       {hasMore && <div ref={loaderRef} className="mt-6 h-px" />}
-
-      {/* Footer */}
-      <div className="mt-12">
-        <Footer />
-      </div>
 
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
