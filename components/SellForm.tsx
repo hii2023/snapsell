@@ -78,6 +78,7 @@ export default function SellForm({
 
   const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
+  const uploadFailedRef = useRef(false);
 
   // Process the captured photo on mount.
   useEffect(() => {
@@ -100,6 +101,7 @@ export default function SellForm({
     setPreview(URL.createObjectURL(file));
     setReading(true);
     setUploading(true);
+    uploadFailedRef.current = false;
 
     const base64 = await fileToBase64(file);
 
@@ -111,7 +113,10 @@ export default function SellForm({
       if (!res.ok) throw new Error(json.error || "Upload failed");
       setImageUrl(json.url);
     })()
-      .catch((err) => setError(err instanceof Error ? err.message : "Upload failed"))
+      .catch((err) => {
+        uploadFailedRef.current = true;
+        setError(err instanceof Error ? err.message : "Upload failed");
+      })
       .finally(() => setUploading(false));
 
     try {
@@ -157,6 +162,7 @@ export default function SellForm({
     setSaving(true);
     try {
       if (uploadRef.current) await uploadRef.current;
+      if (uploadFailedRef.current) throw new Error("Photo upload failed — please try again");
       const res = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
