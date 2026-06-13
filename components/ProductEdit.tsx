@@ -51,8 +51,11 @@ export default function ProductEdit({
         fd.append("file", file);
         const res = await fetch("/api/upload", { method: "POST", body: fd });
         const json = await res.json();
-        if (res.ok && json.url) setImages((prev) => [...prev, json.url]);
+        if (!res.ok) throw new Error(json.error || "Upload failed");
+        if (json.url) setImages((prev) => [...prev, json.url]);
       }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
