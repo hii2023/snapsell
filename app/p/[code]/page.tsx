@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { supabaseConfigured } from "@/lib/supabase";
 import { supabaseServer } from "@/lib/supabase-server";
+import { currentSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
 import { rupees, categoryLabel } from "@/lib/constants";
 import type { Product } from "@/lib/types";
@@ -9,6 +10,7 @@ import ShopClient from "@/components/ShopClient";
 import { StoreHeader } from "@/components/StoreHeader";
 import ProductGallery from "@/components/ProductGallery";
 import { Footer } from "@/components/Footer";
+import SellerBar from "@/components/SellerBar";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +68,15 @@ export default async function ProductPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const p = await getProduct(code);
+  const [p, seller] = await Promise.all([getProduct(code), currentSeller()]);
   const related = p ? await getRelated(p.id, p.category) : [];
+
+  let subcats: Record<string, string[]> = {};
+  if (seller && supabaseConfigured()) {
+    const supabase = await supabaseServer();
+    const { data: row } = await supabase.from("snapsell_settings").select("subcats").eq("id", 1).single();
+    if (row?.subcats && typeof row.subcats === "object") subcats = row.subcats as Record<string, string[]>;
+  }
 
   return (
     <main className="min-h-screen">
@@ -157,6 +166,8 @@ export default async function ProductPage({
       <div className="mx-auto mt-12 max-w-2xl px-4">
         <Footer />
       </div>
+
+      {seller && p && <SellerBar product={p} subcats={subcats} />}
     </main>
   );
 }

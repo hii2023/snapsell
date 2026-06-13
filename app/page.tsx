@@ -4,10 +4,12 @@ import { unstable_noStore as noStore } from "next/cache";
 import { supabaseConfigured } from "@/lib/supabase";
 import LogoLink from "@/components/LogoLink";
 import { supabaseServer } from "@/lib/supabase-server";
+import { currentSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
 import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import StoreContact from "@/components/StoreContact";
+import SellerBar from "@/components/SellerBar";
 
 // Never cache this page — always fetch live products from Supabase
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ export default async function ShopPage() {
   // Force browsers and CDN to never cache this page
   const h = await headers();
   void h; // accessed to mark dynamic; Next.js sees headers() and forces no-cache
+  const seller = await currentSeller();
   let products: Product[] = [];
   let subcats: Record<string, string[]> = {};
 
@@ -102,6 +105,7 @@ export default async function ShopPage() {
         <p className="mt-6 text-center text-sm text-neutral-400">Connect Supabase to start listing.</p>
       )}
       <StoreContact />
+      {seller && <SellerBar subcats={subcats} />}
 
       {/* Footer */}
       <footer className="mt-10 border-t border-neutral-200 bg-white">
