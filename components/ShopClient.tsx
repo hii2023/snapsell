@@ -31,11 +31,14 @@ export default function ShopClient({
   shopName,
   cfg,
   subcats,
+  detail,
 }: {
   products: Product[];
   shopName: string;
   cfg?: ShopCfg;
   subcats?: Record<string, string[]>;
+  /** Detail mode: hides the product grid/filters and shows a full-width Add to cart button */
+  detail?: boolean;
 }) {
   const c: ShopCfg = cfg ?? {
     upiId: process.env.NEXT_PUBLIC_UPI_ID || "",
@@ -278,6 +281,65 @@ export default function ShopClient({
         <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-2 border-neutral-200 border-t-brand" />
         <p className="text-lg font-medium text-neutral-700">Fresh arrivals on the way</p>
         <p className="mt-1 text-sm text-neutral-500">New thrift finds are added daily. Check back shortly.</p>
+      </div>
+    );
+  }
+
+  // ── Detail mode: single product page — show big Add to cart button only ──
+  if (detail) {
+    const p = products[0] ?? initialProducts[0];
+    const line = p ? cart.find((l) => l.product_id === p.id) : null;
+    return (
+      <div>
+        {p && (
+          line ? (
+            <div className="flex items-center gap-3">
+              <button
+                className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-neutral-300 text-2xl font-light hover:bg-neutral-50 active:scale-95"
+                onClick={() => setQty(p.id, line.qty - 1)}
+              >
+                −
+              </button>
+              <span className="text-xl font-semibold tabular-nums">{line.qty}</span>
+              <button
+                className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-neutral-300 text-2xl font-light hover:bg-neutral-50 active:scale-95 disabled:opacity-40"
+                disabled={line.qty >= p.stock}
+                onClick={() => setQty(p.id, line.qty + 1)}
+              >
+                +
+              </button>
+              <button
+                className="btn-primary flex-1 py-3.5 text-base"
+                onClick={() => setStep("checkout")}
+              >
+                Checkout · {rupees(line.qty * line.price)}
+              </button>
+            </div>
+          ) : (
+            <button
+              className="btn-primary w-full py-4 text-lg"
+              onClick={() => add(p)}
+            >
+              {p.giveaway ? "Claim for free" : `Add to cart · ${rupees(p.price)}`}
+            </button>
+          )
+        )}
+        {count > 0 && (
+          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-neutral-500">{count} item(s)</p>
+                <p className="text-lg font-semibold">{rupees(total)}</p>
+              </div>
+              <button onClick={() => setCart([])} className="rounded-2xl border border-neutral-300 px-4 py-3 text-sm text-neutral-600">
+                Clear
+              </button>
+              <button className="btn-primary flex-1 py-3" onClick={() => setStep("checkout")}>
+                Checkout
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

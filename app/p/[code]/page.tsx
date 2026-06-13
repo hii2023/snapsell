@@ -122,7 +122,7 @@ export default async function ProductPage({
             </>
           ) : (
             <div className="mt-6">
-              <ShopClient products={[p]} shopName={shopName} />
+              <ShopClient products={[p]} shopName={shopName} detail />
             </div>
           )}
 
