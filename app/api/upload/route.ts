@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-// @ts-ignore - sharp has type resolution issues but works fine at runtime
-import sharp from "sharp";
 import { supabaseServer } from "@/lib/supabase-server";
 import { requireSeller } from "@/lib/auth";
 import { BUCKET } from "@/lib/db";
@@ -8,8 +6,7 @@ import { BUCKET } from "@/lib/db";
 export const runtime = "nodejs";
 
 // Uploads a product photo to Supabase Storage and returns its public URL.
-// Converts images to WebP format for optimal size and performance.
-// Uses the authenticated seller session (RLS allows authenticated inserts).
+// Stores the original file — no server-side conversion needed.
 export async function POST(req: NextRequest) {
   const seller = await requireSeller();
   if (!seller.ok) {
@@ -26,16 +23,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const buffer = await file.arrayBuffer();
-    const webpBuffer = await sharp(Buffer.from(buffer))
-      .webp({ quality: 80 })
-      .toBuffer();
-
-    const name = `${crypto.randomUUID()}.webp`;
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const name = `${crypto.randomUUID()}.${ext}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
     const supabase = await supabaseServer();
     const { error } = await supabase.storage
       .from(BUCKET)
-      .upload(name, webpBuffer, { contentType: "image/webp", upsert: false });
+      .upload(name, buffer, { contentType: file.type || "image/jpeg", upsert: false });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -44,7 +38,7 @@ export async function POST(req: NextRequest) {
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(name);
     return NextResponse.json({ url: data.publicUrl });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Image processing failed";
+    const message = err instanceof Error ? err.message : "Upload failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
