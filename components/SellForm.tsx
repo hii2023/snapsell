@@ -109,9 +109,9 @@ export default function SellForm({
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Upload failed");
-      setImageUrl(json.url);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((json as { error?: string }).error || "Upload failed");
+      setImageUrl((json as { url: string }).url);
     })()
       .catch((err) => {
         uploadFailedRef.current = true;
