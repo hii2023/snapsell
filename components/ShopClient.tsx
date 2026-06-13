@@ -293,26 +293,20 @@ export default function ShopClient({
       <div>
         {p && (
           line ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <button
                 className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-neutral-300 text-2xl font-light hover:bg-neutral-50 active:scale-95"
                 onClick={() => setQty(p.id, line.qty - 1)}
               >
                 −
               </button>
-              <span className="text-xl font-semibold tabular-nums">{line.qty}</span>
+              <span className="text-xl font-semibold tabular-nums">{line.qty} in cart</span>
               <button
                 className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-neutral-300 text-2xl font-light hover:bg-neutral-50 active:scale-95 disabled:opacity-40"
                 disabled={line.qty >= p.stock}
                 onClick={() => setQty(p.id, line.qty + 1)}
               >
                 +
-              </button>
-              <button
-                className="btn-primary flex-1 py-3.5 text-base"
-                onClick={() => setStep("checkout")}
-              >
-                Checkout · {rupees(line.qty * line.price)}
               </button>
             </div>
           ) : (
