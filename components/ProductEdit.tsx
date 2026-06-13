@@ -12,26 +12,27 @@ export default function ProductEdit({
   onSaved,
   onDeleted,
 }: {
-  product: Product;
+  product?: Product;
   subcats: Record<string, string[]>;
   onClose: () => void;
   onSaved: (p: Product) => void;
   onDeleted: (id: string) => void;
 }) {
-  const [name, setName] = useState(product.name);
-  const [category, setCategory] = useState<Category>(product.category);
-  const [subcategory, setSubcategory] = useState(product.subcategory || "");
-  const [description, setDescription] = useState(product.description || "");
+  const isNew = !product;
+  const [name, setName] = useState(product?.name ?? "");
+  const [category, setCategory] = useState<Category>(product?.category ?? "apparel");
+  const [subcategory, setSubcategory] = useState(product?.subcategory ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
   const [images, setImages] = useState<string[]>(
-    product.images?.length ? product.images : product.image_url ? [product.image_url] : []
+    product?.images?.length ? product.images : product?.image_url ? [product.image_url] : []
   );
-  const [size, setSize] = useState(product.size);
-  const [color, setColor] = useState(product.color);
-  const [price, setPrice] = useState(product.price);
-  const [mrp, setMrp] = useState(product.mrp);
+  const [size, setSize] = useState(product?.size ?? "");
+  const [color, setColor] = useState(product?.color ?? "");
+  const [price, setPrice] = useState(product?.price ?? 0);
+  const [mrp, setMrp] = useState(product?.mrp ?? 0);
   const [half, setHalf] = useState(false);
-  const [giveaway, setGiveaway] = useState(product.giveaway);
-  const [stock, setStock] = useState(product.stock);
+  const [giveaway, setGiveaway] = useState(product?.giveaway ?? false);
+  const [stock, setStock] = useState(product?.stock ?? 1);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -66,6 +67,7 @@ export default function ProductEdit({
   }
 
   async function del() {
+    if (!product) return;
     setError("");
     setDeleting(true);
     try {
@@ -93,23 +95,24 @@ export default function ProductEdit({
     if (!giveaway && price <= 0) return setError("Set a price or mark Give away");
     setSaving(true);
     try {
+      const body = {
+        name: name.trim(),
+        category,
+        subcategory,
+        description,
+        images,
+        size,
+        color,
+        price,
+        mrp,
+        giveaway,
+        stock,
+        ...(!isNew && { id: product!.id }),
+      };
       const res = await fetch("/api/products", {
-        method: "PATCH",
+        method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: product.id,
-          name: name.trim(),
-          category,
-          subcategory,
-          description,
-          images,
-          size,
-          color,
-          price,
-          mrp,
-          giveaway,
-          stock,
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Save failed");
@@ -129,7 +132,7 @@ export default function ProductEdit({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            Edit <span className="text-neutral-400">{product.code}</span>
+            {isNew ? "Add product" : <>Edit <span className="text-neutral-400">{product!.code}</span></>}
           </h2>
           <button onClick={onClose} className="text-sm text-neutral-500">
             Close
@@ -323,16 +326,18 @@ export default function ProductEdit({
             disabled={saving || deleting}
             className="btn-primary w-full py-4 text-lg disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Save changes"}
+            {saving ? "Saving..." : isNew ? "Add product" : "Save changes"}
           </button>
 
-          <button
-            onClick={del}
-            disabled={saving || deleting}
-            className="w-full rounded-2xl border border-red-300 py-3 text-base font-medium text-red-600 disabled:opacity-50"
-          >
-            {deleting ? "Deleting..." : "Delete product"}
-          </button>
+          {!isNew && (
+            <button
+              onClick={del}
+              disabled={saving || deleting}
+              className="w-full rounded-2xl border border-red-300 py-3 text-base font-medium text-red-600 disabled:opacity-50"
+            >
+              {deleting ? "Deleting..." : "Delete product"}
+            </button>
+          )}
         </div>
       </div>
     </div>

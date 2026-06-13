@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import OrdersClient from "./OrdersClient";
 import SellForm from "./SellForm";
 import CameraCapture from "./CameraCapture";
+import ProductEdit from "./ProductEdit";
 import LogoLink from "./LogoLink";
 import NewOrderAlert from "./NewOrderAlert";
 import type { Order, Product, Settings } from "@/lib/types";
@@ -31,6 +32,7 @@ export default function AdminShell({
   const [added, setAdded] = useState(0);
   const [shot, setShot] = useState(0);
   const [batch, setBatch] = useState(false); // persists until the seller unticks it
+  const [addingManually, setAddingManually] = useState(false);
 
   function startAdd() {
     setAdded(0);
@@ -81,6 +83,13 @@ export default function AdminShell({
               View store
             </a>
             <button
+              onClick={() => setAddingManually(true)}
+              title="Add product without photo"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 hover:bg-neutral-50 active:scale-95"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
               onClick={startAdd}
               className="flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white active:scale-95"
             >
@@ -100,6 +109,18 @@ export default function AdminShell({
       >
         <Plus className="h-8 w-8" />
       </button>
+
+      {addingManually && (
+        <ProductEdit
+          subcats={settings.subcats}
+          onClose={() => setAddingManually(false)}
+          onSaved={(p) => {
+            setAddingManually(false);
+            router.refresh();
+          }}
+          onDeleted={() => setAddingManually(false)}
+        />
+      )}
 
       {phase === "camera" && (
         <CameraCapture
@@ -168,6 +189,15 @@ function Plus({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
       <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function Pencil({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
   );
 }
