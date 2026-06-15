@@ -36,7 +36,8 @@ export default function RelatedProducts({
         price: product.giveaway ? 0 : product.price,
         qty: 1,
         size: product.size || "",
-        category: product.category,
+        image_url: product.image_url || "",
+        stock: product.stock,
       });
     }
     localStorage.setItem("cart", JSON.stringify(cart));
