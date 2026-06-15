@@ -9,6 +9,7 @@ import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import { StoreHeader } from "@/components/StoreHeader";
 import ProductGallery from "@/components/ProductGallery";
+import RelatedProducts from "@/components/RelatedProducts";
 import { Footer } from "@/components/Footer";
 import SellerBar from "@/components/SellerBar";
 
@@ -126,40 +127,7 @@ export default async function ProductPage({
             </div>
           )}
 
-          {related.length > 0 && (
-            <section className="mt-12 border-t border-neutral-200 pt-8">
-              <h2 className="mb-4 text-lg font-semibold text-ink">
-                More from {categoryLabel(p.category)}
-              </h2>
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
-                {related.map((r) => (
-                  <Link
-                    key={r.id}
-                    href={`/p/${r.code}`}
-                    className="card overflow-hidden hover:shadow-md transition-shadow"
-                  >
-                    <div className="relative aspect-[4/5] bg-neutral-100">
-                      {r.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={r.image_url} alt={r.name} loading="lazy" className="h-full w-full object-cover" />
-                      ) : null}
-                      {r.code && (
-                        <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
-                          {r.code}
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-2 sm:p-2.5">
-                      <p className="line-clamp-1 text-[13px] font-medium leading-tight">{r.name}</p>
-                      <p className="mt-1 text-sm font-bold text-ink">
-                        {r.giveaway ? "Free" : rupees(r.price)}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
+          <RelatedProducts products={related} category={p.category} />
         </div>
       )}
 
