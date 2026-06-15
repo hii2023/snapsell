@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { rupees, categoryLabel } from "@/lib/constants";
-import type { Product, CartLine } from "@/lib/types";
+import type { Product, CartLine, Category } from "@/lib/types";
 import { BagIcon } from "./icons";
 
 export default function RelatedProducts({
@@ -11,7 +11,7 @@ export default function RelatedProducts({
   category,
 }: {
   products: Product[];
-  category: string;
+  category: Category;
 }) {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
