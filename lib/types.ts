@@ -85,6 +85,7 @@ export type CartLine = {
   qty: number;
   image_url: string;
   stock: number;
+  code?: string;
 };
 
 export type ExtraCategory = { id: string; label: string; subs: string[] };

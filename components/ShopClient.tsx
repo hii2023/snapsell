@@ -214,6 +214,7 @@ export default function ShopClient({
           qty: 1,
           image_url: p.image_url,
           stock: p.stock,
+          code: p.code,
         },
       ];
     });
@@ -856,7 +857,11 @@ function BookingConfirm({
         <p className="mb-3 text-sm font-semibold text-neutral-500">Order summary</p>
         <div className="space-y-3">
           {cart.map((l) => (
-            <div key={l.product_id} className="flex gap-3 pb-3 border-b border-neutral-100 last:border-0 last:pb-0">
+            <Link
+              key={l.product_id}
+              href={l.code ? `/p/${l.code}` : "#"}
+              className="flex gap-3 pb-3 border-b border-neutral-100 last:border-0 last:pb-0 hover:opacity-75 transition-opacity cursor-pointer"
+            >
               {/* Product image */}
               {l.image_url && (
                 <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-neutral-100 overflow-hidden">
@@ -866,10 +871,11 @@ function BookingConfirm({
               )}
               {/* Product details */}
               <div className="flex-1">
-                <p className="text-sm font-medium text-neutral-700">{l.qty}x {l.name}{l.size ? ` (${l.size})` : ""}</p>
+                <p className="text-sm font-medium text-brand underline">{l.qty}x {l.name}{l.size ? ` (${l.size})` : ""}</p>
+                {l.code && <p className="text-xs text-neutral-500 mt-0.5">ID: {l.code}</p>}
                 <p className="mt-1 text-sm font-semibold text-ink">₹{l.price * l.qty}</p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
         {amount > 0 && (

@@ -38,6 +38,7 @@ export default function RelatedProducts({
         size: product.size || "",
         image_url: product.image_url || "",
         stock: product.stock,
+        code: product.code,
       });
     }
     localStorage.setItem("cart", JSON.stringify(cart));
