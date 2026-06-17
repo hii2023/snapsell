@@ -853,15 +853,27 @@ function BookingConfirm({
 
       {/* Items summary */}
       <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4 text-left">
-        <p className="mb-2 text-sm font-semibold text-neutral-500">Order summary</p>
-        {cart.map((l) => (
-          <div key={l.product_id} className="flex justify-between py-1 text-sm">
-            <span className="text-neutral-700">{l.qty}x {l.name}{l.size ? ` (${l.size})` : ""}</span>
-            <span className="font-medium">₹{l.price * l.qty}</span>
-          </div>
-        ))}
+        <p className="mb-3 text-sm font-semibold text-neutral-500">Order summary</p>
+        <div className="space-y-3">
+          {cart.map((l) => (
+            <div key={l.product_id} className="flex gap-3 pb-3 border-b border-neutral-100 last:border-0 last:pb-0">
+              {/* Product image */}
+              {l.image_url && (
+                <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-neutral-100 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={l.image_url} alt={l.name} className="h-full w-full object-cover" />
+                </div>
+              )}
+              {/* Product details */}
+              <div className="flex-1">
+                <p className="text-sm font-medium text-neutral-700">{l.qty}x {l.name}{l.size ? ` (${l.size})` : ""}</p>
+                <p className="mt-1 text-sm font-semibold text-ink">₹{l.price * l.qty}</p>
+              </div>
+            </div>
+          ))}
+        </div>
         {amount > 0 && (
-          <div className="mt-2 flex justify-between border-t border-neutral-100 pt-2 text-sm font-semibold">
+          <div className="mt-3 flex justify-between border-t border-neutral-200 pt-3 text-sm font-semibold">
             <span>Total</span><span>₹{amount}</span>
           </div>
         )}
