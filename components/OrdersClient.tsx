@@ -1750,17 +1750,28 @@ function OrdersTab({
 
                 {viewMode !== "compact" && (
                   <>
-                    <div className="mt-2 rounded-lg bg-neutral-50 p-2.5 text-sm text-neutral-700">
+                    <div className="mt-2 rounded-lg bg-neutral-50 p-2.5">
                       <p className="text-xs font-semibold text-neutral-600 mb-1.5">Items:</p>
-                      <ul className="space-y-0.5">
+                      <div className="space-y-2">
                         {(o.order_items || []).map((i) => (
-                          <li key={i.id} className="flex items-start gap-2">
-                            <span className="text-neutral-500 min-w-6">{i.qty}x</span>
-                            <span>{i.name_snapshot}</span>
-                            {i.size_snapshot && <span className="text-neutral-500 text-xs">({i.size_snapshot})</span>}
-                          </li>
+                          <div key={i.id} className="flex gap-2 items-start">
+                            {/* Product image */}
+                            {(i as any).image_url_snapshot && (
+                              <div className="h-12 w-12 flex-shrink-0 rounded bg-white overflow-hidden border border-neutral-200">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={(i as any).image_url_snapshot} alt={i.name_snapshot} className="h-full w-full object-cover" />
+                              </div>
+                            )}
+                            {/* Product details */}
+                            <div className="flex-1 text-sm">
+                              <p className="text-neutral-700 font-medium">{i.qty}x {i.name_snapshot}</p>
+                              {i.size_snapshot && <p className="text-neutral-500 text-xs">Size: {i.size_snapshot}</p>}
+                              {(i as any).code_snapshot && <p className="text-neutral-500 text-xs">ID: {(i as any).code_snapshot}</p>}
+                              <p className="text-neutral-600 text-xs mt-0.5">₹{i.price_at_purchase}</p>
+                            </div>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </div>
 
                     {/* Collapsible Address */}
