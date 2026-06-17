@@ -1167,6 +1167,19 @@ function OrdersTab({
   const [cancelPickerFor, setCancelPickerFor] = useState<string | null>(null);
   // Share menu state
   const [shareMenuFor, setShareMenuFor] = useState<string | null>(null);
+  // Image viewer state
+  const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
+
+  // Handle ESC key to close image modal
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && viewImageUrl) {
+        setViewImageUrl(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewImageUrl]);
 
   // Hard-coded stage-based WhatsApp messages
   function buildWaUrl(o: Order): string {
@@ -1757,10 +1770,13 @@ function OrdersTab({
                           <div key={i.id} className="flex gap-2 items-start">
                             {/* Product image */}
                             {(i as any).image_url_snapshot && (
-                              <div className="h-12 w-12 flex-shrink-0 rounded bg-white overflow-hidden border border-neutral-200">
+                              <button
+                                onClick={() => setViewImageUrl((i as any).image_url_snapshot)}
+                                className="h-12 w-12 flex-shrink-0 rounded bg-white overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-75 transition-opacity"
+                              >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={(i as any).image_url_snapshot} alt={i.name_snapshot} className="h-full w-full object-cover" />
-                              </div>
+                              </button>
                             )}
                             {/* Product details */}
                             <div className="flex-1 text-sm">
@@ -2032,6 +2048,46 @@ function OrdersTab({
       <div className="mt-12">
         <Footer />
       </div>
+
+      {/* Image Viewer Modal */}
+      {viewImageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setViewImageUrl(null)}
+        >
+          {/* Close button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setViewImageUrl(null);
+            }}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+            title="Close (ESC)"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Image container */}
+          <div
+            className="max-w-2xl max-h-[90vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={viewImageUrl}
+              alt="Product"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+          </div>
+
+          {/* Hint */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center text-white/60 text-sm">
+            Click to close or press ESC
+          </div>
+        </div>
+      )}
     </div>
   );
 }
