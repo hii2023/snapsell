@@ -68,23 +68,12 @@ export default function ShopClient({
     setPageSize(20);
   }, [catFilter]);
 
-  // Live fetch on mount — guarantees fresh products regardless of server cache
-  useEffect(() => {
-    const sb = supabaseBrowser();
-    sb.from(T.products)
-      .select("*")
-      .gt("stock", 0)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (error) console.error("[shop] product fetch error:", error.message);
-        if (data) setProducts(data as Product[]);
-      });
-  }, []);
+  // Skip on-mount fetch — server already provided fresh data with force-dynamic
+  // Redundant client fetch was burning egress quota unnecessarily
 
   // Silently auto-retry in the background while the list is empty so the
   // moment a product is added it appears without the customer doing anything.
-  // Must live above any conditional return (Rules of Hooks).
+  // Increased interval to 15s to reduce egress quota burn. Must live above any conditional return (Rules of Hooks).
   useEffect(() => {
     if (products.length > 0) return;
     const interval = setInterval(() => {
@@ -95,7 +84,7 @@ export default function ShopClient({
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .then(({ data }) => { if (data && data.length > 0) setProducts(data as Product[]); });
-    }, 5000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [products.length]);
 
