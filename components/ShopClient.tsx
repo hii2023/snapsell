@@ -142,6 +142,26 @@ export default function ShopClient({
     }
   }, [cart, hydrated]);
 
+  // Pick up cart changes made elsewhere — RelatedProducts on the product page
+  // (via the "ir-cart-updated" event) and other tabs (via "storage") — so the
+  // cart bar and quantities stay in sync.
+  useEffect(() => {
+    function reload() {
+      try {
+        const raw = localStorage.getItem("ir_cart");
+        setCart(raw ? JSON.parse(raw) : []);
+      } catch {
+        // ignore
+      }
+    }
+    window.addEventListener("ir-cart-updated", reload);
+    window.addEventListener("storage", reload);
+    return () => {
+      window.removeEventListener("ir-cart-updated", reload);
+      window.removeEventListener("storage", reload);
+    };
+  }, []);
+
   const categoriesPresent = CATEGORY_META.filter((c) =>
     products.some((p) => p.category === c.id)
   );

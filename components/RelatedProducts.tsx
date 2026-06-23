@@ -20,15 +20,20 @@ export default function RelatedProducts({
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
+    e.stopPropagation();
     setAddingId(product.id);
 
-    // Add to cart (same logic as ShopClient)
-    const cart: CartLine[] = JSON.parse(
-      localStorage.getItem("cart") || "[]"
-    );
+    // Write to the SAME store the shop uses ("ir_cart") and notify ShopClient
+    // via the "ir-cart-updated" event so it re-reads and the cart bar updates.
+    let cart: CartLine[] = [];
+    try {
+      cart = JSON.parse(localStorage.getItem("ir_cart") || "[]");
+    } catch {
+      cart = [];
+    }
     const existing = cart.find((l) => l.product_id === product.id);
     if (existing) {
-      existing.qty += 1;
+      if (existing.qty < product.stock) existing.qty += 1;
     } else {
       cart.push({
         product_id: product.id,
@@ -41,8 +46,8 @@ export default function RelatedProducts({
         code: product.code,
       });
     }
-    localStorage.setItem("cart", JSON.stringify(cart));
-    window.dispatchEvent(new Event("cart-updated"));
+    localStorage.setItem("ir_cart", JSON.stringify(cart));
+    window.dispatchEvent(new Event("ir-cart-updated"));
 
     setAddedId(product.id);
     setTimeout(() => {

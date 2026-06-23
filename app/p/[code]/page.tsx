@@ -9,6 +9,7 @@ import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import { StoreHeader } from "@/components/StoreHeader";
 import ProductGallery from "@/components/ProductGallery";
+import ProductBackBar from "@/components/ProductBackBar";
 import RelatedProducts from "@/components/RelatedProducts";
 import { Footer } from "@/components/Footer";
 import SellerBar from "@/components/SellerBar";
@@ -96,6 +97,7 @@ export default async function ProductPage({
         </div>
       ) : (
         <div className="mx-auto max-w-2xl px-4 py-6">
+          <ProductBackBar />
           <ProductGallery images={p.images?.length ? p.images : p.image_url ? [p.image_url] : []} name={p.name} />
           <h1 className="mt-4 text-2xl font-semibold">{p.name}</h1>
           <p className="mt-1 text-neutral-500">

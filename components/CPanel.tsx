@@ -4,8 +4,6 @@ import { useState } from "react";
 import { CATEGORY_META } from "@/lib/constants";
 import type { Settings } from "@/lib/types";
 
-type OperationStatus = "idle" | "clearing";
-
 function slug(s: string) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "cat";
 }
@@ -16,8 +14,6 @@ export default function CPanel({ initial }: { initial: Settings }) {
   const [msg, setMsg] = useState("");
   const [newCat, setNewCat] = useState("");
   const [newSub, setNewSub] = useState<Record<string, string>>({});
-  const [opStatus, setOpStatus] = useState<OperationStatus>("idle");
-  const [opMsg, setOpMsg] = useState("");
 
   function set<K extends keyof Settings>(k: K, v: Settings[K]) {
     setS((prev) => ({ ...prev, [k]: v }));
@@ -69,30 +65,6 @@ export default function CPanel({ initial }: { initial: Settings }) {
       setMsg(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function clearAllOrders() {
-    if (!confirm("⚠️ DELETE ALL ORDERS? This cannot be undone!")) return;
-    if (!confirm("Are you absolutely sure? All order data will be permanently deleted.")) return;
-
-    setOpStatus("clearing");
-    setOpMsg("");
-    try {
-      const res = await fetch("/api/orders/clear-all", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setOpMsg(`✅ Deleted ALL ${json.deletedCount} orders`);
-      } else {
-        throw new Error(json.error || "Could not clear orders");
-      }
-    } catch (e) {
-      setOpMsg(e instanceof Error ? e.message : "Error clearing orders");
-    } finally {
-      setOpStatus("idle");
     }
   }
 
@@ -234,28 +206,6 @@ export default function CPanel({ initial }: { initial: Settings }) {
           >
             + Add template
           </button>
-        </div>
-      </section>
-
-      <section>
-        <h3 className="mb-3 text-lg font-semibold">Data Management</h3>
-        <div className="space-y-3">
-          <div className="card border-red-200 bg-red-50 p-4">
-            <p className="mb-3 text-sm font-semibold text-red-700">
-              ⚠️ DELETE ALL ORDERS
-            </p>
-            <p className="mb-3 text-sm text-red-600">
-              Permanently delete ALL orders: Paid, Packing Done, Booked, Delivered, Customer Pickup, Return, and Unpaid. This cannot be undone.
-            </p>
-            <button
-              onClick={clearAllOrders}
-              disabled={opStatus === "clearing"}
-              className="rounded-lg border border-red-500 bg-red-600 px-4 py-2 text-sm font-bold text-white active:scale-[0.98] disabled:opacity-50 hover:bg-red-700"
-            >
-              {opStatus === "clearing" ? "Deleting all orders..." : "🗑️ DELETE ALL ORDERS NOW"}
-            </button>
-            {opMsg && <p className={`mt-3 text-sm font-semibold ${opMsg.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>{opMsg}</p>}
-          </div>
         </div>
       </section>
 
