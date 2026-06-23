@@ -22,8 +22,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const input = email.trim();
-      // Map the "Admin" username to its email; emails pass through unchanged.
-      const mapped = input.toLowerCase() === "admin" ? "admin@snapsell.app" : input;
+      // A plain username (no "@") maps to the shop's email domain so staff can
+      // sign in with just their name, e.g. "priya" -> "priya@snapsell.app".
+      // A full email is passed through unchanged.
+      const mapped = input.includes("@")
+        ? input
+        : `${input.toLowerCase()}@snapsell.app`;
       const supabase = supabaseBrowser();
       const { error } = await supabase.auth.signInWithPassword({
         email: mapped,
