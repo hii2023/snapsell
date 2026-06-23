@@ -7,9 +7,8 @@ import { T } from "@/lib/db";
 import { rupees, categoryLabel } from "@/lib/constants";
 import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
-import { StoreHeader } from "@/components/StoreHeader";
+import ProductTopBar from "@/components/ProductTopBar";
 import ProductGallery from "@/components/ProductGallery";
-import ProductBackBar from "@/components/ProductBackBar";
 import RelatedProducts from "@/components/RelatedProducts";
 import { Footer } from "@/components/Footer";
 import SellerBar from "@/components/SellerBar";
@@ -82,11 +81,7 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen">
-      <StoreHeader right={p?.code ? (
-        <span className="rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-500">
-          {p.code}
-        </span>
-      ) : undefined} />
+      <ProductTopBar code={p?.code} />
 
       {!p ? (
         <div className="mx-auto max-w-md px-4 py-24 text-center text-neutral-500">
@@ -97,7 +92,6 @@ export default async function ProductPage({
         </div>
       ) : (
         <div className="mx-auto max-w-2xl px-4 py-6">
-          <ProductBackBar />
           <ProductGallery images={p.images?.length ? p.images : p.image_url ? [p.image_url] : []} name={p.name} />
           <h1 className="mt-4 text-2xl font-semibold">{p.name}</h1>
           <p className="mt-1 text-neutral-500">

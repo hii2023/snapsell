@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { rupees, categoryLabel } from "@/lib/constants";
 import type { Product, CartLine, Category } from "@/lib/types";
 import { BagIcon } from "./icons";
+
+const CART_KEY = "ir_cart";
 
 export default function RelatedProducts({
   products,
@@ -13,48 +15,70 @@ export default function RelatedProducts({
   products: Product[];
   category: Category;
 }) {
-  const [addingId, setAddingId] = useState<string | null>(null);
-  const [addedId, setAddedId] = useState<string | null>(null);
+  // Mirror the shop cart (localStorage "ir_cart") so each related product can
+  // show its current quantity and a +/- stepper instead of a transient "Added".
+  const [cart, setCart] = useState<CartLine[]>([]);
+
+  useEffect(() => {
+    function load() {
+      try {
+        setCart(JSON.parse(localStorage.getItem(CART_KEY) || "[]"));
+      } catch {
+        setCart([]);
+      }
+    }
+    load();
+    window.addEventListener("ir-cart-updated", load);
+    window.addEventListener("storage", load);
+    return () => {
+      window.removeEventListener("ir-cart-updated", load);
+      window.removeEventListener("storage", load);
+    };
+  }, []);
 
   if (!products.length) return null;
 
-  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+  function persist(next: CartLine[]) {
+    try {
+      localStorage.setItem(CART_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    setCart(next);
+    // Tell ShopClient (cart bar) to re-read the shared cart.
+    window.dispatchEvent(new Event("ir-cart-updated"));
+  }
+
+  function addOne(e: React.MouseEvent, p: Product) {
     e.preventDefault();
     e.stopPropagation();
-    setAddingId(product.id);
-
-    // Write to the SAME store the shop uses ("ir_cart") and notify ShopClient
-    // via the "ir-cart-updated" event so it re-reads and the cart bar updates.
-    let cart: CartLine[] = [];
-    try {
-      cart = JSON.parse(localStorage.getItem("ir_cart") || "[]");
-    } catch {
-      cart = [];
-    }
-    const existing = cart.find((l) => l.product_id === product.id);
-    if (existing) {
-      if (existing.qty < product.stock) existing.qty += 1;
+    const next = cart.map((l) => ({ ...l }));
+    const line = next.find((l) => l.product_id === p.id);
+    if (line) {
+      if (line.qty >= p.stock) return; // respect available stock
+      line.qty += 1;
     } else {
-      cart.push({
-        product_id: product.id,
-        name: product.name,
-        price: product.giveaway ? 0 : product.price,
+      next.push({
+        product_id: p.id,
+        name: p.name,
+        price: p.giveaway ? 0 : p.price,
         qty: 1,
-        size: product.size || "",
-        image_url: product.image_url || "",
-        stock: product.stock,
-        code: product.code,
+        size: p.size || "",
+        image_url: p.image_url || "",
+        stock: p.stock,
+        code: p.code,
       });
     }
-    localStorage.setItem("ir_cart", JSON.stringify(cart));
-    window.dispatchEvent(new Event("ir-cart-updated"));
+    persist(next);
+  }
 
-    setAddedId(product.id);
-    setTimeout(() => {
-      setAddingId(null);
-      setAddedId(null);
-    }, 1500);
-  };
+  function setQty(id: string, qty: number, stock: number) {
+    const clamped = Math.max(0, Math.min(qty, stock));
+    const next = cart
+      .map((l) => (l.product_id === id ? { ...l, qty: clamped } : l))
+      .filter((l) => l.qty > 0);
+    persist(next);
+  }
 
   return (
     <section className="mt-12 border-t border-neutral-200 pt-8">
@@ -62,80 +86,81 @@ export default function RelatedProducts({
         More from {categoryLabel(category)}
       </h2>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
-        {products.map((r) => (
-          <div
-            key={r.id}
-            className="card overflow-hidden transition-shadow hover:shadow-md"
-          >
-            <Link href={`/p/${r.code}`} className="block">
-              <div className="relative aspect-[4/5] bg-neutral-100">
-                {r.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={r.image_url}
-                    alt={r.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                ) : null}
-                {r.code && (
-                  <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
-                    {r.code}
-                  </span>
-                )}
-              </div>
-              <div className="p-2 sm:p-2.5">
-                <p className="line-clamp-1 text-[13px] font-medium leading-tight">
-                  {r.name}
-                </p>
-                <p className="mt-1 text-sm font-bold text-ink">
-                  {r.giveaway ? "Free" : rupees(r.price)}
-                </p>
-              </div>
-            </Link>
-
-            {/* Add to cart button */}
-            <button
-              onClick={(e) => handleAddToCart(e, r)}
-              disabled={addingId === r.id || r.stock <= 0}
-              className={`mx-2 mb-2 flex w-[calc(100%-1rem)] items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors ${
-                addedId === r.id
-                  ? "bg-emerald-600 text-white"
-                  : r.stock <= 0
-                    ? "bg-neutral-100 text-neutral-400 cursor-not-allowed"
-                    : "bg-brand text-white hover:opacity-90"
-              }`}
+        {products.map((r) => {
+          const line = cart.find((l) => l.product_id === r.id);
+          return (
+            <div
+              key={r.id}
+              className="card overflow-hidden transition-shadow hover:shadow-md"
             >
-              {addedId === r.id ? (
-                <>
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
+              <Link href={`/p/${r.code}`} className="block">
+                <div className="relative aspect-[4/5] bg-neutral-100">
+                  {r.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={r.image_url}
+                      alt={r.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
                     />
-                  </svg>
-                  Added
-                </>
-              ) : r.stock <= 0 ? (
-                "Sold out"
-              ) : addingId === r.id ? (
-                "Adding..."
+                  ) : null}
+                  {r.code && (
+                    <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
+                      {r.code}
+                    </span>
+                  )}
+                </div>
+                <div className="p-2 sm:p-2.5">
+                  <p className="line-clamp-1 text-[13px] font-medium leading-tight">
+                    {r.name}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-ink">
+                    {r.giveaway ? "Free" : rupees(r.price)}
+                  </p>
+                </div>
+              </Link>
+
+              {/* Cart control: stepper when in cart, Add otherwise */}
+              {r.stock <= 0 ? (
+                <button
+                  disabled
+                  className="mx-2 mb-2 flex w-[calc(100%-1rem)] items-center justify-center rounded-lg bg-neutral-100 py-2 text-xs font-semibold text-neutral-400"
+                >
+                  Sold out
+                </button>
+              ) : line ? (
+                <div className="mx-2 mb-2 flex items-center justify-between gap-1 rounded-lg border border-neutral-300 px-1 py-1">
+                  <button
+                    onClick={() => setQty(r.id, line.qty - 1, r.stock)}
+                    aria-label="Decrease quantity"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-base leading-none hover:bg-neutral-100 active:scale-95"
+                  >
+                    −
+                  </button>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {line.qty} in cart
+                  </span>
+                  <button
+                    onClick={() => setQty(r.id, line.qty + 1, r.stock)}
+                    disabled={line.qty >= r.stock}
+                    aria-label="Increase quantity"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-base leading-none hover:bg-neutral-100 active:scale-95 disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                </div>
               ) : (
-                <>
+                <button
+                  onClick={(e) => addOne(e, r)}
+                  className="mx-2 mb-2 flex w-[calc(100%-1rem)] items-center justify-center gap-1.5 rounded-lg bg-brand py-2 text-xs font-semibold text-white transition-colors hover:opacity-90"
+                >
                   <BagIcon className="h-4 w-4" />
                   Add
-                </>
+                </button>
               )}
-            </button>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

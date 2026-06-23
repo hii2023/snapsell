@@ -242,7 +242,7 @@ export default function ShopClient({
   }
 
   if (step === "done") {
-    return (
+    const doneView = (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-brand text-white">
           <CheckIcon className="h-10 w-10" />
@@ -262,10 +262,17 @@ export default function ShopClient({
         </button>
       </div>
     );
+    // On a product page (detail mode) take over the whole screen so checkout
+    // feels like a separate page, not content appended under the product.
+    return detail ? (
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-white">{doneView}</div>
+    ) : (
+      doneView
+    );
   }
 
   if (step === "checkout") {
-    return (
+    const checkoutView = (
       <Checkout
         cart={cart}
         total={total}
@@ -279,6 +286,11 @@ export default function ShopClient({
           setStep("shop");
         }}
       />
+    );
+    return detail ? (
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-white">{checkoutView}</div>
+    ) : (
+      checkoutView
     );
   }
 
