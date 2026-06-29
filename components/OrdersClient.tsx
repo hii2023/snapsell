@@ -1769,20 +1769,20 @@ function OrdersTab({
                         {(o.order_items || []).map((i) => (
                           <div key={i.id} className="flex gap-2 items-start">
                             {/* Product image */}
-                            {(i as any).image_url_snapshot && (
+                            {i.image_url_snapshot && (
                               <button
-                                onClick={() => setViewImageUrl((i as any).image_url_snapshot)}
+                                onClick={() => setViewImageUrl(i.image_url_snapshot)}
                                 className="h-12 w-12 flex-shrink-0 rounded bg-white overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-75 transition-opacity"
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={(i as any).image_url_snapshot} alt={i.name_snapshot} className="h-full w-full object-cover" />
+                                <img src={i.image_url_snapshot} alt={i.name_snapshot} className="h-full w-full object-cover" />
                               </button>
                             )}
                             {/* Product details */}
                             <div className="flex-1 text-sm">
                               <p className="text-neutral-700 font-medium">{i.qty}x {i.name_snapshot}</p>
                               {i.size_snapshot && <p className="text-neutral-500 text-xs">Size: {i.size_snapshot}</p>}
-                              {(i as any).code_snapshot && <p className="text-neutral-500 text-xs">ID: {(i as any).code_snapshot}</p>}
+                              {i.code_snapshot && <p className="text-neutral-500 text-xs">ID: {i.code_snapshot}</p>}
                               <p className="text-neutral-600 text-xs mt-0.5">₹{i.price_at_purchase}</p>
                             </div>
                           </div>

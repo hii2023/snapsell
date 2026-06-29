@@ -47,6 +47,8 @@ export type OrderItem = {
   price_at_purchase: number;
   name_snapshot: string;
   size_snapshot: string;
+  code_snapshot?: string;
+  image_url_snapshot?: string;
 };
 
 export type Order = {
