@@ -1771,7 +1771,7 @@ function OrdersTab({
                             {/* Product image */}
                             {i.image_url_snapshot && (
                               <button
-                                onClick={() => setViewImageUrl(i.image_url_snapshot)}
+                                onClick={() => setViewImageUrl(i.image_url_snapshot!)}
                                 className="h-12 w-12 flex-shrink-0 rounded bg-white overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-75 transition-opacity"
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
