@@ -950,6 +950,18 @@ function ProductsTab({
         ))}
       </div>
 
+      <a
+        href="/api/products/export"
+        className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 active:scale-[0.99]"
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <path d="M7 10l5 5 5-5" />
+          <path d="M12 15V3" />
+        </svg>
+        Download all products (Excel)
+      </a>
+
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-xs text-neutral-400">
           {selectMode ? `${selected.size} selected · tap to add/remove` : "Tap to edit · hold to select"}
@@ -1674,12 +1686,6 @@ function OrdersTab({
             {selected.size} selected
           </p>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelected(new Set(shown.map((o) => o.id)))}
-              className="text-xs font-semibold text-neutral-600 hover:text-neutral-900"
-            >
-              Select all visible
-            </button>
             <button
               onClick={bulkDelete}
               disabled={selected.size === 0 || busy === "bulk"}
