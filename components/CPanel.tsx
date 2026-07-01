@@ -260,11 +260,7 @@ export default function CPanel({ initial }: { initial: Settings }) {
       </section>
 
       <section className="border-t border-neutral-200 pt-6">
-        <h3 className="mb-1 text-lg font-semibold">Install as app</h3>
-        <p className="mb-3 text-sm text-neutral-500">
-          Add this dashboard to your home screen for one-tap access. It stays up to date
-          automatically — every update goes live without a reinstall.
-        </p>
+        <h3 className="mb-3 text-lg font-semibold">Install as app</h3>
         {installed ? (
           <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
