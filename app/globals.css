@@ -40,6 +40,15 @@ button, a, [role="button"] {
 .card {
   @apply rounded-2xl border border-neutral-200 bg-white transition-shadow duration-200;
 }
+/* Horizontal chip rows: keep the swipe scroll but hide the scrollbar, which on
+   mobile renders over the chips below and looks like it overlaps the labels. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 @media (hover: hover) {
   .card:hover {
     @apply shadow-md;

@@ -363,7 +363,7 @@ export default function ShopClient({
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 pb-28">
       {(categoriesPresent.length > 1 || hasGiveaway) && (
-        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
           <button
             onClick={() => setCatFilter("all")}
             className={`chip shrink-0 ${catFilter === "all" ? "chip-on" : "chip-off"}`}
@@ -402,7 +402,7 @@ export default function ShopClient({
 
       {/* Sub-category chips */}
       {subcatList.length > 0 && (
-        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
           <button
             onClick={() => setSubcatFilter("all")}
             className={`chip shrink-0 text-xs ${subcatFilter === "all" ? "chip-on" : "chip-off"}`}
@@ -423,7 +423,7 @@ export default function ShopClient({
 
       {/* Size chips — only for the Clothing category */}
       {sizeList.length > 0 && (
-        <div className="mb-3 -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1">
+        <div className="mb-3 -mx-4 flex items-center gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
           <span className="shrink-0 text-xs font-semibold text-neutral-500">Size:</span>
           <button
             onClick={() => setSizeFilter("all")}

@@ -100,6 +100,15 @@ export function BagIcon({ className = base }: P) {
   );
 }
 
+export function BooksIcon({ className = base }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  );
+}
+
 import type { Category } from "@/lib/types";
 export function CategoryIcon({ id, className = "h-8 w-8" }: { id: Category; className?: string }) {
   if (id === "apparel") return <ShirtIcon className={className} />;
@@ -108,5 +117,6 @@ export function CategoryIcon({ id, className = "h-8 w-8" }: { id: Category; clas
   if (id === "cleaning") return <CleaningIcon className={className} />;
   if (id === "jewellery") return <JewelleryIcon className={className} />;
   if (id === "cosmetics") return <CosmeticsIcon className={className} />;
+  if (id === "books") return <BooksIcon className={className} />;
   return <FurnitureIcon className={className} />;
 }

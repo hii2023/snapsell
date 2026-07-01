@@ -27,6 +27,7 @@ const ACCENT_HEX: Record<Category, string> = {
   cleaning: "#059669",
   jewellery: "#e11d48",
   cosmetics: "#c026d3",
+  books: "#0d9488",
 };
 
 export default function SellForm({
@@ -255,9 +256,9 @@ export default function SellForm({
         </div>
       </div>
 
-      <h1 className="mt-5 text-3xl font-bold">{TITLES[step]}</h1>
+      <h1 className="mt-4 text-2xl font-bold">{TITLES[step]}</h1>
 
-      <div className="relative mt-5">
+      <div className="relative mt-4">
         <AnimatePresence mode="wait" custom={dir}>
           <motion.div
             key={step}
@@ -313,14 +314,14 @@ export default function SellForm({
             )}
 
             {step === 1 && category && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-lg font-semibold">Product name</label>
+                  <label className="mb-1.5 block text-base font-semibold">Product name</label>
                   <input
                     ref={nameRef}
                     autoFocus
                     enterKeyHint="next"
-                    className="input text-xl"
+                    className="input text-lg"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onKeyDown={(e) => {
@@ -335,13 +336,13 @@ export default function SellForm({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-lg font-semibold">{SIZE_LABEL[category]}</label>
-                  <div className="flex flex-wrap gap-2.5">
+                  <label className="mb-1.5 block text-base font-semibold">{SIZE_LABEL[category]}</label>
+                  <div className="flex flex-wrap gap-2">
                     {SIZE_OPTIONS[category].map((s) => (
                       <button
                         key={s}
                         onClick={() => setSize(size === s ? "" : s)}
-                        className={`rounded-full border-2 px-5 py-2.5 text-lg font-medium transition active:scale-95 ${
+                        className={`rounded-full border-2 px-4 py-2 text-base font-medium transition active:scale-95 ${
                           size === s
                             ? `${accent.solid} ${accent.solidText} border-transparent`
                             : "border-neutral-300 bg-white text-neutral-700"
@@ -355,13 +356,13 @@ export default function SellForm({
 
                 {(subcats[category] || []).length > 0 && (
                   <div>
-                    <label className="mb-2 block text-lg font-semibold">Subcategory</label>
-                    <div className="flex flex-wrap gap-2.5">
+                    <label className="mb-1.5 block text-base font-semibold">Subcategory</label>
+                    <div className="flex flex-wrap gap-2">
                       {(subcats[category] || []).map((sub) => (
                         <button
                           key={sub}
                           onClick={() => setSubcategory(subcategory === sub ? "" : sub)}
-                          className={`rounded-full border-2 px-5 py-2.5 text-lg font-medium transition active:scale-95 ${
+                          className={`rounded-full border-2 px-4 py-2 text-base font-medium transition active:scale-95 ${
                             subcategory === sub
                               ? `${accent.solid} ${accent.solidText} border-transparent`
                               : "border-neutral-300 bg-white text-neutral-700"
@@ -397,16 +398,16 @@ export default function SellForm({
                 )}
 
                 <div>
-                  <label className="mb-2 block text-lg font-semibold">How many units?</label>
+                  <label className="mb-1.5 block text-base font-semibold">How many units?</label>
                   <Stepper value={units} onChange={setUnits} />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-lg font-semibold">
+                  <label className="mb-1.5 block text-base font-semibold">
                     Description <span className="font-normal text-neutral-400">(optional)</span>
                   </label>
                   <textarea
-                    className="input min-h-20"
+                    className="input min-h-16"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Condition, details, what's included..."
@@ -415,7 +416,7 @@ export default function SellForm({
 
                 <button
                   onClick={() => (name.trim() ? go(2) : setError("Add a product name"))}
-                  className={`w-full rounded-2xl ${accent.solid} ${accent.solidText} py-4 text-xl font-semibold transition active:scale-[0.98]`}
+                  className={`w-full rounded-2xl ${accent.solid} ${accent.solidText} py-3.5 text-lg font-semibold transition active:scale-[0.98]`}
                 >
                   Continue
                 </button>
@@ -423,7 +424,7 @@ export default function SellForm({
             )}
 
             {step === 2 && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -452,13 +453,13 @@ export default function SellForm({
                 ) : (
                   <>
                 <div>
-                  <label className="mb-3 block text-lg font-semibold">Pick a price</label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <label className="mb-2 block text-base font-semibold">Pick a price</label>
+                  <div className="grid grid-cols-3 gap-2.5">
                     {pricePresets.map((p) => (
                       <button
                         key={p}
                         onClick={() => setPrice(p)}
-                        className={`rounded-2xl border-2 py-4 text-2xl font-bold transition active:scale-95 ${
+                        className={`rounded-2xl border-2 py-3 text-xl font-bold transition active:scale-95 ${
                           price === p
                             ? `${accent.solid} ${accent.solidText} border-transparent`
                             : "border-neutral-300 bg-white text-neutral-800"
@@ -471,12 +472,12 @@ export default function SellForm({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-lg font-semibold">Or slide to set a price</label>
-                  <div className="rounded-2xl border-2 border-neutral-200 bg-white p-5">
-                    <div className="text-center text-5xl font-bold tabular-nums">
+                  <label className="mb-2 block text-base font-semibold">Or slide to set a price</label>
+                  <div className="rounded-2xl border-2 border-neutral-200 bg-white p-4">
+                    <div className="text-center text-4xl font-bold tabular-nums">
                       {price > 0 ? rupees(price) : "₹0"}
                     </div>
-                    <div className="mt-4 flex items-center gap-3">
+                    <div className="mt-3 flex items-center gap-3">
                       <button
                         aria-label="Decrease price"
                         onClick={() => setPrice((p) => Math.max(0, p - 10))}
@@ -506,7 +507,7 @@ export default function SellForm({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-lg font-semibold">
+                  <label className="mb-1.5 block text-base font-semibold">
                     MRP <span className="font-normal text-neutral-400">(optional)</span>
                   </label>
                   <div className="relative">
@@ -560,20 +561,20 @@ export default function SellForm({
                 <button
                   onClick={save}
                   disabled={saving || uploading}
-                  className={`w-full rounded-2xl ${accent.solid} ${accent.solidText} py-5 text-xl font-bold transition active:scale-[0.98] disabled:opacity-50`}
+                  className={`w-full rounded-2xl ${accent.solid} ${accent.solidText} py-4 text-lg font-bold transition active:scale-[0.98] disabled:opacity-50`}
                 >
                   {saving ? "Saving..." : uploading ? "Finishing photo..." : "Save to the list"}
                 </button>
 
-                <label className="flex items-center justify-center gap-3 text-base text-neutral-700">
+                <label className="flex items-center justify-center gap-2.5 text-base font-medium text-neutral-700">
                   <input
                     type="checkbox"
                     checked={batch}
                     onChange={(e) => onBatchChange?.(e.target.checked)}
-                    className="h-6 w-6 rounded"
+                    className="h-5 w-5 rounded"
                     style={{ accentColor: accentHex }}
                   />
-                  Batch mode: jump straight to the camera after saving
+                  Batch mode
                 </label>
               </div>
             )}

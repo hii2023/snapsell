@@ -932,7 +932,7 @@ function ProductsTab({
         </button>
       </div>
 
-      <div className="mb-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      <div className="mb-4 -mx-4 flex gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
         <button
           onClick={() => setCatFilter("all")}
           className={`chip shrink-0 ${catFilter === "all" ? "chip-on" : "chip-off"}`}
@@ -1611,7 +1611,7 @@ function OrdersTab({
     <div>
       {/* Stage filter — horizontally scrollable on mobile */}
       <p className="mb-2 text-sm font-semibold text-neutral-700">Order Status</p>
-      <div className="mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto">
+      <div className="mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto no-scrollbar">
         <div className="flex gap-2 pb-1" style={{ width: "max-content" }}>
           {filters.map((f) => (
             <button

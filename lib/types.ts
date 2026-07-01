@@ -5,7 +5,8 @@ export type Category =
   | "furniture"
   | "cleaning"
   | "jewellery"
-  | "cosmetics";
+  | "cosmetics"
+  | "books";
 
 export type Product = {
   id: string;

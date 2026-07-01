@@ -10,6 +10,7 @@ export const SIZE_OPTIONS: Record<Category, string[]> = {
   cleaning: ["250ml", "500ml", "1L", "2L", "5L", "1 pc"],
   jewellery: ["Ring", "Necklace", "Earrings", "Bangle", "Chain", "Other"],
   cosmetics: ["Small", "30ml", "50ml", "100ml", "1 pc"],
+  books: ["1 pc", "Set", "Other"],
 };
 
 export const SIZE_LABEL: Record<Category, string> = {
@@ -20,6 +21,7 @@ export const SIZE_LABEL: Record<Category, string> = {
   cleaning: "Size",
   jewellery: "Type",
   cosmetics: "Size",
+  books: "Type",
 };
 
 // Colour selection is intentionally off for every category for now.
@@ -31,6 +33,7 @@ export const HAS_COLOR: Record<Category, boolean> = {
   cleaning: false,
   jewellery: false,
   cosmetics: false,
+  books: false,
 };
 
 export const COLORS: { name: string; hex: string }[] = [
@@ -66,6 +69,7 @@ export const ACCENT: Record<Category, Accent> = {
   cleaning: { text: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-400", border: "border-emerald-500", solid: "bg-emerald-600", solidText: "text-white" },
   jewellery: { text: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-400", border: "border-rose-500", solid: "bg-rose-600", solidText: "text-white" },
   cosmetics: { text: "text-fuchsia-600", bg: "bg-fuchsia-50", ring: "ring-fuchsia-400", border: "border-fuchsia-500", solid: "bg-fuchsia-600", solidText: "text-white" },
+  books: { text: "text-teal-600", bg: "bg-teal-50", ring: "ring-teal-400", border: "border-teal-500", solid: "bg-teal-600", solidText: "text-white" },
 };
 
 export const CATEGORY_META: { id: Category; label: string }[] = [
@@ -76,6 +80,7 @@ export const CATEGORY_META: { id: Category; label: string }[] = [
   { id: "cleaning", label: "Cleaning" },
   { id: "jewellery", label: "Jewellery" },
   { id: "cosmetics", label: "Cosmetics" },
+  { id: "books", label: "Books" },
 ];
 
 export const DEFAULT_PRICE_PRESETS = [49, 99, 199, 299, 499, 999];
