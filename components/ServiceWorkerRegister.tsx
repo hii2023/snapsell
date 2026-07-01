@@ -2,14 +2,15 @@
 
 import { useEffect } from "react";
 
+// Registers the network-first service worker (public/sw.js) so the app is
+// installable. The SW caches nothing, so there is no stale content and no need
+// to force a reload — installed apps always fetch the latest deploy.
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
     navigator.serviceWorker
       .register("/sw.js")
       .then((reg) => {
-        // When the SW updates, take over immediately so the installed app
-        // doesn't get stuck on a stale version.
         if (reg.waiting) reg.waiting.postMessage("SKIP_WAITING");
         reg.addEventListener("updatefound", () => {
           const nw = reg.installing;
@@ -22,17 +23,8 @@ export function ServiceWorkerRegister() {
         });
       })
       .catch(() => {
-        // Service worker registration failed, app still works
+        // Registration failed — the app still works as a normal website.
       });
-
-    // When a new SW takes control, reload once so the page reflects the
-    // freshly-deployed code instead of running on stale bytes.
-    let reloaded = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloaded) return;
-      reloaded = true;
-      window.location.reload();
-    });
   }, []);
   return null;
 }

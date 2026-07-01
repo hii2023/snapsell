@@ -1,27 +1,34 @@
-// PWA disabled. This service worker exists only to unregister itself and
-// purge caches if any older client still tries to load it. When the PWA is
-// re-enabled later, replace this file with the real network-first SW.
+// Network-first service worker. Its only job is to make the app installable
+// (PWA) — it never caches HTML or app code, so an installed app always shows
+// the latest deployed version, exactly like the website. No stale content.
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(self.skipWaiting());
+self.addEventListener("install", () => {
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
+      // Purge any caches left behind by older service workers.
       try {
         const keys = await caches.keys();
         await Promise.all(keys.map((k) => caches.delete(k)));
       } catch {}
-      try {
-        await self.registration.unregister();
-      } catch {}
-      const clients = await self.clients.matchAll({ type: "window" });
-      clients.forEach((c) => c.navigate(c.url));
+      await self.clients.claim();
     })()
   );
 });
 
-self.addEventListener("fetch", () => {
-  // no-op: fall back to default network behavior
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
+});
+
+// Fetch handler is required for installability. It is a pure network
+// passthrough for same-origin GET requests — nothing is cached.
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  event.respondWith(fetch(req).catch(() => Response.error()));
 });

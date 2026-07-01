@@ -1,16 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
-import { ServiceWorkerCleanup } from "@/components/ServiceWorkerCleanup";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
-// PWA / Install App feature is intentionally disabled for now.
-// Files kept on disk so we can flip it back on later:
-//   - public/manifest.json
-//   - public/sw.js
-//   - components/ServiceWorkerRegister.tsx
-//   - components/InstallAppButton.tsx
-// To re-enable: re-add the manifest <link>, the appleWebApp metadata, and
-// mount <ServiceWorkerRegister /> + <InstallAppButton /> below.
+// PWA / Install App is enabled. The service worker (public/sw.js) is network
+// first and never caches HTML, so installed apps always show the latest deploy.
+// The manifest is generated per-host at /manifest.webmanifest so the admin
+// domain installs a dashboard app and the store domain installs a shop app.
 
 const plex = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -25,6 +21,12 @@ export const metadata: Metadata = {
   description: "Buy and sell thrifted items easily",
   formatDetection: {
     telephone: false,
+  },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: shopName,
   },
 };
 
@@ -46,7 +48,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased">
         {children}
-        <ServiceWorkerCleanup />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

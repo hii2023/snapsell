@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_META } from "@/lib/constants";
 import { supabaseBrowser } from "@/lib/supabase";
@@ -10,6 +10,11 @@ function slug(s: string) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "cat";
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 export default function CPanel({ initial }: { initial: Settings }) {
   const [s, setS] = useState<Settings>({ ...initial, subcats: initial.subcats || {} });
   const [saving, setSaving] = useState(false);
@@ -17,6 +22,42 @@ export default function CPanel({ initial }: { initial: Settings }) {
   const [newCat, setNewCat] = useState("");
   const [newSub, setNewSub] = useState<Record<string, string>>({});
   const router = useRouter();
+
+  // Install-as-app (PWA) state
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+    const onInstalled = () => {
+      setInstalled(true);
+      setInstallPrompt(null);
+    };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    setInstalled(standalone);
+    setIsIOS(/iphone|ipad|ipod/i.test(window.navigator.userAgent || ""));
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  async function installApp() {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  }
 
   async function signOut() {
     await supabaseBrowser().auth.signOut();
@@ -216,6 +257,45 @@ export default function CPanel({ initial }: { initial: Settings }) {
             + Add template
           </button>
         </div>
+      </section>
+
+      <section className="border-t border-neutral-200 pt-6">
+        <h3 className="mb-1 text-lg font-semibold">Install as app</h3>
+        <p className="mb-3 text-sm text-neutral-500">
+          Add this dashboard to your home screen for one-tap access. It stays up to date
+          automatically — every update goes live without a reinstall.
+        </p>
+        {installed ? (
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            App is installed on this device.
+          </div>
+        ) : installPrompt ? (
+          <button
+            onClick={installApp}
+            className="flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white active:scale-95"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v12" />
+              <path d="M7 10l5 5 5-5" />
+              <rect x="4" y="17" width="16" height="4" rx="1" />
+            </svg>
+            Install app
+          </button>
+        ) : isIOS ? (
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+            On iPhone or iPad: tap the <span className="font-semibold">Share</span> icon in Safari,
+            then choose <span className="font-semibold">Add to Home Screen</span>.
+          </div>
+        ) : (
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+            Open your browser menu and choose <span className="font-semibold">Install app</span> or{" "}
+            <span className="font-semibold">Add to Home Screen</span>. If you don&apos;t see it yet,
+            reload this page once and try again.
+          </div>
+        )}
       </section>
 
       <section className="border-t border-neutral-200 pt-6">
