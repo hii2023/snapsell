@@ -109,6 +109,17 @@ export function BooksIcon({ className = base }: P) {
   );
 }
 
+export function MoreIcon({ className = base }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
 import type { Category } from "@/lib/types";
 export function CategoryIcon({ id, className = "h-8 w-8" }: { id: Category; className?: string }) {
   if (id === "apparel") return <ShirtIcon className={className} />;
@@ -118,5 +129,6 @@ export function CategoryIcon({ id, className = "h-8 w-8" }: { id: Category; clas
   if (id === "jewellery") return <JewelleryIcon className={className} />;
   if (id === "cosmetics") return <CosmeticsIcon className={className} />;
   if (id === "books") return <BooksIcon className={className} />;
+  if (id === "more") return <MoreIcon className={className} />;
   return <FurnitureIcon className={className} />;
 }

@@ -37,9 +37,9 @@ export async function readProductPhoto(
         },
         category: {
           type: "string",
-          enum: ["apparel", "food", "electronics", "furniture", "cleaning", "jewellery", "cosmetics", "books"],
+          enum: ["apparel", "food", "electronics", "furniture", "cleaning", "jewellery", "cosmetics", "books", "more"],
           description:
-            "apparel = clothing/wearables, food = edible/grocery, electronics = gadgets/devices, furniture = chairs/tables/home furniture, cleaning = cleaning supplies/chemicals/detergents, jewellery = rings/necklaces/earrings/ornaments, cosmetics = makeup/beauty/skincare, books = books/magazines/printed reading material.",
+            "apparel = clothing/wearables, food = edible/grocery, electronics = gadgets/devices, furniture = chairs/tables/home furniture, cleaning = cleaning supplies/chemicals/detergents, jewellery = rings/necklaces/earrings/ornaments, cosmetics = makeup/beauty/skincare, books = books/magazines/printed reading material, more = anything that does not fit the other categories.",
         },
         suggested_size: {
           type: "string",
