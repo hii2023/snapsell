@@ -512,11 +512,12 @@ export default function SellForm({
                     MRP <span className="font-normal text-neutral-400">(optional)</span>
                   </label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-neutral-500">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-neutral-500">
                       ₹
                     </span>
                     <input
-                      className="input pl-9 text-lg"
+                      className="input text-lg"
+                      style={{ paddingLeft: "2.75rem" }}
                       inputMode="numeric"
                       placeholder="Original price (shown crossed out)"
                       value={mrp > 0 ? String(mrp) : ""}
