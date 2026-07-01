@@ -9,7 +9,6 @@ import CameraCapture from "./CameraCapture";
 import ProductEdit from "./ProductEdit";
 import LogoLink from "./LogoLink";
 import NewOrderAlert from "./NewOrderAlert";
-import { supabaseBrowser } from "@/lib/supabase";
 import type { Order, Product, Settings } from "@/lib/types";
 
 const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
@@ -65,11 +64,6 @@ export default function AdminShell({
     setAdded(0);
     router.refresh();
   }
-  async function signOut() {
-    await supabaseBrowser().auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
 
   const current = queue[qIndex];
 
@@ -94,20 +88,6 @@ export default function AdminShell({
               className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 hover:bg-neutral-50 active:scale-95"
             >
               <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              onClick={startAdd}
-              className="flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white active:scale-95"
-            >
-              <Plus className="h-4 w-4" />
-              Add
-            </button>
-            <button
-              onClick={signOut}
-              title="Sign out"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 hover:bg-neutral-50 active:scale-95"
-            >
-              <LogOut className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -202,16 +182,6 @@ function Plus({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
       <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
-
-function LogOut({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <path d="M16 17l5-5-5-5" />
-      <path d="M21 12H9" />
     </svg>
   );
 }

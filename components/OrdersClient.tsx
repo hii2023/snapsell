@@ -26,6 +26,12 @@ type FulfillmentFilter = "all" | "delivery" | "pickup";
 
 const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
 
+// Public storefront base URL. Product links shared with customers must point at
+// the store, never the admin domain the seller is browsing from.
+const STORE_URL = (
+  process.env.NEXT_PUBLIC_STORE_URL || "https://store.indiarecycles.org"
+).replace(/\/+$/, "");
+
 const isPendingDispatch = (o: Order) =>
   o.delivery_status === "unbooked" || o.delivery_status === "booked";
 
@@ -671,12 +677,11 @@ function Insight({
 /* ---------------- Products ---------------- */
 
 function itemDetails(p: Product): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const lines = [`*${p.name}* (${p.code})`];
   lines.push(
     `Price: ${rupees(p.price)}` + (p.mrp > p.price ? `  (MRP ${rupees(p.mrp)})` : "")
   );
-  lines.push(`${origin}/p/${p.code}`);
+  lines.push(`${STORE_URL}/p/${p.code}`);
   return lines.join("\n");
 }
 
@@ -743,6 +748,66 @@ async function sendAll(items: Product[]) {
   window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
 }
 
+// Share the photo(s) via the phone's native share sheet, which lists Instagram
+// (Story + Post), WhatsApp, and every other installed app. Instagram ignores any
+// caption passed through the share sheet, so we copy the price+link text to the
+// clipboard first and let the seller paste it. Returns false if the device has
+// no native share support (desktop), so the caller can show a fallback.
+async function shareToApps(items: Product[]): Promise<boolean> {
+  const text = `${shopName}\n\n` + items.map(itemDetails).join("\n\n");
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // clipboard may be blocked; sharing still proceeds
+  }
+  if (typeof navigator !== "undefined" && navigator.canShare) {
+    const files: File[] = [];
+    for (const p of items) {
+      const f = await fetchImageFile(p);
+      if (f) files.push(f);
+    }
+    if (files.length > 0 && navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files, text });
+        return true;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return true;
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
+function WhatsAppGlyph({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
+function InstagramGlyph({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function ShareGlyph({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" />
+    </svg>
+  );
+}
+
 function ProductsTab({
   products,
   setProducts,
@@ -764,6 +829,8 @@ function ProductsTab({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [shareOpen, setShareOpen] = useState(false);
+  const [shareChannel, setShareChannel] = useState<"pick" | "wa">("pick");
+  const [shareNote, setShareNote] = useState("");
   const [sendIndex, setSendIndex] = useState(0);
   const [editing, setEditing] = useState<Product | null>(null);
   const [view, setView] = useState<"list" | "grid">("list");
@@ -1006,11 +1073,13 @@ function ProductsTab({
             <button
               onClick={() => {
                 setSendIndex(0);
+                setShareChannel("pick");
+                setShareNote("");
                 setShareOpen(true);
               }}
               className="flex-1 rounded-2xl bg-green-600 py-3 text-base font-semibold text-white active:scale-[0.98]"
             >
-              Share {selected.size} on WhatsApp
+              Share {selected.size}
             </button>
           </div>
         </div>
@@ -1035,13 +1104,69 @@ function ProductsTab({
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Share on WhatsApp</h3>
+              <h3 className="text-lg font-semibold">
+                {shareChannel === "wa"
+                  ? "Share on WhatsApp"
+                  : `Share ${chosen.length} product${chosen.length === 1 ? "" : "s"}`}
+              </h3>
               <button onClick={() => setShareOpen(false)} className="text-sm text-neutral-500">
                 Close
               </button>
             </div>
 
-            {sendIndex < chosen.length ? (
+            {shareChannel === "pick" ? (
+              <div className="space-y-3">
+                <p className="text-sm text-neutral-500">
+                  Every share includes the product photo, price and store link.
+                </p>
+                <button
+                  onClick={() => {
+                    setSendIndex(0);
+                    setShareChannel("wa");
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl bg-green-600 px-4 py-4 text-left text-white active:scale-[0.98]"
+                >
+                  <WhatsAppGlyph className="h-7 w-7 shrink-0" />
+                  <span>
+                    <span className="block text-base font-semibold">WhatsApp</span>
+                    <span className="block text-xs text-green-100">Send to a chat or group</span>
+                  </span>
+                </button>
+                <button
+                  onClick={async () => {
+                    const ok = await shareToApps(chosen);
+                    setShareNote(
+                      ok
+                        ? "Caption (name, price and link) copied. In Instagram, pick Story or Post, then paste the caption."
+                        : "Instagram sharing works from a phone. Caption copied to your clipboard so you can paste it into Instagram."
+                    );
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-fuchsia-600 via-pink-600 to-orange-500 px-4 py-4 text-left text-white active:scale-[0.98]"
+                >
+                  <InstagramGlyph className="h-7 w-7 shrink-0" />
+                  <span>
+                    <span className="block text-base font-semibold">Instagram Story / Post</span>
+                    <span className="block text-xs text-pink-100">Opens share sheet, caption copied</span>
+                  </span>
+                </button>
+                <button
+                  onClick={async () => {
+                    const ok = await shareToApps(chosen);
+                    if (!ok) setShareNote("No share sheet on this device. Caption copied to your clipboard.");
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-neutral-300 px-4 py-4 text-left text-neutral-700 active:scale-[0.98]"
+                >
+                  <ShareGlyph className="h-6 w-6 shrink-0" />
+                  <span>
+                    <span className="block text-base font-semibold">More apps</span>
+                    <span className="block text-xs text-neutral-400">Facebook, Telegram, email…</span>
+                  </span>
+                </button>
+                {shareNote && (
+                  <p className="rounded-xl bg-neutral-50 px-3 py-2 text-xs text-neutral-600">{shareNote}</p>
+                )}
+              </div>
+            ) : sendIndex < chosen.length ? (
               <div>
                 <p className="mb-3 text-sm text-neutral-500">
                   Product {sendIndex + 1} of {chosen.length}. Each one sends as its own
@@ -1102,14 +1227,22 @@ function ProductsTab({
               </div>
             )}
 
-            <div className="mt-5 border-t border-neutral-100 pt-4">
-              <button
-                onClick={() => sendAll(chosen)}
-                className="w-full rounded-2xl border border-green-600 py-3 text-base font-semibold text-green-700"
-              >
-                Or send all in one message
-              </button>
-            </div>
+            {shareChannel === "wa" && (
+              <div className="mt-5 space-y-3 border-t border-neutral-100 pt-4">
+                <button
+                  onClick={() => sendAll(chosen)}
+                  className="w-full rounded-2xl border border-green-600 py-3 text-base font-semibold text-green-700"
+                >
+                  Or send all in one message
+                </button>
+                <button
+                  onClick={() => setShareChannel("pick")}
+                  className="w-full py-1 text-sm text-neutral-500 underline"
+                >
+                  Back to share options
+                </button>
+              </div>
+            )}
           </motion.div>
         </motion.div>
         )}
@@ -1713,7 +1846,7 @@ function OrdersTab({
                               <div className="absolute right-0 top-full mt-1 rounded-xl border border-blue-300 bg-white p-2 shadow-lg z-20">
                                 <button
                                   onClick={() => {
-                                    navigator.clipboard.writeText(`${typeof window !== "undefined" ? window.location.origin : ""}/p/${o.id.slice(0, 8).toLowerCase()}`);
+                                    navigator.clipboard.writeText(`${STORE_URL}/p/${o.id.slice(0, 8).toLowerCase()}`);
                                     setShareMenuFor(null);
                                   }}
                                   className="block w-full text-left rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"

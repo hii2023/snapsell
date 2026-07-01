@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CATEGORY_META } from "@/lib/constants";
+import { supabaseBrowser } from "@/lib/supabase";
 import type { Settings } from "@/lib/types";
 
 function slug(s: string) {
@@ -14,6 +16,13 @@ export default function CPanel({ initial }: { initial: Settings }) {
   const [msg, setMsg] = useState("");
   const [newCat, setNewCat] = useState("");
   const [newSub, setNewSub] = useState<Record<string, string>>({});
+  const router = useRouter();
+
+  async function signOut() {
+    await supabaseBrowser().auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   function set<K extends keyof Settings>(k: K, v: Settings[K]) {
     setS((prev) => ({ ...prev, [k]: v }));
@@ -207,6 +216,22 @@ export default function CPanel({ initial }: { initial: Settings }) {
             + Add template
           </button>
         </div>
+      </section>
+
+      <section className="border-t border-neutral-200 pt-6">
+        <h3 className="mb-1 text-lg font-semibold">Account</h3>
+        <p className="mb-3 text-sm text-neutral-500">Sign out of the admin dashboard on this device.</p>
+        <button
+          onClick={signOut}
+          className="flex items-center gap-2 rounded-full border border-red-300 px-5 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 active:scale-95"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>
+          Sign out
+        </button>
       </section>
 
       <div className="sticky bottom-0 -mx-4 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
