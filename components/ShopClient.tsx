@@ -262,13 +262,8 @@ export default function ShopClient({
         </button>
       </div>
     );
-    // On a product page (detail mode) take over the whole screen so checkout
-    // feels like a separate page, not content appended under the product.
-    return detail ? (
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-white">{doneView}</div>
-    ) : (
-      doneView
-    );
+    // Take over the whole screen so the confirmation feels like a separate page.
+    return <div className="fixed inset-0 z-50 overflow-y-auto bg-white">{doneView}</div>;
   }
 
   if (step === "checkout") {
@@ -287,11 +282,9 @@ export default function ShopClient({
         }}
       />
     );
-    return detail ? (
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-white">{checkoutView}</div>
-    ) : (
-      checkoutView
-    );
+    // Take over the whole screen so checkout feels like a separate page — this
+    // also covers the store's top announcement bar and tagline strip.
+    return <div className="fixed inset-0 z-50 overflow-y-auto bg-white">{checkoutView}</div>;
   }
 
   // Empty / loading state — soft, branded, no asks of the customer.
@@ -676,7 +669,13 @@ function Checkout({
 
       <div className="mt-4 card divide-y divide-neutral-100">
         {cart.map((l) => (
-          <div key={l.product_id} className="flex items-center justify-between gap-2 p-3 text-sm">
+          <div key={l.product_id} className="flex items-center gap-3 p-3 text-sm">
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+              {l.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={l.image_url} alt={l.name} className="h-full w-full object-cover" />
+              ) : null}
+            </div>
             <span className="flex-1">
               {l.qty} x {l.name} {l.size ? `(${l.size})` : ""}
             </span>
@@ -684,7 +683,7 @@ function Checkout({
             <button
               onClick={() => onRemove(l.product_id)}
               aria-label="Remove"
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-100 text-neutral-500"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-500"
             >
               ×
             </button>
