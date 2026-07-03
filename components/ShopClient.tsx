@@ -491,7 +491,7 @@ export default function ShopClient({
                   <p className="line-clamp-1 text-[13px] font-medium leading-tight">{p.name}</p>
                 </Wrap>
                 <p className="mt-0.5 line-clamp-1 text-[11px] text-neutral-500">
-                  {[p.size, p.color].filter(Boolean).join(" · ") || " "}
+                  {[p.gender, p.size, p.color].filter(Boolean).join(" · ") || " "}
                 </p>
                 <div className="mt-1.5 flex items-baseline gap-1.5">
                   {p.giveaway ? (

@@ -1028,6 +1028,7 @@ function ProductsTab({
                 </p>
                 <p className="text-xs text-neutral-500">
                   <span className="font-medium text-neutral-600">{p.code}</span>
+                  {p.gender ? " · " + p.gender : ""}
                   {p.size ? " · " + p.size : ""} ·{" "}
                   {p.giveaway ? (
                     <span className="font-medium text-emerald-700">Free</span>

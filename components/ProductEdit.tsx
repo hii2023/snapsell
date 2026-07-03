@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 import { Stepper } from "./ui";
-import { SIZE_OPTIONS, SIZE_LABEL, HAS_COLOR, COLORS, CATEGORY_META } from "@/lib/constants";
+import { SIZE_OPTIONS, SIZE_LABEL, HAS_COLOR, COLORS, CATEGORY_META, GENDERS } from "@/lib/constants";
 import type { Category, Product } from "@/lib/types";
+import { SizeField } from "./SizeField";
 
 export default function ProductEdit({
   product,
@@ -28,6 +29,7 @@ export default function ProductEdit({
   );
   const [size, setSize] = useState(product?.size ?? "");
   const [color, setColor] = useState(product?.color ?? "");
+  const [gender, setGender] = useState(product?.gender ?? "");
   const [price, setPrice] = useState(product?.price ?? 0);
   const [mrp, setMrp] = useState(product?.mrp ?? 0);
   const [half, setHalf] = useState(false);
@@ -83,9 +85,11 @@ export default function ProductEdit({
   }
 
   function chooseCategory(c: Category) {
+    if (c === category) return; // same category: keep size (incl. custom) as-is
     setCategory(c);
     if (!SIZE_OPTIONS[c].includes(size)) setSize("");
     if (!HAS_COLOR[c]) setColor("");
+    if (c !== "apparel") setGender("");
     if (!(subcats[c] || []).includes(subcategory)) setSubcategory("");
   }
 
@@ -103,6 +107,7 @@ export default function ProductEdit({
         images,
         size,
         color,
+        gender,
         price,
         mrp,
         giveaway,
@@ -216,18 +221,31 @@ export default function ProductEdit({
 
           <div>
             <label className="label">{SIZE_LABEL[category]}</label>
-            <div className="flex flex-wrap gap-2">
-              {SIZE_OPTIONS[category].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSize(size === s ? "" : s)}
-                  className={`chip ${size === s ? "chip-on" : "chip-off"}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            <SizeField
+              key={category}
+              category={category}
+              value={size}
+              onChange={setSize}
+              chipClass={(active) => `chip ${active ? "chip-on" : "chip-off"}`}
+            />
           </div>
+
+          {category === "apparel" && (
+            <div>
+              <label className="label">Gender (optional)</label>
+              <div className="flex flex-wrap gap-2">
+                {GENDERS.map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGender(gender === g ? "" : g)}
+                    className={`chip ${gender === g ? "chip-on" : "chip-off"}`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {HAS_COLOR[category] && (
             <div>

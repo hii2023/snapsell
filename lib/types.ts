@@ -20,6 +20,7 @@ export type Product = {
   description: string;
   size: string;
   color: string;
+  gender: string;
   price: number;
   mrp: number;
   giveaway: boolean;

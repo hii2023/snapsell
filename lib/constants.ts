@@ -88,6 +88,14 @@ export const CATEGORY_META: { id: Category; label: string }[] = [
   { id: "more", label: "More" },
 ];
 
+// Categories where the seller can enter a custom size (e.g. 15ml, 650ml, 1.5L)
+// on top of the presets, because pack sizes vary a lot for FMCG/food.
+export const CUSTOM_SIZE_CATEGORIES: Category[] = ["food", "cleaning", "cosmetics"];
+export const CUSTOM_SIZE_UNITS = ["ml", "L", "g", "kg", "pc"];
+
+// Optional gender tag for clothing.
+export const GENDERS = ["Men", "Women", "Unisex", "Kids"];
+
 export const DEFAULT_PRICE_PRESETS = [49, 99, 199, 299, 499, 999];
 
 // Pickup location for "Pickup" orders + give-away items.

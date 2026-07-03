@@ -14,6 +14,8 @@ const VALID: Category[] = [
   "cleaning",
   "jewellery",
   "cosmetics",
+  "books",
+  "more",
 ];
 
 // Create a product (seller-only, via authenticated session + RLS).
@@ -32,6 +34,7 @@ export async function POST(req: NextRequest) {
     description?: string;
     size?: string;
     color?: string;
+    gender?: string;
     price?: number;
     mrp?: number;
     giveaway?: boolean;
@@ -67,6 +70,7 @@ export async function POST(req: NextRequest) {
       description: (body.description || "").trim(),
       size: (body.size || "").trim(),
       color: (body.color || "").trim(),
+      gender: (body.gender || "").trim(),
       price,
       mrp: giveaway ? 0 : Math.max(0, Math.round(Number(body.mrp) || 0)),
       giveaway,
@@ -110,6 +114,7 @@ export async function PATCH(req: NextRequest) {
     description?: string;
     size?: string;
     color?: string;
+    gender?: string;
     price?: number;
     mrp?: number;
     giveaway?: boolean;
@@ -130,6 +135,7 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof body.size === "string") patch.size = body.size.trim();
   if (typeof body.color === "string") patch.color = body.color.trim();
+  if (typeof body.gender === "string") patch.gender = body.gender.trim();
   if (typeof body.stock === "number") patch.stock = Math.max(0, Math.round(body.stock));
   if (typeof body.is_active === "boolean") patch.is_active = body.is_active;
 

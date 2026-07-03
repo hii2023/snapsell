@@ -10,11 +10,13 @@ import {
   HAS_COLOR,
   COLORS,
   CATEGORY_META,
+  GENDERS,
   ACCENT,
   rupees,
 } from "@/lib/constants";
 import type { Category, VisionResult } from "@/lib/types";
 import { polishPhoto } from "@/lib/polish";
+import { SizeField } from "./SizeField";
 
 // Categories that get an automatic clean white background. Disabled for now
 // (empty set) — add "food", "cleaning", "cosmetics" here to turn it back on.
@@ -74,6 +76,7 @@ export default function SellForm({
   const [aiCategory, setAiCategory] = useState<Category | null>(null);
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
+  const [gender, setGender] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [description, setDescription] = useState("");
   const [units, setUnits] = useState(1);
@@ -196,10 +199,14 @@ export default function SellForm({
   }
 
   function pickCategory(c: Category) {
+    const changed = c !== category;
     setCategory(c);
-    if (!SIZE_OPTIONS[c].includes(size)) setSize("");
-    if (!HAS_COLOR[c]) setColor("");
-    if (!(subcats[c] || []).includes(subcategory)) setSubcategory("");
+    if (changed) {
+      if (!SIZE_OPTIONS[c].includes(size)) setSize("");
+      if (!HAS_COLOR[c]) setColor("");
+      if (c !== "apparel") setGender("");
+      if (!(subcats[c] || []).includes(subcategory)) setSubcategory("");
+    }
     // Upload now: FMCG/food get a clean white background, others use the original.
     void useVariant(AUTO_CLEAN_CATEGORIES.has(c));
     go(1);
@@ -227,6 +234,7 @@ export default function SellForm({
           description,
           size,
           color,
+          gender,
           price: giveaway ? 0 : price,
           mrp: giveaway ? 0 : mrp,
           giveaway,
@@ -389,22 +397,44 @@ export default function SellForm({
 
                 <div>
                   <label className="mb-1.5 block text-base font-semibold">{SIZE_LABEL[category]}</label>
-                  <div className="flex flex-wrap gap-2">
-                    {SIZE_OPTIONS[category].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setSize(size === s ? "" : s)}
-                        className={`rounded-full border-2 px-4 py-2 text-base font-medium transition active:scale-95 ${
-                          size === s
-                            ? `${accent.solid} ${accent.solidText} border-transparent`
-                            : "border-neutral-300 bg-white text-neutral-700"
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
+                  <SizeField
+                    key={category}
+                    category={category}
+                    value={size}
+                    onChange={setSize}
+                    chipClass={(active) =>
+                      `rounded-full border-2 px-4 py-2 text-base font-medium transition active:scale-95 ${
+                        active
+                          ? `${accent.solid} ${accent.solidText} border-transparent`
+                          : "border-neutral-300 bg-white text-neutral-700"
+                      }`
+                    }
+                  />
                 </div>
+
+                {category === "apparel" && (
+                  <div>
+                    <label className="mb-1.5 block text-base font-semibold">
+                      Gender <span className="font-normal text-neutral-400">(optional)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {GENDERS.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setGender(gender === g ? "" : g)}
+                          className={`rounded-full border-2 px-4 py-2 text-base font-medium transition active:scale-95 ${
+                            gender === g
+                              ? `${accent.solid} ${accent.solidText} border-transparent`
+                              : "border-neutral-300 bg-white text-neutral-700"
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {(subcats[category] || []).length > 0 && (
                   <div>
