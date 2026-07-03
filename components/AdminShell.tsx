@@ -31,7 +31,7 @@ export default function AdminShell({
   const [qIndex, setQIndex] = useState(0);
   const [added, setAdded] = useState(0);
   const [shot, setShot] = useState(0);
-  const [batch, setBatch] = useState(true); // on by default; persists until the seller unticks it
+  const [batch] = useState(true); // batch mode is always on (no toggle in the UI)
   const [addingManually, setAddingManually] = useState(false);
 
   function startAdd() {
@@ -167,7 +167,6 @@ export default function AdminShell({
                 onAdvance={advance}
                 addedTotal={added}
                 batch={batch}
-                onBatchChange={setBatch}
                 subcats={settings.subcats}
               />
             </motion.div>

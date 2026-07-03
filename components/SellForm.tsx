@@ -16,12 +16,9 @@ import {
 import type { Category, VisionResult } from "@/lib/types";
 import { polishPhoto } from "@/lib/polish";
 
-// Categories that get an automatic clean white background (FMCG + food).
-const AUTO_CLEAN_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
-  "food",
-  "cleaning",
-  "cosmetics",
-]);
+// Categories that get an automatic clean white background. Disabled for now
+// (empty set) — add "food", "cleaning", "cosmetics" here to turn it back on.
+const AUTO_CLEAN_CATEGORIES: ReadonlySet<Category> = new Set<Category>([]);
 
 type Screen = "wizard" | "saved";
 type Step = 0 | 1 | 2; // category, details, price
@@ -48,7 +45,6 @@ export default function SellForm({
   onAdvance,
   addedTotal,
   batch = false,
-  onBatchChange,
   subcats = {},
 }: {
   pricePresets: number[];
@@ -628,17 +624,6 @@ export default function SellForm({
                     ? "Finishing photo..."
                     : "Save to the list"}
                 </button>
-
-                <label className="flex items-center justify-center gap-2.5 text-base font-medium text-neutral-700">
-                  <input
-                    type="checkbox"
-                    checked={batch}
-                    onChange={(e) => onBatchChange?.(e.target.checked)}
-                    className="h-5 w-5 rounded"
-                    style={{ accentColor: accentHex }}
-                  />
-                  Batch mode
-                </label>
               </div>
             )}
           </motion.div>
