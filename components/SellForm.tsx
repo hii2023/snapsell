@@ -14,7 +14,14 @@ import {
   rupees,
 } from "@/lib/constants";
 import type { Category, VisionResult } from "@/lib/types";
-import { polishPhoto, type PolishStage } from "@/lib/polish";
+import { polishPhoto } from "@/lib/polish";
+
+// Categories that get an automatic clean white background (FMCG + food).
+const AUTO_CLEAN_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
+  "food",
+  "cleaning",
+  "cosmetics",
+]);
 
 type Screen = "wizard" | "saved";
 type Step = 0 | 1 | 2; // category, details, price
@@ -79,16 +86,15 @@ export default function SellForm({
   const [giveaway, setGiveaway] = useState(false);
   const [half, setHalf] = useState(false);
 
-  // On-device photo cleanup (background removal + white background + polish)
-  const [cleanBg, setCleanBg] = useState(true);
+  // On-device photo cleanup (background removal + white background + shadow),
+  // applied automatically for FMCG/food categories after the seller picks one.
   const [polishing, setPolishing] = useState(false);
-  const [polishStage, setPolishStage] = useState<PolishStage>("download");
-  const [polishPct, setPolishPct] = useState(0);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
   const uploadFailedRef = useRef(false);
   const originalRef = useRef<File | null>(null);
+  const cleanedRef = useRef<File | null>(null);
 
   // Process the captured photo on mount.
   useEffect(() => {
@@ -126,67 +132,66 @@ export default function SellForm({
       .finally(() => setUploading(false));
   }
 
-  // Clean the photo on-device (or use the original), then upload the result.
-  async function applyClean(clean: boolean, file: File) {
+  // Choose which image to upload based on the picked category: FMCG/food get a
+  // clean white background, everything else uploads the original photo. The
+  // cleaned result is cached so switching back and forth does not re-process.
+  async function useVariant(clean: boolean) {
+    const original = originalRef.current;
+    if (!original) return;
+
     if (!clean) {
-      setPreview(URL.createObjectURL(file));
-      beginUpload(file);
+      setPreview(URL.createObjectURL(original));
+      beginUpload(original);
+      return;
+    }
+    if (cleanedRef.current) {
+      setPreview(URL.createObjectURL(cleanedRef.current));
+      beginUpload(cleanedRef.current);
       return;
     }
     setPolishing(true);
-    setPolishPct(0);
     try {
-      const cleaned = await polishPhoto(file, (stage, pct) => {
-        setPolishStage(stage);
-        setPolishPct(pct);
-      });
+      const cleaned = await polishPhoto(original);
+      cleanedRef.current = cleaned;
       setPreview(URL.createObjectURL(cleaned));
       beginUpload(cleaned);
     } catch {
       // On any failure, silently fall back to the original photo.
-      setPreview(URL.createObjectURL(file));
-      beginUpload(file);
+      setPreview(URL.createObjectURL(original));
+      beginUpload(original);
     } finally {
       setPolishing(false);
     }
   }
 
-  function toggleClean(v: boolean) {
-    setCleanBg(v);
-    if (originalRef.current) applyClean(v, originalRef.current);
-  }
-
   async function processFile(file: File) {
     originalRef.current = file;
+    cleanedRef.current = null;
     setPreview(URL.createObjectURL(file));
     setReading(true);
 
-    // Vision reads the original photo (background does not affect recognition)
-    // and runs in parallel with the on-device cleanup + upload.
-    const base64 = await fileToBase64(file);
-    const visionP = (async () => {
-      try {
-        const res = await fetch("/api/vision", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64, mediaType: file.type }),
-        });
-        const json = (await res.json()) as VisionResult & { error?: string };
-        if (res.ok) {
-          setName(json.name || "");
-          if (json.category) setAiCategory(json.category);
-          if (json.suggested_size) setSize(json.suggested_size);
-          if (json.suggested_color) setColor(json.suggested_color);
-        }
-      } catch {
-        // best effort
-      } finally {
-        setReading(false);
+    // Vision reads the original photo (background does not affect recognition).
+    // The photo is only uploaded once a category is chosen, so we know whether
+    // to clean it first.
+    try {
+      const base64 = await fileToBase64(file);
+      const res = await fetch("/api/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64, mediaType: file.type }),
+      });
+      const json = (await res.json()) as VisionResult & { error?: string };
+      if (res.ok) {
+        setName(json.name || "");
+        if (json.category) setAiCategory(json.category);
+        if (json.suggested_size) setSize(json.suggested_size);
+        if (json.suggested_color) setColor(json.suggested_color);
       }
-    })();
-
-    await applyClean(cleanBg, file);
-    await visionP;
+    } catch {
+      // best effort
+    } finally {
+      setReading(false);
+    }
   }
 
   function go(next: Step) {
@@ -199,6 +204,8 @@ export default function SellForm({
     if (!SIZE_OPTIONS[c].includes(size)) setSize("");
     if (!HAS_COLOR[c]) setColor("");
     if (!(subcats[c] || []).includes(subcategory)) setSubcategory("");
+    // Upload now: FMCG/food get a clean white background, others use the original.
+    void useVariant(AUTO_CLEAN_CATEGORIES.has(c));
     go(1);
   }
 
@@ -327,28 +334,9 @@ export default function SellForm({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={preview} alt="Product" className="h-16 w-16 rounded-xl border border-neutral-200 object-cover" />
                   )}
-                  <div className="min-w-0">
-                    <p className="text-base text-neutral-500">
-                      {polishing
-                        ? polishStage === "download"
-                          ? `Preparing cleanup... ${polishPct}%`
-                          : `Cleaning photo... ${polishPct}%`
-                        : reading
-                        ? "Reading photo..."
-                        : "Tap the closest match."}
-                    </p>
-                    <label className="mt-1.5 flex items-center gap-2 text-sm font-medium text-neutral-600">
-                      <input
-                        type="checkbox"
-                        checked={cleanBg}
-                        onChange={(e) => toggleClean(e.target.checked)}
-                        disabled={polishing}
-                        className="h-4 w-4 rounded disabled:opacity-50"
-                        style={{ accentColor: accentHex }}
-                      />
-                      Clean white background
-                    </label>
-                  </div>
+                  <p className="text-base text-neutral-500">
+                    {reading ? "Reading photo..." : "Tap the closest match."}
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {CATEGORY_META.map((c, idx) => {

@@ -24,19 +24,35 @@ export async function polishPhoto(
     },
   });
 
-  // Composite the transparent cutout onto a solid white background.
   const img = await createImageBitmap(cutout);
+  const w = img.width;
+  const h = img.height;
+
+  // Polish pass on a transparent canvas so the cutout keeps its alpha (needed
+  // for a clean shadow silhouette).
+  const off = document.createElement("canvas");
+  off.width = w;
+  off.height = h;
+  const octx = off.getContext("2d");
+  if (!octx) throw new Error("Canvas not supported");
+  octx.filter = "brightness(1.03) contrast(1.05) saturate(1.06)";
+  octx.drawImage(img, 0, 0);
+
+  // Composite onto a solid white background with a soft drop shadow so the
+  // product looks like a studio shot.
   const canvas = document.createElement("canvas");
-  canvas.width = img.width;
-  canvas.height = img.height;
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
 
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // Subtle studio-style polish.
-  ctx.filter = "brightness(1.03) contrast(1.05) saturate(1.06)";
-  ctx.drawImage(img, 0, 0);
+  ctx.fillRect(0, 0, w, h);
+  ctx.shadowColor = "rgba(0, 0, 0, 0.18)";
+  ctx.shadowBlur = Math.round(Math.max(w, h) * 0.03);
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = Math.round(h * 0.015);
+  ctx.drawImage(off, 0, 0);
 
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/jpeg", 0.9)
