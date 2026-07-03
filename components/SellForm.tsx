@@ -14,6 +14,7 @@ import {
   rupees,
 } from "@/lib/constants";
 import type { Category, VisionResult } from "@/lib/types";
+import { polishPhoto, type PolishStage } from "@/lib/polish";
 
 type Screen = "wizard" | "saved";
 type Step = 0 | 1 | 2; // category, details, price
@@ -78,9 +79,16 @@ export default function SellForm({
   const [giveaway, setGiveaway] = useState(false);
   const [half, setHalf] = useState(false);
 
+  // On-device photo cleanup (background removal + white background + polish)
+  const [cleanBg, setCleanBg] = useState(true);
+  const [polishing, setPolishing] = useState(false);
+  const [polishStage, setPolishStage] = useState<PolishStage>("download");
+  const [polishPct, setPolishPct] = useState(0);
+
   const nameRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
   const uploadFailedRef = useRef(false);
+  const originalRef = useRef<File | null>(null);
 
   // Process the captured photo on mount.
   useEffect(() => {
@@ -99,17 +107,13 @@ export default function SellForm({
   const accent = category ? ACCENT[category] : ACCENT.apparel;
   const accentHex = category ? ACCENT_HEX[category] : "#0f766e";
 
-  async function processFile(file: File) {
-    setPreview(URL.createObjectURL(file));
-    setReading(true);
+  // Kick off the upload of whichever file we settled on (cleaned or original).
+  function beginUpload(f: File) {
     setUploading(true);
     uploadFailedRef.current = false;
-
-    const base64 = await fileToBase64(file);
-
     uploadRef.current = (async () => {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", f);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { error?: string }).error || "Upload failed");
@@ -120,25 +124,69 @@ export default function SellForm({
         setError(err instanceof Error ? err.message : "Upload failed");
       })
       .finally(() => setUploading(false));
+  }
 
-    try {
-      const res = await fetch("/api/vision", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base64, mediaType: file.type }),
-      });
-      const json = (await res.json()) as VisionResult & { error?: string };
-      if (res.ok) {
-        setName(json.name || "");
-        if (json.category) setAiCategory(json.category);
-        if (json.suggested_size) setSize(json.suggested_size);
-        if (json.suggested_color) setColor(json.suggested_color);
-      }
-    } catch {
-      // best effort
-    } finally {
-      setReading(false);
+  // Clean the photo on-device (or use the original), then upload the result.
+  async function applyClean(clean: boolean, file: File) {
+    if (!clean) {
+      setPreview(URL.createObjectURL(file));
+      beginUpload(file);
+      return;
     }
+    setPolishing(true);
+    setPolishPct(0);
+    try {
+      const cleaned = await polishPhoto(file, (stage, pct) => {
+        setPolishStage(stage);
+        setPolishPct(pct);
+      });
+      setPreview(URL.createObjectURL(cleaned));
+      beginUpload(cleaned);
+    } catch {
+      // On any failure, silently fall back to the original photo.
+      setPreview(URL.createObjectURL(file));
+      beginUpload(file);
+    } finally {
+      setPolishing(false);
+    }
+  }
+
+  function toggleClean(v: boolean) {
+    setCleanBg(v);
+    if (originalRef.current) applyClean(v, originalRef.current);
+  }
+
+  async function processFile(file: File) {
+    originalRef.current = file;
+    setPreview(URL.createObjectURL(file));
+    setReading(true);
+
+    // Vision reads the original photo (background does not affect recognition)
+    // and runs in parallel with the on-device cleanup + upload.
+    const base64 = await fileToBase64(file);
+    const visionP = (async () => {
+      try {
+        const res = await fetch("/api/vision", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ base64, mediaType: file.type }),
+        });
+        const json = (await res.json()) as VisionResult & { error?: string };
+        if (res.ok) {
+          setName(json.name || "");
+          if (json.category) setAiCategory(json.category);
+          if (json.suggested_size) setSize(json.suggested_size);
+          if (json.suggested_color) setColor(json.suggested_color);
+        }
+      } catch {
+        // best effort
+      } finally {
+        setReading(false);
+      }
+    })();
+
+    await applyClean(cleanBg, file);
+    await visionP;
   }
 
   function go(next: Step) {
@@ -277,11 +325,30 @@ export default function SellForm({
                 <div className="mb-4 flex items-center gap-3">
                   {preview && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={preview} alt="Product" className="h-16 w-16 rounded-xl object-cover" />
+                    <img src={preview} alt="Product" className="h-16 w-16 rounded-xl border border-neutral-200 object-cover" />
                   )}
-                  <p className="text-base text-neutral-500">
-                    {reading ? "Reading photo..." : "Tap the closest match."}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="text-base text-neutral-500">
+                      {polishing
+                        ? polishStage === "download"
+                          ? `Preparing cleanup... ${polishPct}%`
+                          : `Cleaning photo... ${polishPct}%`
+                        : reading
+                        ? "Reading photo..."
+                        : "Tap the closest match."}
+                    </p>
+                    <label className="mt-1.5 flex items-center gap-2 text-sm font-medium text-neutral-600">
+                      <input
+                        type="checkbox"
+                        checked={cleanBg}
+                        onChange={(e) => toggleClean(e.target.checked)}
+                        disabled={polishing}
+                        className="h-4 w-4 rounded disabled:opacity-50"
+                        style={{ accentColor: accentHex }}
+                      />
+                      Clean white background
+                    </label>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {CATEGORY_META.map((c, idx) => {
@@ -562,10 +629,16 @@ export default function SellForm({
 
                 <button
                   onClick={save}
-                  disabled={saving || uploading}
+                  disabled={saving || uploading || polishing}
                   className={`w-full rounded-2xl ${accent.solid} ${accent.solidText} py-4 text-lg font-bold transition active:scale-[0.98] disabled:opacity-50`}
                 >
-                  {saving ? "Saving..." : uploading ? "Finishing photo..." : "Save to the list"}
+                  {saving
+                    ? "Saving..."
+                    : polishing
+                    ? "Cleaning photo..."
+                    : uploading
+                    ? "Finishing photo..."
+                    : "Save to the list"}
                 </button>
 
                 <label className="flex items-center justify-center gap-2.5 text-base font-medium text-neutral-700">
