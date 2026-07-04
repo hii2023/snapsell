@@ -72,8 +72,11 @@ export default function CameraCapture({
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
-    if (files.length) addFiles(files);
     if (fileRef.current) fileRef.current.value = "";
+    if (!files.length) return;
+    // Picking from the gallery goes straight to the next page (category), no
+    // extra Continue tap. Any photos already taken with the camera come along.
+    onCapture([...shots.map((s) => s.file), ...files]);
   }
 
   function removeShot(i: number) {

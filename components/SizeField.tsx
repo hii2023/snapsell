@@ -22,17 +22,21 @@ export function SizeField({
   value,
   onChange,
   chipClass,
+  numberRef,
 }: {
   category: Category;
   value: string;
   onChange: (v: string) => void;
   chipClass: (active: boolean) => string;
+  numberRef?: React.RefObject<HTMLInputElement | null>;
 }) {
   const presets = SIZE_OPTIONS[category];
   const allowCustom = CUSTOM_SIZE_CATEGORIES.includes(category);
   const parsed = parseCustom(value);
   const customValue = allowCustom && value !== "" && !presets.includes(value);
-  const [open, setOpen] = useState(customValue);
+  // For FMCG/food, start with the custom box open (ml selected) since pack sizes
+  // vary so much — unless the product already has a preset size chosen.
+  const [open, setOpen] = useState(allowCustom && (customValue || value === ""));
   const [num, setNum] = useState(parsed?.num ?? "");
   const [unit, setUnit] = useState(parsed?.unit ?? "ml");
 
@@ -73,6 +77,7 @@ export function SizeField({
       {allowCustom && (open || customValue) && (
         <div className="mt-1 flex w-full items-center gap-2">
           <input
+            ref={numberRef}
             type="text"
             inputMode="decimal"
             placeholder="e.g. 15"

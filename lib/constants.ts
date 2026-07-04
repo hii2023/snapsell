@@ -79,12 +79,12 @@ export const ACCENT: Record<Category, Accent> = {
 export const CATEGORY_META: { id: Category; label: string }[] = [
   { id: "apparel", label: "Clothing" },
   { id: "food", label: "Food" },
-  { id: "electronics", label: "Electronics" },
-  { id: "furniture", label: "Furniture" },
-  { id: "cleaning", label: "Cleaning" },
-  { id: "jewellery", label: "Jewellery" },
   { id: "cosmetics", label: "Cosmetics" },
+  { id: "cleaning", label: "Cleaning" },
   { id: "books", label: "Books" },
+  { id: "jewellery", label: "Jewellery" },
+  { id: "furniture", label: "Furniture" },
+  { id: "electronics", label: "Electronics" },
   { id: "more", label: "More" },
 ];
 
@@ -94,7 +94,7 @@ export const CUSTOM_SIZE_CATEGORIES: Category[] = ["food", "cleaning", "cosmetic
 export const CUSTOM_SIZE_UNITS = ["ml", "L", "g", "kg", "pc"];
 
 // Optional gender tag for clothing.
-export const GENDERS = ["Men", "Women", "Unisex", "Kids"];
+export const GENDERS = ["Women", "Men", "Unisex", "Kids"];
 
 export const DEFAULT_PRICE_PRESETS = [49, 99, 199, 299, 499, 999];
 

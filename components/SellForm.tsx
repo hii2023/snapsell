@@ -10,6 +10,7 @@ import {
   HAS_COLOR,
   COLORS,
   CATEGORY_META,
+  CUSTOM_SIZE_CATEGORIES,
   GENDERS,
   ACCENT,
   rupees,
@@ -71,6 +72,8 @@ export default function SellForm({
 
   const [preview, setPreview] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [extraImages, setExtraImages] = useState<string[]>([]);
+  const [addingPhoto, setAddingPhoto] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<Category | null>(null);
   const [aiCategory, setAiCategory] = useState<Category | null>(null);
@@ -90,6 +93,8 @@ export default function SellForm({
   const [polishing, setPolishing] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
+  const sizeNumberRef = useRef<HTMLInputElement>(null);
+  const morePhotoRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<Promise<void> | null>(null);
   const uploadFailedRef = useRef(false);
   const originalRef = useRef<File | null>(null);
@@ -129,6 +134,30 @@ export default function SellForm({
         setError(err instanceof Error ? err.message : "Upload failed");
       })
       .finally(() => setUploading(false));
+  }
+
+  // Add extra photos to the same product (beyond the first captured one).
+  async function addMorePhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (morePhotoRef.current) morePhotoRef.current.value = "";
+    if (!files.length) return;
+    setAddingPhoto(true);
+    setError("");
+    try {
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((json as { error?: string }).error || "Upload failed");
+        const url = (json as { url?: string }).url;
+        if (url) setExtraImages((prev) => [...prev, url]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setAddingPhoto(false);
+    }
   }
 
   // Choose which image to upload based on the picked category: FMCG/food get a
@@ -230,6 +259,7 @@ export default function SellForm({
           name: name.trim(),
           category,
           image_url: imageUrl,
+          images: [imageUrl, ...extraImages].filter(Boolean),
           subcategory,
           description,
           size,
@@ -333,12 +363,44 @@ export default function SellForm({
           >
             {step === 0 && (
               <div>
-                <div className="mb-4 flex items-center gap-3">
-                  {preview && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={preview} alt="Product" className="h-16 w-16 rounded-xl border border-neutral-200 object-cover" />
-                  )}
-                  <p className="text-base text-neutral-500">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {preview && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={preview} alt="Product" className="h-16 w-16 shrink-0 rounded-xl border border-neutral-200 object-cover" />
+                    )}
+                    {extraImages.map((url) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={url} src={url} alt="" className="h-16 w-16 shrink-0 rounded-xl border border-neutral-200 object-cover" />
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => morePhotoRef.current?.click()}
+                      disabled={addingPhoto}
+                      aria-label="Add more photos"
+                      className="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-neutral-300 text-neutral-500 disabled:opacity-50"
+                    >
+                      {addingPhoto ? (
+                        <span className="text-xs">...</span>
+                      ) : (
+                        <>
+                          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 5v14M5 12h14" />
+                          </svg>
+                          <span className="text-[10px] font-medium">Photo</span>
+                        </>
+                      )}
+                    </button>
+                    <input
+                      ref={morePhotoRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={addMorePhotos}
+                    />
+                  </div>
+                  <p className="mt-2 text-base text-neutral-500">
                     {reading ? "Reading photo..." : "Tap the closest match."}
                   </p>
                 </div>
@@ -387,8 +449,14 @@ export default function SellForm({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        if (name.trim()) go(2);
-                        else setError("Add a product name");
+                        if (!name.trim()) {
+                          setError("Add a product name");
+                        } else if (CUSTOM_SIZE_CATEGORIES.includes(category)) {
+                          // FMCG/food: jump into the custom quantity box.
+                          sizeNumberRef.current?.focus();
+                        } else {
+                          go(2);
+                        }
                       }
                     }}
                     placeholder="e.g. Cotton T-shirt"
@@ -402,6 +470,7 @@ export default function SellForm({
                     category={category}
                     value={size}
                     onChange={setSize}
+                    numberRef={sizeNumberRef}
                     chipClass={(active) =>
                       `rounded-full border-2 px-4 py-2 text-base font-medium transition active:scale-95 ${
                         active
