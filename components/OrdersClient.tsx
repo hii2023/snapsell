@@ -1150,7 +1150,7 @@ function ProductsTab({
                     const ok = await shareToApps(chosen);
                     setShareNote(
                       ok
-                        ? "Caption (name, price and link) copied. In Instagram, pick Story or Post, then paste the caption."
+                        ? "Caption copied. When Instagram opens, tap Stories, then paste the caption if you want text."
                         : "Instagram sharing works from a phone. Caption copied to your clipboard so you can paste it into Instagram."
                     );
                   }}
@@ -1158,8 +1158,8 @@ function ProductsTab({
                 >
                   <InstagramGlyph className="h-7 w-7 shrink-0" />
                   <span>
-                    <span className="block text-base font-semibold">Instagram Story / Post</span>
-                    <span className="block text-xs text-pink-100">Opens share sheet, caption copied</span>
+                    <span className="block text-base font-semibold">Instagram Story</span>
+                    <span className="block text-xs text-pink-100">Opens Instagram, tap Stories</span>
                   </span>
                 </button>
                 <button
