@@ -9,6 +9,7 @@ import CameraCapture from "./CameraCapture";
 import ProductEdit from "./ProductEdit";
 import LogoLink from "./LogoLink";
 import NewOrderAlert from "./NewOrderAlert";
+import { useBackClose } from "@/lib/use-back";
 import type { Order, Product, Settings } from "@/lib/types";
 
 const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || "India Recycle";
@@ -64,6 +65,11 @@ export default function AdminShell({
     setAdded(0);
     router.refresh();
   }
+
+  // Phone / browser Back closes the camera / add-product wizard and the
+  // manual-add modal instead of leaving the admin.
+  useBackClose(phase !== "closed", close);
+  useBackClose(addingManually, () => setAddingManually(false));
 
   const current = queue[qIndex];
 

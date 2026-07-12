@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useBackClose } from "@/lib/use-back";
 
 // Product image gallery with thumbnail strip and a fullscreen zoom modal.
 // Native pinch-zoom on mobile via `touch-action: pinch-zoom`; on desktop
@@ -15,6 +16,10 @@ export default function ProductGallery({
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
   const [zoomed, setZoomed] = useState(false);
+
+  // Phone / browser Back closes the fullscreen viewer instead of leaving
+  // the product page.
+  useBackClose(open, () => setOpen(false));
 
   useEffect(() => {
     if (!open) return;

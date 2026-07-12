@@ -9,6 +9,7 @@ import { CategoryIcon, CheckIcon } from "./icons";
 import ProductEdit from "./ProductEdit";
 import CPanel from "./CPanel";
 import { Footer } from "./Footer";
+import { useBackClose } from "@/lib/use-back";
 import type { Category, Order, Product, Settings, WaTemplate } from "@/lib/types";
 
 type Tab = "overview" | "products" | "orders" | "insight" | "settings";
@@ -72,6 +73,10 @@ export default function OrdersClient({
     setTab("orders");
   }
 
+  // Phone / browser Back returns to the Overview tab instead of leaving the
+  // admin panel.
+  useBackClose(tab !== "overview", () => setTab("overview"));
+
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
     { id: "orders", label: "Orders" },
@@ -104,6 +109,17 @@ export default function OrdersClient({
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
         >
+          {tab !== "overview" && (
+            <button
+              onClick={() => setTab("overview")}
+              className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 active:scale-95"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Back to overview
+            </button>
+          )}
           {tab === "overview" && (
             <Overview
               products={products}
@@ -349,6 +365,9 @@ function Insight({
 }) {
   const [drill, setDrill] = useState<InsightDrill>(null);
   const [custQuery, setCustQuery] = useState("");
+
+  // Phone / browser Back leaves a drill-down view instead of the admin.
+  useBackClose(drill !== null, () => setDrill(null));
 
   // ── Inventory ─────────────────────────────────────────
   const inStock = products.filter((p) => p.stock > 0).length;
@@ -834,6 +853,11 @@ function ProductsTab({
   const [sendIndex, setSendIndex] = useState(0);
   const [editing, setEditing] = useState<Product | null>(null);
   const [view, setView] = useState<"list" | "grid">("list");
+
+  // Phone / browser Back closes the edit modal / share sheet instead of
+  // leaving the admin.
+  useBackClose(!!editing, () => setEditing(null));
+  useBackClose(shareOpen, () => setShareOpen(false));
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fired = useRef(false);
   const selectMode = selected.size > 0;
@@ -1315,6 +1339,9 @@ function OrdersTab({
   const [shareMenuFor, setShareMenuFor] = useState<string | null>(null);
   // Image viewer state
   const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
+
+  // Phone / browser Back closes the image viewer instead of leaving the admin.
+  useBackClose(!!viewImageUrl, () => setViewImageUrl(null));
 
   // Handle ESC key to close image modal
   useEffect(() => {

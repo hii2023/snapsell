@@ -5,6 +5,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import { supabaseBrowser } from "@/lib/supabase";
 import { T } from "@/lib/db";
+import { useBackClose } from "@/lib/use-back";
 import { rupees, CATEGORY_META, PICKUP_ADDRESS, SIZE_OPTIONS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
 import type { Category, CartLine, Product } from "@/lib/types";
@@ -60,6 +61,20 @@ export default function ShopClient({
   const [pageSize, setPageSize] = useState<number>(10);
   const [hydrated, setHydrated] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  // True once the current checkout has placed an order (payment screen shown),
+  // so leaving via the phone Back button also clears the booked cart.
+  const [bookedInCheckout, setBookedInCheckout] = useState(false);
+  useEffect(() => {
+    if (step === "shop") setBookedInCheckout(false);
+  }, [step]);
+
+  // Phone / browser Back closes the checkout and confirmation screens instead
+  // of leaving the store.
+  useBackClose(step !== "shop", () => {
+    if (step === "done" || bookedInCheckout) setCart([]);
+    setStep("shop");
+  });
 
   // Reset subcategory / size / pagination when the category changes
   useEffect(() => {
@@ -275,6 +290,7 @@ export default function ShopClient({
         cfg={c}
         onBack={() => setStep("shop")}
         onDone={() => setStep("done")}
+        onBooked={() => setBookedInCheckout(true)}
         onRemove={(id) => setQty(id, 0)}
         onClear={() => {
           setCart([]);
@@ -569,6 +585,7 @@ function Checkout({
   cfg,
   onBack,
   onDone,
+  onBooked,
   onRemove,
   onClear,
 }: {
@@ -578,6 +595,7 @@ function Checkout({
   cfg: ShopCfg;
   onBack: () => void;
   onDone: () => void;
+  onBooked: () => void;
   onRemove: (id: string) => void;
   onClear: () => void;
 }) {
@@ -632,6 +650,7 @@ function Checkout({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not book");
       setBooked({ id: json.order_id, amount: grandTotal });
+      onBooked();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -658,7 +677,14 @@ function Checkout({
   return (
     <div className="mx-auto max-w-md px-4 py-6 pb-28">
       <div className="flex items-center justify-between">
-        <button onClick={onBack} className="text-sm text-brand underline">
+        <button
+          onClick={onBack}
+          aria-label="Back to store"
+          className="inline-flex items-center gap-1.5 rounded-full border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 active:scale-95"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
           Back
         </button>
         <button onClick={onClear} className="text-sm text-neutral-500 underline">
