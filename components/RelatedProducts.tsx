@@ -104,6 +104,11 @@ export default function RelatedProducts({
                       className="h-full w-full object-cover"
                     />
                   ) : null}
+                  {r.giveaway && (
+                    <span className="absolute left-1.5 top-1.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                      FREE
+                    </span>
+                  )}
                   {r.code && (
                     <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
                       {r.code}
@@ -113,6 +118,9 @@ export default function RelatedProducts({
                 <div className="p-2 sm:p-2.5">
                   <p className="line-clamp-1 text-[13px] font-medium leading-tight">
                     {r.name}
+                  </p>
+                  <p className="mt-0.5 line-clamp-1 text-[11px] text-neutral-500">
+                    {[r.gender, r.size, r.color].filter(Boolean).join(" · ") || " "}
                   </p>
                   <p className="mt-1 text-sm font-bold text-ink">
                     {r.giveaway ? "Free" : rupees(r.price)}

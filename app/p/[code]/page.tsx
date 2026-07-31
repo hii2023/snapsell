@@ -28,9 +28,15 @@ async function getProduct(code: string): Promise<Product | null> {
   return (data as Product) || null;
 }
 
-async function getRelated(currentId: string, category: string): Promise<Product[]> {
+async function getRelated(
+  currentId: string,
+  category: string,
+  size: string | null
+): Promise<Product[]> {
   if (!supabaseConfigured()) return [];
   const supabase = await supabaseServer();
+  // Pull a wider pool than we show so we can prefer same-size / give-away items
+  // even when they are not the very newest additions.
   const { data } = await supabase
     .from(T.products)
     .select("*")
@@ -39,8 +45,24 @@ async function getRelated(currentId: string, category: string): Promise<Product[
     .gt("stock", 0)
     .neq("id", currentId)
     .order("created_at", { ascending: false })
-    .limit(6);
-  return (data as Product[]) || [];
+    .limit(30);
+  const pool = (data as Product[]) || [];
+  const target = (size || "").trim().toLowerCase();
+  // Ranking: give-aways first, then products in the same size as the opened one,
+  // then the rest. Array.sort is stable, so the query's newest-first order is
+  // preserved within each group. If nothing matches the size, other sizes still
+  // show (they just rank after any same-size items).
+  const ranked = [...pool].sort((a, b) => {
+    const giveaway = Number(!!b.giveaway) - Number(!!a.giveaway);
+    if (giveaway !== 0) return giveaway;
+    if (target) {
+      const sameA = (a.size || "").trim().toLowerCase() === target ? 0 : 1;
+      const sameB = (b.size || "").trim().toLowerCase() === target ? 0 : 1;
+      if (sameA !== sameB) return sameA - sameB;
+    }
+    return 0;
+  });
+  return ranked.slice(0, 6);
 }
 
 export async function generateMetadata({
@@ -70,7 +92,7 @@ export default async function ProductPage({
 }) {
   const { code } = await params;
   const [p, seller] = await Promise.all([getProduct(code), currentSeller()]);
-  const related = p ? await getRelated(p.id, p.category) : [];
+  const related = p ? await getRelated(p.id, p.category, p.size) : [];
 
   let subcats: Record<string, string[]> = {};
   if (seller && supabaseConfigured()) {
