@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import ExitGuard from "@/components/ExitGuard";
 
 // PWA / Install App is enabled. The service worker (public/sw.js) is network
 // first and never caches HTML, so installed apps always show the latest deploy.
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         {children}
         <ServiceWorkerRegister />
+        <ExitGuard />
       </body>
     </html>
   );

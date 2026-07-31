@@ -27,6 +27,12 @@ type ShopCfg = {
   freeAbove: number;
 };
 
+// Where the shopper's active filters are remembered for the length of the
+// browsing session, so opening a product and pressing Back returns to the same
+// category instead of resetting to "All". sessionStorage (not localStorage) so
+// a brand-new visit still starts fresh.
+const FILTERS_KEY = "ir_shop_filters";
+
 export default function ShopClient({
   products: initialProducts,
   shopName,
@@ -55,6 +61,8 @@ export default function ShopClient({
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
+  const validCat = (v: unknown): v is Category | "all" | "giveaway" =>
+    v === "all" || v === "giveaway" || CATEGORY_META.some((c) => c.id === v);
   const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
   const [subcatFilter, setSubcatFilter] = useState<string>("all");
   const [sizeFilter, setSizeFilter] = useState<string>("all");
@@ -76,12 +84,56 @@ export default function ShopClient({
     setStep("shop");
   });
 
-  // Reset subcategory / size / pagination when the category changes
+  // Reset subcategory / size / pagination when the category changes — but skip
+  // the first run so filters restored from sessionStorage (on Back from a
+  // product) are kept instead of being cleared on mount.
+  const firstCatRun = useRef(true);
   useEffect(() => {
+    if (firstCatRun.current) {
+      firstCatRun.current = false;
+      return;
+    }
     setSubcatFilter("all");
     setSizeFilter("all");
     setPageSize(20);
   }, [catFilter]);
+
+  // Restore the filters the shopper last had (this browsing session) so opening
+  // a product and pressing Back returns to the same category. Runs once on
+  // mount; reads storage before the save effect below can overwrite it.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (detail || restored.current) return;
+    restored.current = true;
+    try {
+      const raw = sessionStorage.getItem(FILTERS_KEY);
+      if (!raw) return;
+      const f = JSON.parse(raw) as { cat?: unknown; sub?: unknown; size?: unknown };
+      if (!validCat(f.cat) || f.cat === "all") return;
+      // Keep the just-restored sub/size from being wiped by the category-reset
+      // effect above (which fires because we are changing the category here).
+      firstCatRun.current = true;
+      setCatFilter(f.cat);
+      if (typeof f.sub === "string") setSubcatFilter(f.sub);
+      if (typeof f.size === "string") setSizeFilter(f.size);
+    } catch {
+      // ignore malformed storage
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail]);
+
+  // Remember the active filters for the rest of the session.
+  useEffect(() => {
+    if (detail || typeof window === "undefined") return;
+    try {
+      sessionStorage.setItem(
+        FILTERS_KEY,
+        JSON.stringify({ cat: catFilter, sub: subcatFilter, size: sizeFilter })
+      );
+    } catch {
+      // ignore (private mode / quota)
+    }
+  }, [detail, catFilter, subcatFilter, sizeFilter]);
 
   // Skip on-mount fetch — server already provided fresh data with force-dynamic
   // Redundant client fetch was burning egress quota unnecessarily
