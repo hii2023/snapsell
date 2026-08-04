@@ -300,6 +300,14 @@ export default function ShopClient({
       )
     : [];
 
+  // Compact, equal-width chip for the Gender/Size rows: chips share the row
+  // via flex-1 so every option fits on one line (no horizontal scroll on
+  // mobile), then grow to a comfortable size on larger screens.
+  const segChip = (active: boolean) =>
+    `min-w-0 flex-1 rounded-full border px-1.5 py-1.5 text-center text-xs font-medium transition-colors active:scale-95 sm:px-4 sm:py-2 sm:text-sm ${
+      active ? "chip-on" : "chip-off"
+    }`;
+
   const fullyFiltered = (() => {
     let list: Product[];
     if (catFilter === "all") list = products;
@@ -541,25 +549,18 @@ export default function ShopClient({
       {/* Clothing filters — Gender first, Size beneath, grouped in one card so
           they read as a clear, deliberate filter panel. */}
       {(genderList.length > 0 || sizeList.length > 0) && (
-        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm sm:p-4">
+        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-2.5 shadow-sm sm:p-4">
           {genderList.length > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="w-14 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:w-14 sm:text-[11px]">
                 Gender
               </span>
-              <div className="-mr-3 flex flex-1 gap-2 overflow-x-auto no-scrollbar pr-3">
-                <button
-                  onClick={() => setGenderFilter("all")}
-                  className={`chip shrink-0 ${genderFilter === "all" ? "chip-on" : "chip-off"}`}
-                >
+              <div className="flex flex-1 gap-1.5 sm:gap-2">
+                <button onClick={() => setGenderFilter("all")} className={segChip(genderFilter === "all")}>
                   All
                 </button>
                 {genderList.map((g) => (
-                  <button
-                    key={g}
-                    onClick={() => setGenderFilter(g)}
-                    className={`chip shrink-0 ${genderFilter === g ? "chip-on" : "chip-off"}`}
-                  >
+                  <button key={g} onClick={() => setGenderFilter(g)} className={segChip(genderFilter === g)}>
                     {g}
                   </button>
                 ))}
@@ -568,27 +569,20 @@ export default function ShopClient({
           )}
 
           {genderList.length > 0 && sizeList.length > 0 && (
-            <div className="my-3 border-t border-neutral-100" />
+            <div className="my-2.5 border-t border-neutral-100 sm:my-3" />
           )}
 
           {sizeList.length > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="w-14 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:w-14 sm:text-[11px]">
                 Size
               </span>
-              <div className="-mr-3 flex flex-1 gap-2 overflow-x-auto no-scrollbar pr-3">
-                <button
-                  onClick={() => setSizeFilter("all")}
-                  className={`chip shrink-0 ${sizeFilter === "all" ? "chip-on" : "chip-off"}`}
-                >
+              <div className="flex flex-1 gap-1.5 sm:gap-2">
+                <button onClick={() => setSizeFilter("all")} className={segChip(sizeFilter === "all")}>
                   All
                 </button>
                 {sizeList.map((sz) => (
-                  <button
-                    key={sz}
-                    onClick={() => setSizeFilter(sz)}
-                    className={`chip shrink-0 ${sizeFilter === sz ? "chip-on" : "chip-off"}`}
-                  >
+                  <button key={sz} onClick={() => setSizeFilter(sz)} className={segChip(sizeFilter === sz)}>
                     {sz}
                   </button>
                 ))}
