@@ -40,6 +40,26 @@ button, a, [role="button"] {
 .card {
   @apply rounded-2xl border border-neutral-200 bg-white transition-shadow duration-200;
 }
+/* Gentle fade-in for product cards as they scroll into the list, so newly
+   revealed rows ease in instead of popping. Runs once when a card mounts. */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.card-in {
+  animation: card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-in {
+    animation: none;
+  }
+}
 /* Horizontal chip rows: keep the swipe scroll but hide the scrollbar, which on
    mobile renders over the chips below and looks like it overlaps the labels. */
 .no-scrollbar {

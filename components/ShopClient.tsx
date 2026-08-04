@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { supabaseBrowser } from "@/lib/supabase";
 import { T } from "@/lib/db";
 import { useBackClose } from "@/lib/use-back";
-import { rupees, CATEGORY_META, PICKUP_ADDRESS, SIZE_OPTIONS } from "@/lib/constants";
+import { rupees, CATEGORY_META, PICKUP_ADDRESS, SIZE_OPTIONS, GENDERS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
 import type { Category, CartLine, Product } from "@/lib/types";
 
@@ -65,10 +65,10 @@ export default function ShopClient({
     v === "all" || v === "giveaway" || CATEGORY_META.some((c) => c.id === v);
   const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
   const [subcatFilter, setSubcatFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
   const [sizeFilter, setSizeFilter] = useState<string>("all");
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(18);
   const [hydrated, setHydrated] = useState(false);
-  const loaderRef = useRef<HTMLDivElement>(null);
 
   // True once the current checkout has placed an order (payment screen shown),
   // so leaving via the phone Back button also clears the booked cart.
@@ -94,9 +94,21 @@ export default function ShopClient({
       return;
     }
     setSubcatFilter("all");
+    setGenderFilter("all");
     setSizeFilter("all");
-    setPageSize(20);
+    setPageSize(18);
   }, [catFilter]);
+
+  // Picking a gender narrows the size options, so reset the size choice when the
+  // gender changes (skip the first run so a restored size isn't wiped on mount).
+  const firstGenderRun = useRef(true);
+  useEffect(() => {
+    if (firstGenderRun.current) {
+      firstGenderRun.current = false;
+      return;
+    }
+    setSizeFilter("all");
+  }, [genderFilter]);
 
   // Restore the filters the shopper last had (this browsing session) so opening
   // a product and pressing Back returns to the same category. Runs once on
@@ -108,13 +120,21 @@ export default function ShopClient({
     try {
       const raw = sessionStorage.getItem(FILTERS_KEY);
       if (!raw) return;
-      const f = JSON.parse(raw) as { cat?: unknown; sub?: unknown; size?: unknown };
+      const f = JSON.parse(raw) as {
+        cat?: unknown;
+        sub?: unknown;
+        gender?: unknown;
+        size?: unknown;
+      };
       if (!validCat(f.cat) || f.cat === "all") return;
-      // Keep the just-restored sub/size from being wiped by the category-reset
-      // effect above (which fires because we are changing the category here).
+      // Keep the just-restored sub/gender/size from being wiped by the
+      // category-reset effect above (which fires because we change the category
+      // here) and the gender-reset effect (which fires when gender changes).
       firstCatRun.current = true;
+      firstGenderRun.current = true;
       setCatFilter(f.cat);
       if (typeof f.sub === "string") setSubcatFilter(f.sub);
+      if (typeof f.gender === "string") setGenderFilter(f.gender);
       if (typeof f.size === "string") setSizeFilter(f.size);
     } catch {
       // ignore malformed storage
@@ -128,12 +148,17 @@ export default function ShopClient({
     try {
       sessionStorage.setItem(
         FILTERS_KEY,
-        JSON.stringify({ cat: catFilter, sub: subcatFilter, size: sizeFilter })
+        JSON.stringify({
+          cat: catFilter,
+          sub: subcatFilter,
+          gender: genderFilter,
+          size: sizeFilter,
+        })
       );
     } catch {
       // ignore (private mode / quota)
     }
-  }, [detail, catFilter, subcatFilter, sizeFilter]);
+  }, [detail, catFilter, subcatFilter, genderFilter, sizeFilter]);
 
   // Skip on-mount fetch — server already provided fresh data with force-dynamic
   // Redundant client fetch was burning egress quota unnecessarily
@@ -155,18 +180,23 @@ export default function ShopClient({
     return () => clearInterval(interval);
   }, [products.length]);
 
-  // Infinite scroll — load more products when loader becomes visible
-  useEffect(() => {
-    const observer = new IntersectionObserver(
+  // Infinite scroll — reveal more products as the shopper nears the bottom.
+  // A generous rootMargin loads the next batch well before the loader is
+  // actually on screen, so new rows are already in place by the time they
+  // scroll to them — no visible stop-and-wait, which feels much smoother.
+  // A callback ref re-attaches the observer whenever the loader mounts again
+  // (e.g. after switching categories), so infinite scroll never goes stale.
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loaderRefCb = useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    if (!node) return;
+    observerRef.current = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setPageSize((n) => n + 20);
-        }
+        if (entry.isIntersecting) setPageSize((n) => n + 18);
       },
-      { threshold: 0.1 }
+      { rootMargin: "800px 0px", threshold: 0 }
     );
-    if (loaderRef.current) observer.observe(loaderRef.current);
-    return () => observer.disconnect();
+    observerRef.current.observe(node);
   }, []);
 
   // Refresh products whenever the tab regains focus (covers offline → online,
@@ -229,9 +259,9 @@ export default function ShopClient({
     };
   }, []);
 
-  const categoriesPresent = CATEGORY_META.filter((c) =>
-    products.some((p) => p.category === c.id)
-  );
+  // Show every category in the filter bar (even ones with nothing in stock yet)
+  // so the store always reads as a full catalog and shoppers can browse by type.
+  const categoriesPresent = CATEGORY_META;
   const hasGiveaway = products.some((p) => p.giveaway);
 
   // Sub-categories available for the currently selected category
@@ -242,25 +272,48 @@ export default function ShopClient({
           products.some((p) => p.category === catFilter && p.subcategory === sc)
         );
 
-  // Size filter — only meaningful for apparel (Clothing); list the sizes
-  // that are actually in stock for the current category.
-  const sizeList: string[] =
-    catFilter === "apparel"
-      ? SIZE_OPTIONS.apparel.filter((sz) =>
-          products.some((p) => p.category === "apparel" && p.size === sz)
-        )
-      : [];
+  // Gender + size filters apply when browsing clothing: either the Clothing
+  // category is selected, or the whole store is clothing-only (so "All" is
+  // effectively the clothing view). Gender comes first, size narrows under it.
+  const onlyClothing =
+    products.length > 0 && products.every((p) => p.category === "apparel");
+  const showClothingFilters =
+    catFilter === "apparel" || (catFilter === "all" && onlyClothing);
+  const clothingScope = products.filter((p) => p.category === "apparel");
 
-  const fullyFiltered =
-    catFilter === "all"
-      ? products
-      : catFilter === "giveaway"
-        ? products.filter((p) => p.giveaway)
-        : products.filter((p) =>
-            p.category === catFilter &&
-            (subcatFilter === "all" || p.subcategory === subcatFilter) &&
-            (sizeFilter === "all" || p.size === sizeFilter)
-          );
+  // Genders actually in stock (Women / Men / Unisex / Kids).
+  const genderList: string[] = showClothingFilters
+    ? GENDERS.filter((g) => clothingScope.some((p) => p.gender === g))
+    : [];
+
+  // Sizes in stock for the chosen gender (or all clothing when gender = all).
+  const sizeList: string[] = showClothingFilters
+    ? SIZE_OPTIONS.apparel.filter((sz) =>
+        clothingScope.some(
+          (p) =>
+            p.size === sz &&
+            (genderFilter === "all" || p.gender === genderFilter)
+        )
+      )
+    : [];
+
+  const fullyFiltered = (() => {
+    let list: Product[];
+    if (catFilter === "all") list = products;
+    else if (catFilter === "giveaway") list = products.filter((p) => p.giveaway);
+    else
+      list = products.filter(
+        (p) =>
+          p.category === catFilter &&
+          (subcatFilter === "all" || p.subcategory === subcatFilter)
+      );
+    if (showClothingFilters) {
+      if (genderFilter !== "all")
+        list = list.filter((p) => p.gender === genderFilter);
+      if (sizeFilter !== "all") list = list.filter((p) => p.size === sizeFilter);
+    }
+    return list;
+  })();
 
   const visible = fullyFiltered.slice(0, pageSize);
   const hasMore = fullyFiltered.length > visible.length;
@@ -482,7 +535,29 @@ export default function ShopClient({
         </div>
       )}
 
-      {/* Size chips — only for the Clothing category */}
+      {/* Gender chips — for clothing (shown first, above Size) */}
+      {genderList.length > 0 && (
+        <div className="mb-3 -mx-4 flex items-center gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
+          <span className="shrink-0 text-xs font-semibold text-neutral-500">Gender:</span>
+          <button
+            onClick={() => setGenderFilter("all")}
+            className={`chip shrink-0 text-xs ${genderFilter === "all" ? "chip-on" : "chip-off"}`}
+          >
+            All
+          </button>
+          {genderList.map((g) => (
+            <button
+              key={g}
+              onClick={() => setGenderFilter(g)}
+              className={`chip shrink-0 text-xs ${genderFilter === g ? "chip-on" : "chip-off"}`}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Size chips — for clothing (shown under Gender) */}
       {sizeList.length > 0 && (
         <div className="mb-3 -mx-4 flex items-center gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
           <span className="shrink-0 text-xs font-semibold text-neutral-500">Size:</span>
@@ -507,6 +582,25 @@ export default function ShopClient({
       {/* Separator between the category filters and the products */}
       <div className="mb-4 mt-1 border-t border-neutral-200" />
 
+      {visible.length === 0 && (
+        <div className="py-16 text-center">
+          <p className="text-base font-medium text-neutral-700">Nothing here yet</p>
+          <p className="mt-1 text-sm text-neutral-500">
+            No items match this filter right now. New finds are added often, so check back soon.
+          </p>
+          <button
+            className="mt-5 chip chip-off"
+            onClick={() => {
+              setCatFilter("all");
+              setGenderFilter("all");
+              setSizeFilter("all");
+            }}
+          >
+            Browse all items
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {visible.map((p) => {
           const line = cart.find((l) => l.product_id === p.id);
@@ -520,7 +614,7 @@ export default function ShopClient({
               <div className={className}>{children}</div>
             );
           return (
-            <div key={p.id} className="card overflow-hidden">
+            <div key={p.id} className="card card-in overflow-hidden">
               <Wrap className="block">
                 <div className="relative aspect-[4/5] bg-neutral-100">
                   {p.image_url ? (
@@ -605,7 +699,7 @@ export default function ShopClient({
       </div>
 
       {/* Infinite scroll loader — triggers when scrolled into view */}
-      {hasMore && <div ref={loaderRef} className="mt-6 h-px" />}
+      {hasMore && <div ref={loaderRefCb} className="mt-6 h-px" />}
 
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
