@@ -259,9 +259,12 @@ export default function ShopClient({
     };
   }, []);
 
-  // Show every category in the filter bar (even ones with nothing in stock yet)
-  // so the store always reads as a full catalog and shoppers can browse by type.
-  const categoriesPresent = CATEGORY_META;
+  // Only show categories that actually have items in stock, so shoppers never
+  // tap into an empty section. (The whole bar hides when only one category has
+  // stock, e.g. a clothing-only store — gender/size filters cover that case.)
+  const categoriesPresent = CATEGORY_META.filter((c) =>
+    products.some((p) => p.category === c.id)
+  );
   const hasGiveaway = products.some((p) => p.giveaway);
 
   // Sub-categories available for the currently selected category
@@ -535,47 +538,63 @@ export default function ShopClient({
         </div>
       )}
 
-      {/* Gender chips — for clothing (shown first, above Size) */}
-      {genderList.length > 0 && (
-        <div className="mb-3 -mx-4 flex items-center gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
-          <span className="shrink-0 text-xs font-semibold text-neutral-500">Gender:</span>
-          <button
-            onClick={() => setGenderFilter("all")}
-            className={`chip shrink-0 text-xs ${genderFilter === "all" ? "chip-on" : "chip-off"}`}
-          >
-            All
-          </button>
-          {genderList.map((g) => (
-            <button
-              key={g}
-              onClick={() => setGenderFilter(g)}
-              className={`chip shrink-0 text-xs ${genderFilter === g ? "chip-on" : "chip-off"}`}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Clothing filters — Gender first, Size beneath, grouped in one card so
+          they read as a clear, deliberate filter panel. */}
+      {(genderList.length > 0 || sizeList.length > 0) && (
+        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm sm:p-4">
+          {genderList.length > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="w-14 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                Gender
+              </span>
+              <div className="-mr-3 flex flex-1 gap-2 overflow-x-auto no-scrollbar pr-3">
+                <button
+                  onClick={() => setGenderFilter("all")}
+                  className={`chip shrink-0 ${genderFilter === "all" ? "chip-on" : "chip-off"}`}
+                >
+                  All
+                </button>
+                {genderList.map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGenderFilter(g)}
+                    className={`chip shrink-0 ${genderFilter === g ? "chip-on" : "chip-off"}`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* Size chips — for clothing (shown under Gender) */}
-      {sizeList.length > 0 && (
-        <div className="mb-3 -mx-4 flex items-center gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
-          <span className="shrink-0 text-xs font-semibold text-neutral-500">Size:</span>
-          <button
-            onClick={() => setSizeFilter("all")}
-            className={`chip shrink-0 text-xs ${sizeFilter === "all" ? "chip-on" : "chip-off"}`}
-          >
-            All
-          </button>
-          {sizeList.map((sz) => (
-            <button
-              key={sz}
-              onClick={() => setSizeFilter(sz)}
-              className={`chip shrink-0 text-xs ${sizeFilter === sz ? "chip-on" : "chip-off"}`}
-            >
-              {sz}
-            </button>
-          ))}
+          {genderList.length > 0 && sizeList.length > 0 && (
+            <div className="my-3 border-t border-neutral-100" />
+          )}
+
+          {sizeList.length > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="w-14 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                Size
+              </span>
+              <div className="-mr-3 flex flex-1 gap-2 overflow-x-auto no-scrollbar pr-3">
+                <button
+                  onClick={() => setSizeFilter("all")}
+                  className={`chip shrink-0 ${sizeFilter === "all" ? "chip-on" : "chip-off"}`}
+                >
+                  All
+                </button>
+                {sizeList.map((sz) => (
+                  <button
+                    key={sz}
+                    onClick={() => setSizeFilter(sz)}
+                    className={`chip shrink-0 ${sizeFilter === sz ? "chip-on" : "chip-off"}`}
+                  >
+                    {sz}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
