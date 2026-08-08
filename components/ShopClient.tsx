@@ -820,6 +820,9 @@ function Checkout({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [booked, setBooked] = useState<{ id: string; amount: number } | null>(null);
+  // Guidelines confirmation popup shown after the shopper taps "Book". The order
+  // is only placed once they confirm inside this popup.
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const items = cart.map((l) => ({ product_id: l.product_id, qty: l.qty }));
   const deliveryFee =
@@ -840,9 +843,18 @@ function Checkout({
     return false;
   }
 
+  // Tapping "Book" validates first, then opens the guidelines popup. Nothing is
+  // booked until the shopper confirms inside that popup.
+  function requestBook() {
+    setError("");
+    if (!validate()) return;
+    setShowConfirm(true);
+  }
+
   async function submit() {
     setError("");
     if (!validate()) return;
+    setShowConfirm(false);
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {
@@ -1030,44 +1042,20 @@ function Checkout({
         )}
       </div>
 
-      {/* Delivery & Store pickup guidelines — shown on every checkout so the
-          rules are clear before an order is placed. Full details on /terms. */}
-      <div className="mt-6 overflow-hidden rounded-2xl border border-neutral-200">
-        <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-2.5">
-          <p className="text-sm font-semibold text-ink">Delivery &amp; store pickup guidelines</p>
-        </div>
-        <div className="divide-y divide-neutral-100 text-xs leading-relaxed text-neutral-600">
-          <div className="px-4 py-3">
-            <p className="mb-1 flex items-center gap-1.5 font-semibold text-ink">
-              <span aria-hidden>🚚</span> Delivery
-            </p>
-            <ul className="list-disc space-y-1 pl-4">
-              <li>Delivery charges are not included in the order value and are calculated separately based on your delivery location.</li>
-              <li>Charges of the selected delivery partner apply and are paid directly to the delivery service provider.</li>
-            </ul>
-          </div>
-          <div className="px-4 py-3">
-            <p className="mb-1 flex items-center gap-1.5 font-semibold text-ink">
-              <span aria-hidden>🏬</span> Store pickup
-            </p>
-            <ul className="list-disc space-y-1 pl-4">
-              <li>Orders opted for pickup must be collected within 7 days of the order date.</li>
-              <li>Orders not collected within this period will be returned to our inventory and will not be eligible for a refund.</li>
-            </ul>
-          </div>
-        </div>
-        <div className="border-t border-neutral-200 bg-neutral-50 px-4 py-2.5 text-xs">
-          <Link href="/terms" className="font-medium text-brand underline underline-offset-2">
-            Read full Terms &amp; Conditions
-          </Link>
-        </div>
-      </div>
+      {/* T&C hyperlink below the address (full guidelines pop up on Book). */}
+      <p className="mt-4 text-xs text-neutral-500">
+        By booking you agree to our{" "}
+        <Link href="/terms" className="font-medium text-brand underline underline-offset-2">
+          Terms &amp; Conditions
+        </Link>
+        .
+      </p>
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
 
       <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
         <div className="mx-auto max-w-md">
-          <button onClick={submit} disabled={loading} className="btn-primary w-full text-lg disabled:opacity-50">
+          <button onClick={requestBook} disabled={loading} className="btn-primary w-full text-lg disabled:opacity-50">
             {loading
               ? "Booking..."
               : grandTotal === 0
@@ -1076,6 +1064,71 @@ function Checkout({
           </button>
         </div>
       </div>
+
+      {/* Guidelines confirmation popup — appears only after tapping "Book".
+          Shows the rules for the chosen option; order is placed on confirm. */}
+      {showConfirm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          onClick={() => !loading && setShowConfirm(false)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3.5">
+              <p className="text-base font-semibold text-ink">
+                {fulfillment === "delivery" ? "Delivery guidelines" : "Store pickup guidelines"}
+              </p>
+              <button
+                onClick={() => !loading && setShowConfirm(false)}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="px-5 py-4 text-sm leading-relaxed text-neutral-700">
+              {fulfillment === "delivery" ? (
+                <ul className="list-disc space-y-2 pl-4">
+                  <li>Delivery charges are not included in the order value and are calculated separately based on your delivery location.</li>
+                  <li>Charges of the selected delivery partner apply and are to be paid directly to the delivery service provider.</li>
+                </ul>
+              ) : (
+                <ul className="list-disc space-y-2 pl-4">
+                  <li>Orders opted for pickup must be collected within 7 days of the order date.</li>
+                  <li>Orders not collected within this period will be returned to our inventory and will not be eligible for a refund.</li>
+                </ul>
+              )}
+              <p className="mt-4 text-xs text-neutral-500">
+                Full details in our{" "}
+                <Link href="/terms" className="font-medium text-brand underline underline-offset-2">
+                  Terms &amp; Conditions
+                </Link>
+                .
+              </p>
+            </div>
+
+            <div className="flex gap-2 border-t border-neutral-200 p-4">
+              <button
+                onClick={() => setShowConfirm(false)}
+                disabled={loading}
+                className="chip chip-off flex-1 py-3 disabled:opacity-50"
+              >
+                Back
+              </button>
+              <button
+                onClick={submit}
+                disabled={loading}
+                className="btn-primary flex-1 py-3 disabled:opacity-50"
+              >
+                {loading ? "Booking..." : "Agree & book"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
