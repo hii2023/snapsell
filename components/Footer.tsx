@@ -42,6 +42,10 @@ export function Footer() {
         <a href="/guide" className="text-neutral-500 transition-colors hover:text-emerald-700">
           How It Works
         </a>
+        <span className="text-neutral-300">·</span>
+        <a href="/terms" className="text-neutral-500 transition-colors hover:text-emerald-700">
+          Terms &amp; Conditions
+        </a>
       </div>
 
       <a

@@ -33,6 +33,24 @@ type ShopCfg = {
 // a brand-new visit still starts fresh.
 const FILTERS_KEY = "ir_shop_filters";
 
+// Playful "sold out" lines shown when a shopper taps into a category that has
+// no items in stock right now. A category is always shown (even when empty) so
+// people know we carry it, and landing on an empty one is turned into a bit of
+// FOMO fun. A random line is picked on every filter change, never repeating the
+// previous one.
+const SOLD_OUT_LINES = [
+  "You're late. Everything here got scooped up while you were doom-scrolling the wrong app.",
+  "Empty already. The early birds cleaned this shelf out before your chai even went cold.",
+  "All gone. Someone with faster thumbs beat you to every single one.",
+  "Wiped out. This is what happens when you save it in cart 'for later'.",
+  "Sold out in a blink. Blame the reels you were watching instead of shopping.",
+  "Cleaned out. The good stuff never waits around for a slow scroller.",
+  "Too slow. This section emptied faster than your phone battery.",
+  "All claimed. Next time refresh here before you refresh Instagram.",
+  "Nothing left. The thrifting champions showed up at sunrise, and you did not.",
+  "Poof, empty. Real ones check back every morning. Maybe set an alarm.",
+];
+
 export default function ShopClient({
   products: initialProducts,
   shopName,
@@ -69,6 +87,20 @@ export default function ShopClient({
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [pageSize, setPageSize] = useState<number>(18);
   const [hydrated, setHydrated] = useState(false);
+
+  // Which playful "sold out" line to show when the current filter is empty.
+  // Reshuffled on every filter change, never repeating the previous line.
+  const [soldOutIdx, setSoldOutIdx] = useState(() =>
+    Math.floor(Math.random() * SOLD_OUT_LINES.length)
+  );
+  useEffect(() => {
+    setSoldOutIdx((prev) => {
+      if (SOLD_OUT_LINES.length < 2) return prev;
+      let n = Math.floor(Math.random() * SOLD_OUT_LINES.length);
+      if (n === prev) n = (n + 1) % SOLD_OUT_LINES.length;
+      return n;
+    });
+  }, [catFilter, subcatFilter, genderFilter, sizeFilter]);
 
   // True once the current checkout has placed an order (payment screen shown),
   // so leaving via the phone Back button also clears the booked cart.
@@ -259,12 +291,10 @@ export default function ShopClient({
     };
   }, []);
 
-  // Only show categories that actually have items in stock, so shoppers never
-  // tap into an empty section. (The whole bar hides when only one category has
-  // stock, e.g. a clothing-only store — gender/size filters cover that case.)
-  const categoriesPresent = CATEGORY_META.filter((c) =>
-    products.some((p) => p.category === c.id)
-  );
+  // Show EVERY category all the time — even ones with nothing in stock right now
+  // — so shoppers always know the full range we carry (e.g. Food). Tapping into
+  // an empty one shows a playful "sold out" line instead of a dead end.
+  const categoriesPresent = CATEGORY_META;
   const hasGiveaway = products.some((p) => p.giveaway);
 
   // Sub-categories available for the currently selected category
@@ -595,24 +625,47 @@ export default function ShopClient({
       {/* Separator between the category filters and the products */}
       <div className="mb-4 mt-1 border-t border-neutral-200" />
 
-      {visible.length === 0 && (
-        <div className="py-16 text-center">
-          <p className="text-base font-medium text-neutral-700">Nothing here yet</p>
-          <p className="mt-1 text-sm text-neutral-500">
-            No items match this filter right now. New finds are added often, so check back soon.
-          </p>
-          <button
-            className="mt-5 chip chip-off"
-            onClick={() => {
-              setCatFilter("all");
-              setGenderFilter("all");
-              setSizeFilter("all");
-            }}
-          >
-            Browse all items
-          </button>
-        </div>
-      )}
+      {visible.length === 0 &&
+        (catFilter !== "all" ? (
+          <div className="py-16 text-center">
+            <div className="mx-auto mb-3 text-4xl" aria-hidden>
+              🏃💨
+            </div>
+            <p className="mx-auto max-w-sm text-lg font-semibold leading-snug text-ink">
+              {SOLD_OUT_LINES[soldOutIdx]}
+            </p>
+            <p className="mt-2 text-sm text-neutral-500">
+              Fresh finds land here almost every day. Be the early bird next time.
+            </p>
+            <button
+              className="mt-5 chip chip-off"
+              onClick={() => {
+                setCatFilter("all");
+                setSubcatFilter("all");
+                setGenderFilter("all");
+                setSizeFilter("all");
+              }}
+            >
+              Browse all items
+            </button>
+          </div>
+        ) : (
+          <div className="py-16 text-center">
+            <p className="text-base font-medium text-neutral-700">Nothing here yet</p>
+            <p className="mt-1 text-sm text-neutral-500">
+              No items match this filter right now. New finds are added often, so check back soon.
+            </p>
+            <button
+              className="mt-5 chip chip-off"
+              onClick={() => {
+                setGenderFilter("all");
+                setSizeFilter("all");
+              }}
+            >
+              Browse all items
+            </button>
+          </div>
+        ))}
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {visible.map((p) => {
@@ -970,11 +1023,44 @@ function Checkout({
             <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
               <p className="font-semibold">Important:</p>
               <p className="mt-1">
-                You must collect your item within 2 weeks of purchase. Items not collected within this period will be re-sold without any refund.
+                Orders opted for pickup must be collected within 7 days of the order date. Items not collected within this period will be returned to our inventory and will not be eligible for a refund.
               </p>
             </div>
           </div>
         )}
+      </div>
+
+      {/* Delivery & Store pickup guidelines — shown on every checkout so the
+          rules are clear before an order is placed. Full details on /terms. */}
+      <div className="mt-6 overflow-hidden rounded-2xl border border-neutral-200">
+        <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-2.5">
+          <p className="text-sm font-semibold text-ink">Delivery &amp; store pickup guidelines</p>
+        </div>
+        <div className="divide-y divide-neutral-100 text-xs leading-relaxed text-neutral-600">
+          <div className="px-4 py-3">
+            <p className="mb-1 flex items-center gap-1.5 font-semibold text-ink">
+              <span aria-hidden>🚚</span> Delivery
+            </p>
+            <ul className="list-disc space-y-1 pl-4">
+              <li>Delivery charges are not included in the order value and are calculated separately based on your delivery location.</li>
+              <li>Charges of the selected delivery partner apply and are paid directly to the delivery service provider.</li>
+            </ul>
+          </div>
+          <div className="px-4 py-3">
+            <p className="mb-1 flex items-center gap-1.5 font-semibold text-ink">
+              <span aria-hidden>🏬</span> Store pickup
+            </p>
+            <ul className="list-disc space-y-1 pl-4">
+              <li>Orders opted for pickup must be collected within 7 days of the order date.</li>
+              <li>Orders not collected within this period will be returned to our inventory and will not be eligible for a refund.</li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-neutral-200 bg-neutral-50 px-4 py-2.5 text-xs">
+          <Link href="/terms" className="font-medium text-brand underline underline-offset-2">
+            Read full Terms &amp; Conditions
+          </Link>
+        </div>
       </div>
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}

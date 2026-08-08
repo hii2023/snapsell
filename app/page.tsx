@@ -215,6 +215,10 @@ export default async function ShopPage() {
             <a href="/guide" className="font-medium text-neutral-600 hover:text-emerald-700">
               How It Works
             </a>
+            <span className="text-neutral-300">·</span>
+            <a href="/terms" className="font-medium text-neutral-600 hover:text-emerald-700">
+              Terms &amp; Conditions
+            </a>
           </div>
 
           {/* Address row */}
