@@ -60,6 +60,73 @@ button, a, [role="button"] {
     animation: none;
   }
 }
+/* Free-delivery celebration: shown when the cart crosses the ₹999 threshold.
+   The banner pops in, a little truck drives across, and a soft shine sweeps
+   over it so unlocking free delivery feels like a reward. */
+@keyframes free-ship-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+  60% {
+    transform: translateY(0) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes free-ship-shine {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+@keyframes free-ship-drive {
+  0% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(-4px);
+  }
+}
+.free-ship {
+  position: relative;
+  overflow: hidden;
+  animation: free-ship-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.free-ship::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 35%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  transform: translateX(-120%);
+  animation: free-ship-shine 2.2s ease-in-out 0.35s infinite;
+}
+.free-ship-truck {
+  display: inline-block;
+  animation: free-ship-drive 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .free-ship,
+  .free-ship::after,
+  .free-ship-truck {
+    animation: none;
+  }
+}
 /* Horizontal chip rows: keep the swipe scroll but hide the scrollbar, which on
    mobile renders over the chips below and looks like it overlaps the labels. */
 .no-scrollbar {

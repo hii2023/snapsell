@@ -105,8 +105,8 @@ export const PICKUP_DIRECTIONS_URL =
   "https://www.google.com/maps/dir/?api=1&destination=" +
   encodeURIComponent(PICKUP_ADDRESS);
 
-// Delivery: free over this amount, otherwise a flat fee.
-export const FREE_DELIVERY_ABOVE = 1000;
+// Delivery: free for orders of this amount and above, otherwise a flat fee.
+export const FREE_DELIVERY_ABOVE = 999;
 export const DELIVERY_FEE = 100;
 
 export function deliveryFeeFor(itemsTotal: number, pickup: boolean): number {

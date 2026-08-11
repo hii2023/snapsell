@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     whatsapp_number: row?.whatsapp_number ?? "",
     pickup_address: row?.pickup_address ?? "",
     delivery_fee_amount: row?.delivery_fee_amount ?? 100,
-    delivery_free_above: row?.delivery_free_above ?? 1000,
+    delivery_free_above: row?.delivery_free_above ?? 999,
     extra_categories: Array.isArray(row?.extra_categories) ? row.extra_categories : [],
     subcats: row?.subcats && typeof row.subcats === "object" ? row.subcats : {},
     wa_templates: Array.isArray(row?.wa_templates) ? row.wa_templates : [],

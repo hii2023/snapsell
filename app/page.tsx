@@ -34,7 +34,7 @@ export default async function ShopPage() {
     whatsapp: process.env.NEXT_PUBLIC_SELLER_WHATSAPP || "",
     pickupAddress: "",
     deliveryFee: 100,
-    freeAbove: 1000,
+    freeAbove: 999,
   };
 
   if (supabaseConfigured()) {
@@ -56,7 +56,7 @@ export default async function ShopPage() {
         whatsapp: row.whatsapp_number || cfg.whatsapp,
         pickupAddress: row.pickup_address || "",
         deliveryFee: row.delivery_fee_amount ?? 100,
-        freeAbove: row.delivery_free_above ?? 1000,
+        freeAbove: row.delivery_free_above ?? 999,
       };
       if (row.subcats && typeof row.subcats === "object") {
         subcats = row.subcats as Record<string, string[]>;
@@ -73,7 +73,7 @@ export default async function ShopPage() {
           <span className="font-semibold text-emerald-300">Save money</span>,{" "}
           <span className="font-semibold text-emerald-300">reduce waste</span>,{" "}
           <span className="font-semibold text-emerald-300">discover daily</span>.{" "}
-          <span className="font-semibold text-amber-300">Pick up or delivered.</span>
+          <span className="font-semibold text-amber-300">Delivery charges apply · FREE on orders ₹999 &amp; above.</span>
         </p>
       </div>
 

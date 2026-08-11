@@ -71,7 +71,7 @@ export default function ShopClient({
     whatsapp: process.env.NEXT_PUBLIC_SELLER_WHATSAPP || "",
     pickupAddress: "",
     deliveryFee: 100,
-    freeAbove: 1000,
+    freeAbove: 999,
   };
 
   // Start with server-rendered data, then immediately refresh client-side.
@@ -81,7 +81,10 @@ export default function ShopClient({
   const [step, setStep] = useState<Step>("shop");
   const validCat = (v: unknown): v is Category | "all" | "giveaway" =>
     v === "all" || v === "giveaway" || CATEGORY_META.some((c) => c.id === v);
-  const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("all");
+  // Clothing (apparel) is the store's flagship category, so the shop opens on it
+  // by default instead of the recency-sorted "All" view. A returning shopper's
+  // last category is still restored from sessionStorage below.
+  const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("apparel");
   const [subcatFilter, setSubcatFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [sizeFilter, setSizeFilter] = useState<string>("all");
@@ -769,23 +772,61 @@ export default function ShopClient({
 
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-neutral-500">{count} item(s)</p>
-              <p className="text-lg font-semibold">{rupees(total)}</p>
+          <div className="mx-auto max-w-6xl">
+            <FreeDeliveryNudge total={total} threshold={c.freeAbove} />
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-neutral-500">{count} item(s)</p>
+                <p className="text-lg font-semibold">{rupees(total)}</p>
+              </div>
+              <button
+                onClick={() => setCart([])}
+                className="rounded-2xl border border-neutral-300 px-4 py-3 text-sm text-neutral-600"
+              >
+                Clear
+              </button>
+              <button className="btn-primary flex-1" onClick={() => setStep("checkout")}>
+                Checkout
+              </button>
             </div>
-            <button
-              onClick={() => setCart([])}
-              className="rounded-2xl border border-neutral-300 px-4 py-3 text-sm text-neutral-600"
-            >
-              Clear
-            </button>
-            <button className="btn-primary flex-1" onClick={() => setStep("checkout")}>
-              Checkout
-            </button>
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// Free-delivery incentive shown in the cart bar and checkout. Below the ₹999
+// threshold it nudges the shopper with how much more to add (with a progress
+// bar); once the cart reaches ₹999 it celebrates the unlocked free delivery
+// with the animated banner (see .free-ship in globals.css).
+function FreeDeliveryNudge({ total, threshold }: { total: number; threshold: number }) {
+  if (total <= 0 || threshold <= 0) return null;
+  const unlocked = total >= threshold;
+  if (unlocked) {
+    return (
+      <div className="free-ship mb-2 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm">
+        <span className="free-ship-truck text-base" aria-hidden>
+          🚚
+        </span>
+        <span>Woohoo! You&apos;ve unlocked FREE delivery.</span>
+      </div>
+    );
+  }
+  const remaining = Math.max(0, threshold - total);
+  const pct = Math.min(100, Math.round((total / threshold) * 100));
+  return (
+    <div className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+      <p className="text-center text-xs font-medium text-emerald-800">
+        Delivery charges apply &middot; add <span className="font-bold">{rupees(remaining)}</span> more for{" "}
+        <span className="font-bold">FREE delivery</span>
+      </p>
+      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-emerald-100">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-green-600 transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -951,6 +992,12 @@ function Checkout({
         </div>
       </div>
 
+      {fulfillment === "delivery" && (
+        <div className="mt-4">
+          <FreeDeliveryNudge total={total} threshold={cfg.freeAbove} />
+        </div>
+      )}
+
       <div className="mt-5 space-y-4">
         <div>
           <label className="label">Your name</label>
@@ -1092,7 +1139,10 @@ function Checkout({
             <div className="px-5 py-4 text-sm leading-relaxed text-neutral-700">
               {fulfillment === "delivery" ? (
                 <ul className="list-disc space-y-2 pl-4">
-                  <li>Delivery charges are not included in the order value and are calculated separately based on your delivery location.</li>
+                  <li className="font-semibold text-emerald-700 marker:text-emerald-600">
+                    Orders of {rupees(cfg.freeAbove)} and above get FREE delivery, on us.
+                  </li>
+                  <li>For orders below {rupees(cfg.freeAbove)}, delivery charges are not included in the order value and are calculated separately based on your delivery location.</li>
                   <li>Charges of the selected delivery partner apply and are to be paid directly to the delivery service provider.</li>
                 </ul>
               ) : (
