@@ -333,6 +333,12 @@ export default function ShopClient({
       )
     : [];
 
+  // Size only appears once a gender is picked — keeps the filter panel tidy and
+  // guides the customer to choose Women/Men/etc. first. If the stock has no
+  // gender dimension at all, fall back to showing sizes outright.
+  const showSize =
+    sizeList.length > 0 && (genderFilter !== "all" || genderList.length === 0);
+
   // Compact, equal-width chip for the Gender/Size rows: chips share the row
   // via flex-1 so every option fits on one line (no horizontal scroll on
   // mobile), then grow to a comfortable size on larger screens.
@@ -581,7 +587,7 @@ export default function ShopClient({
 
       {/* Clothing filters — Gender first, Size beneath, grouped in one card so
           they read as a clear, deliberate filter panel. */}
-      {(genderList.length > 0 || sizeList.length > 0) && (
+      {(genderList.length > 0 || showSize) && (
         <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-2.5 shadow-sm sm:p-4">
           {genderList.length > 0 && (
             <div className="flex items-center gap-2 sm:gap-3">
@@ -601,11 +607,11 @@ export default function ShopClient({
             </div>
           )}
 
-          {genderList.length > 0 && sizeList.length > 0 && (
+          {genderList.length > 0 && showSize && (
             <div className="my-2.5 border-t border-neutral-100 sm:my-3" />
           )}
 
-          {sizeList.length > 0 && (
+          {showSize && (
             <div className="flex items-center gap-2 sm:gap-3">
               <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:w-14 sm:text-[11px]">
                 Size
