@@ -73,7 +73,7 @@ export default async function ShopPage() {
           <span className="font-semibold text-emerald-300">Save money</span>,{" "}
           <span className="font-semibold text-emerald-300">reduce waste</span>,{" "}
           <span className="font-semibold text-emerald-300">discover daily</span>.{" "}
-          <span className="font-semibold text-amber-300">Delivery charges apply · FREE on orders ₹999 &amp; above.</span>
+          <span className="font-semibold text-amber-300">FREE delivery on orders ₹999 &amp; above.</span>
         </p>
       </div>
 
