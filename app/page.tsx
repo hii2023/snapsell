@@ -10,12 +10,19 @@ import type { Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import StoreContact from "@/components/StoreContact";
 import SellerBar from "@/components/SellerBar";
+import { STORE_TITLE, STORE_DESC, STORE_NAME, STORE_URL, CHARITY_URL } from "@/lib/seo";
 
 // Never cache this page — always fetch live products from Supabase
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
-export const metadata: Metadata = { title: "Thrift Shoppers" };
+// `title: { absolute }` so the storefront keeps its full descriptive title
+// instead of having the store name appended twice by the layout template.
+export const metadata: Metadata = {
+  title: { absolute: STORE_TITLE },
+  description: STORE_DESC,
+  alternates: { canonical: "/" },
+};
 
 const shopName = "Thrift Shoppers";
 
@@ -64,8 +71,41 @@ export default async function ShopPage() {
     }
   }
 
+  // Store + Organization graph: tells search engines this is a real shop in
+  // Ahmedabad run by the India Recycles charity, not a generic marketplace.
+  const storeJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    "@id": `${STORE_URL}/#store`,
+    name: STORE_NAME,
+    description: STORE_DESC,
+    url: STORE_URL,
+    image: `${STORE_URL}/icon-512.png`,
+    priceRange: "₹₹",
+    currenciesAccepted: "INR",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Ahmedabad",
+      addressRegion: "Gujarat",
+      addressCountry: "IN",
+    },
+    areaServed: [
+      { "@type": "City", name: "Ahmedabad" },
+      { "@type": "City", name: "Vadodara" },
+    ],
+    parentOrganization: {
+      "@type": "NGO",
+      name: "India Recycles",
+      url: CHARITY_URL,
+    },
+  };
+
   return (
     <main className="min-h-screen bg-neutral-50">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+      />
       {/* Top announcement bar */}
       <div className="bg-ink text-white">
         <p className="mx-auto max-w-6xl px-4 py-1.5 text-center text-[11px] leading-relaxed sm:text-xs">

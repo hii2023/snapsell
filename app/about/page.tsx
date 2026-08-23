@@ -4,9 +4,10 @@ import { StoreHeader } from "@/components/StoreHeader";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "About Us · Thrift Shoppers",
+  title: { absolute: "About the India Recycles Thrift Store in Ahmedabad" },
   description:
-    "Thrift Shoppers by India Recycles. Handpicked preloved treasures and FMCG deals. Save money, reduce waste, discover daily.",
+    "Thrift Shoppers is the online store of India Recycles. Every pre-loved piece you buy funds community sales, medical camps and livelihoods across Gujarat.",
+  alternates: { canonical: "/about" },
 };
 
 const values = [

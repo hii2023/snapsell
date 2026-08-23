@@ -4,9 +4,10 @@ import { StoreHeader } from "@/components/StoreHeader";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions · Thrift Shoppers",
+  title: { absolute: "Terms & Conditions | India Recycles Thrift Store" },
   description:
-    "Terms & Conditions for Thrift Shoppers by India Recycles — delivery, store pickup, damaged items, size & fit, pre-loved products, product images, and availability.",
+    "Terms for shopping at the India Recycles thrift store: delivery, store pickup, damaged items, size and fit, pre-loved condition, product images and availability.",
+  alternates: { canonical: "/terms" },
 };
 
 const STORE_WA = "917202035700";

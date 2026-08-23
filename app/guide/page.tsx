@@ -4,9 +4,10 @@ import { StoreHeader } from "@/components/StoreHeader";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "How It Works · Thrift Shoppers",
+  title: { absolute: "How to Shop | India Recycles Thrift Store, Ahmedabad" },
   description:
-    "How to shop at Thrift Shoppers by India Recycles. Browse, book, pay by UPI, and get it delivered or pick it up from the store.",
+    "How to shop pre-loved at India Recycles: browse the latest thrifted pieces, book, pay by UPI, then choose home delivery or pick up from the Ahmedabad store.",
+  alternates: { canonical: "/guide" },
 };
 
 const steps = [

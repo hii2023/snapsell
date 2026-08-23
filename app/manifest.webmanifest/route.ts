@@ -14,7 +14,7 @@ export async function GET() {
     short_name: isAdmin ? "IR Admin" : "IR Store",
     description: isAdmin
       ? "Manage products and orders"
-      : "Buy and sell thrifted items",
+      : "Shop pre-loved clothes and accessories in Ahmedabad",
     start_url: isAdmin ? "/orders" : "/",
     scope: "/",
     display: "standalone",

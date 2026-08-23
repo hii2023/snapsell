@@ -12,6 +12,7 @@ import ProductGallery from "@/components/ProductGallery";
 import RelatedProducts from "@/components/RelatedProducts";
 import { Footer } from "@/components/Footer";
 import SellerBar from "@/components/SellerBar";
+import { STORE_NAME, STORE_URL } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -72,11 +73,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { code } = await params;
   const p = await getProduct(code);
-  if (!p) return { title: `${shopName}` };
+  if (!p) return { title: { absolute: STORE_NAME }, robots: { index: false, follow: true } };
   const desc = `${p.code} · ${p.giveaway ? "Give away (Free)" : rupees(p.price)} · ${categoryLabel(p.category)}`;
   return {
-    title: `${p.name} · ${shopName}`,
+    title: { absolute: `${p.name} · ${STORE_NAME}` },
     description: desc,
+    alternates: { canonical: `/p/${encodeURIComponent(p.code)}` },
     openGraph: {
       title: `${p.name} - ${rupees(p.price)}`,
       description: desc,
@@ -101,8 +103,44 @@ export default async function ProductPage({
     if (row?.subcats && typeof row.subcats === "object") subcats = row.subcats as Record<string, string[]>;
   }
 
+  // Product schema so listings can surface with price and availability.
+  // Only emitted for a real, buyable product.
+  const productJsonLd = p
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: p.name,
+        sku: p.code,
+        description: p.description || `${categoryLabel(p.category)} from ${STORE_NAME}.`,
+        image: p.image_url ? [p.image_url, ...(p.images || [])].filter(Boolean) : undefined,
+        category: categoryLabel(p.category),
+        color: p.color || undefined,
+        size: p.size || undefined,
+        // Thrifted stock is second-hand by definition.
+        itemCondition: "https://schema.org/UsedCondition",
+        offers: {
+          "@type": "Offer",
+          url: `${STORE_URL}/p/${encodeURIComponent(p.code)}`,
+          priceCurrency: "INR",
+          price: p.giveaway ? 0 : p.price,
+          availability:
+            p.stock > 0 && p.is_active
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+          itemCondition: "https://schema.org/UsedCondition",
+          seller: { "@type": "Organization", name: STORE_NAME, url: STORE_URL },
+        },
+      }
+    : null;
+
   return (
     <main className="min-h-screen">
+      {productJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        />
+      )}
       <ProductTopBar code={p?.code} />
 
       {!p ? (
