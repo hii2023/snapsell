@@ -226,6 +226,8 @@ export default function ProductEdit({
               category={category}
               value={size}
               onChange={setSize}
+              subcategory={subcategory}
+              name={name}
               chipClass={(active) => `chip ${active ? "chip-on" : "chip-off"}`}
             />
           </div>

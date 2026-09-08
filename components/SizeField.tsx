@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SIZE_OPTIONS, CUSTOM_SIZE_CATEGORIES, CUSTOM_SIZE_UNITS } from "@/lib/constants";
+import { SIZE_OPTIONS, CUSTOM_SIZE_CATEGORIES, CUSTOM_SIZE_UNITS, apparelSizeOptions } from "@/lib/constants";
 import type { Category } from "@/lib/types";
 
 // Split a stored size like "650ml" / "1.5L" into a number + unit for editing.
@@ -23,14 +23,22 @@ export function SizeField({
   onChange,
   chipClass,
   numberRef,
+  subcategory,
+  name,
 }: {
   category: Category;
   value: string;
   onChange: (v: string) => void;
   chipClass: (active: boolean) => string;
   numberRef?: React.RefObject<HTMLInputElement | null>;
+  subcategory?: string;
+  name?: string;
 }) {
-  const presets = SIZE_OPTIONS[category];
+  // For clothing, bottoms (trousers / jeans / shorts …) also offer waist sizes.
+  const presets =
+    category === "apparel"
+      ? apparelSizeOptions(subcategory, name)
+      : SIZE_OPTIONS[category];
   const allowCustom = CUSTOM_SIZE_CATEGORIES.includes(category);
   const parsed = parseCustom(value);
   const customValue = allowCustom && value !== "" && !presets.includes(value);

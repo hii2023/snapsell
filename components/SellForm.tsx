@@ -470,6 +470,8 @@ export default function SellForm({
                     category={category}
                     value={size}
                     onChange={setSize}
+                    subcategory={subcategory}
+                    name={name}
                     numberRef={sizeNumberRef}
                     chipClass={(active) =>
                       `rounded-full border-2 px-4 py-2 text-base font-medium transition active:scale-95 ${

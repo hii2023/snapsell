@@ -14,6 +14,32 @@ export const SIZE_OPTIONS: Record<Category, string[]> = {
   more: ["1 pc", "Small", "Medium", "Large", "Other"],
 };
 
+// Waist sizes for bottoms (trousers / pants / jeans / shorts). Shown in addition
+// to the letter sizes when a clothing item looks like a bottom, since S/M/L are
+// not how trousers are usually sized.
+export const BOTTOM_SIZES = ["28", "30", "32", "34", "36", "38", "40"];
+
+const BOTTOM_KEYWORDS = [
+  "trouser", "pant", "jean", "jegging", "chino", "cargo", "short",
+  "trackpant", "track pant", "pyjama", "pajama", "legging", "culotte",
+  "capri", "denim", "bottom", "lower", "dungaree", "joggers", "jogger",
+];
+
+// A clothing item counts as a "bottom" if its subcategory or name mentions one
+// of the keywords above (case-insensitive).
+export function isBottomApparel(subcategory?: string, name?: string): boolean {
+  const hay = `${subcategory || ""} ${name || ""}`.toLowerCase();
+  return BOTTOM_KEYWORDS.some((k) => hay.includes(k));
+}
+
+// Size chips for a clothing item: bottoms get the waist sizes first, then the
+// letter sizes (kept so nothing that already used S/M/L breaks).
+export function apparelSizeOptions(subcategory?: string, name?: string): string[] {
+  return isBottomApparel(subcategory, name)
+    ? [...BOTTOM_SIZES, ...SIZE_OPTIONS.apparel]
+    : SIZE_OPTIONS.apparel;
+}
+
 export const SIZE_LABEL: Record<Category, string> = {
   apparel: "Size",
   food: "Weight",
