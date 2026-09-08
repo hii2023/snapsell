@@ -32,12 +32,14 @@ export function isBottomApparel(subcategory?: string, name?: string): boolean {
   return BOTTOM_KEYWORDS.some((k) => hay.includes(k));
 }
 
-// Size chips for a clothing item: bottoms get the waist sizes first, then the
-// letter sizes (kept so nothing that already used S/M/L breaks).
+// Size chips for a clothing item: waist sizes are ALWAYS shown alongside the
+// letter sizes so they're available by default. When the item looks like a
+// bottom (trousers / jeans / shorts …) the waist sizes lead; otherwise the
+// letter sizes lead.
 export function apparelSizeOptions(subcategory?: string, name?: string): string[] {
   return isBottomApparel(subcategory, name)
     ? [...BOTTOM_SIZES, ...SIZE_OPTIONS.apparel]
-    : SIZE_OPTIONS.apparel;
+    : [...SIZE_OPTIONS.apparel, ...BOTTOM_SIZES];
 }
 
 export const SIZE_LABEL: Record<Category, string> = {
