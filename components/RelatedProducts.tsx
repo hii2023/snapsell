@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { rupees, categoryLabel } from "@/lib/constants";
 import type { Product, CartLine, Category } from "@/lib/types";
 import { BagIcon } from "./icons";
@@ -96,12 +97,12 @@ export default function RelatedProducts({
               <Link href={`/p/${r.code}`} className="block">
                 <div className="relative aspect-[4/5] bg-neutral-100">
                   {r.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={r.image_url}
                       alt={r.name}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
+                      fill
+                      sizes="(min-width:640px) 33vw, 50vw"
+                      className="object-cover"
                     />
                   ) : null}
                   {r.giveaway && (

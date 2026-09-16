@@ -60,6 +60,29 @@ button, a, [role="button"] {
     animation: none;
   }
 }
+/* Reveal-on-scroll for product cards. The hidden state (.reveal-hidden) is
+   added by ShopClient's IntersectionObserver only to off-screen cards, so a
+   card is fully visible unless JS deliberately hid it — no stuck-hidden content
+   if the observer never runs. The card then eases up + fades in when it scrolls
+   into view (.reveal-in). */
+.reveal-card.reveal-hidden {
+  opacity: 0;
+  transform: translateY(16px);
+  will-change: opacity, transform;
+}
+.reveal-card.reveal-hidden.reveal-in {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-card.reveal-hidden {
+    opacity: 1;
+    transform: none;
+  }
+}
 /* Free-delivery celebration: shown when the cart crosses the ₹999 threshold.
    The banner pops in, a little truck drives across, and a soft shine sweeps
    over it so unlocking free delivery feels like a reward. */

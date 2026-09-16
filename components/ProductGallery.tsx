@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useBackClose } from "@/lib/use-back";
 
 // Product image gallery with thumbnail strip and a fullscreen zoom modal.
@@ -51,11 +52,13 @@ export default function ProductGallery({
         className="group relative block aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100"
         aria-label="View full image"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={current}
           alt={name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          fill
+          priority
+          sizes="(min-width:1024px) 500px, (min-width:640px) 50vw, 100vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
         />
         {/* Zoom hint */}
         <span className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
@@ -74,13 +77,12 @@ export default function ProductGallery({
             <button
               key={i}
               onClick={() => setActive(i)}
-              className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${
+              className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${
                 i === active ? "border-emerald-600" : "border-transparent opacity-70 hover:opacity-100"
               }`}
               aria-label={`View image ${i + 1}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt={`${name} ${i + 1}`} className="h-full w-full object-cover" />
+              <Image src={url} alt={`${name} ${i + 1}`} fill sizes="64px" className="object-cover" />
             </button>
           ))}
         </div>

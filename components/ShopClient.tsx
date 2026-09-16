@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import QRCode from "qrcode";
 import { supabaseBrowser } from "@/lib/supabase";
 import { T } from "@/lib/db";
@@ -368,6 +369,38 @@ export default function ShopClient({
   const visible = fullyFiltered.slice(0, pageSize);
   const hasMore = fullyFiltered.length > visible.length;
 
+  // Smooth reveal: product cards ease up and fade in as they scroll into view,
+  // instead of the whole grid appearing at once. Off-screen cards are hidden by
+  // JS only (never in base CSS), so if the observer is unavailable or the user
+  // prefers reduced motion, every card simply stays visible.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || typeof IntersectionObserver === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add("reveal-in");
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -6% 0px", threshold: 0.04 }
+    );
+    grid.querySelectorAll<HTMLElement>(".reveal-card:not(.reveal-in)").forEach((el) => {
+      // Cards already on screen at first paint stay visible — no flash.
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.95) {
+        el.classList.add("reveal-in");
+        return;
+      }
+      el.classList.add("reveal-hidden");
+      io.observe(el);
+    });
+    return () => io.disconnect();
+  }, [visible.length, catFilter, subcatFilter, genderFilter, sizeFilter]);
+
   const total = useMemo(
     () => cart.reduce((s, l) => s + l.price * l.qty, 0),
     [cart]
@@ -676,7 +709,7 @@ export default function ShopClient({
           </div>
         ))}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div ref={gridRef} className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {visible.map((p) => {
           const line = cart.find((l) => l.product_id === p.id);
           const hasDiscount = p.mrp > p.price && !p.giveaway;
@@ -689,17 +722,16 @@ export default function ShopClient({
               <div className={className}>{children}</div>
             );
           return (
-            <div key={p.id} className="card card-in overflow-hidden">
+            <div key={p.id} className="card reveal-card overflow-hidden">
               <Wrap className="block">
                 <div className="relative aspect-[4/5] bg-neutral-100">
                   {p.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={p.image_url}
                       alt={p.name}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                      decoding="async"
+                      fill
+                      sizes="(min-width:1280px) 190px, (min-width:1024px) 220px, (min-width:768px) 25vw, (min-width:640px) 33vw, 50vw"
+                      className="object-cover"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-neutral-300">
@@ -967,10 +999,9 @@ function Checkout({
       <div className="mt-4 card divide-y divide-neutral-100">
         {cart.map((l) => (
           <div key={l.product_id} className="flex items-center gap-3 p-3 text-sm">
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
               {l.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={l.image_url} alt={l.name} className="h-full w-full object-cover" />
+                <Image src={l.image_url} alt={l.name} fill sizes="48px" className="object-cover" />
               ) : null}
             </div>
             <span className="flex-1">
@@ -1267,9 +1298,8 @@ function BookingConfirm({
             >
               {/* Product image */}
               {l.image_url && (
-                <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-neutral-100 overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={l.image_url} alt={l.name} className="h-full w-full object-cover" />
+                <div className="relative h-16 w-16 flex-shrink-0 rounded-lg bg-neutral-100 overflow-hidden">
+                  <Image src={l.image_url} alt={l.name} fill sizes="64px" className="object-cover" />
                 </div>
               )}
               {/* Product details */}
