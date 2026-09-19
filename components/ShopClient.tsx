@@ -1269,14 +1269,19 @@ function Checkout({
       )}
 
           {/* On desktop the action lives under the summary instead of in a
-              bar floating over the page. */}
-          <button
-            onClick={requestBook}
-            disabled={loading}
-            className="btn-primary mt-4 hidden w-full text-base disabled:opacity-50 lg:block"
-          >
-            {bookLabel}
-          </button>
+              bar floating over the page. The wrapper carries the breakpoint,
+              not the button: .btn-primary sets `inline-flex` from plain CSS
+              that is emitted after Tailwind's utilities, so a `hidden` on the
+              button itself would lose and it would show on phones too. */}
+          <div className="mt-4 hidden lg:block">
+            <button
+              onClick={requestBook}
+              disabled={loading}
+              className="btn-primary w-full text-base disabled:opacity-50"
+            >
+              {bookLabel}
+            </button>
+          </div>
         </div>
 
         <div className="lg:order-1">
