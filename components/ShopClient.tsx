@@ -349,6 +349,15 @@ export default function ShopClient({
       active ? "chip-on" : "chip-off"
     }`;
 
+  // Desktop sidebar row: a full-width list item rather than a pill, so a long
+  // category list reads as a quiet vertical menu beside the products.
+  const sideItem = (active: boolean) =>
+    `w-full rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ${
+      active
+        ? "bg-brand font-semibold text-white"
+        : "text-neutral-700 hover:bg-neutral-100"
+    }`;
+
   const fullyFiltered = (() => {
     let list: ShopProduct[];
     if (catFilter === "all") list = products;
@@ -559,9 +568,124 @@ export default function ShopClient({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 pb-28">
+    <div className="mx-auto max-w-6xl px-4 py-6 pb-28 lg:max-w-[1600px] lg:pb-8">
+      <div className="lg:flex lg:items-start lg:gap-6">
+        {/* Desktop only: filters live in a quiet left rail so the grid gets the
+            middle of the screen and the cart gets the right. Phones keep the
+            original scrolling chip rows below. */}
+        <aside className="hidden lg:sticky lg:top-4 lg:block lg:w-52 lg:shrink-0 lg:space-y-3">
+          <nav className="rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
+            <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              Category
+            </p>
+            <button onClick={() => setCatFilter("all")} className={sideItem(catFilter === "all")}>
+              All
+            </button>
+            {hasGiveaway && (
+              <button
+                onClick={() => setCatFilter("giveaway")}
+                className={`w-full rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ${
+                  catFilter === "giveaway"
+                    ? "bg-emerald-600 font-semibold text-white"
+                    : "text-emerald-700 hover:bg-emerald-50"
+                }`}
+              >
+                Give away
+              </button>
+            )}
+            {categoriesPresent.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setCatFilter(c.id)}
+                className={sideItem(catFilter === c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </nav>
+
+          {subcatList.length > 0 && (
+            <nav className="rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
+              <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                Type
+              </p>
+              <button
+                onClick={() => setSubcatFilter("all")}
+                className={sideItem(subcatFilter === "all")}
+              >
+                All
+              </button>
+              {subcatList.map((sc) => (
+                <button
+                  key={sc}
+                  onClick={() => setSubcatFilter(sc)}
+                  className={sideItem(subcatFilter === sc)}
+                >
+                  {sc}
+                </button>
+              ))}
+            </nav>
+          )}
+
+          {(genderList.length > 0 || showSize) && (
+            <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
+              {genderList.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                    Gender
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => setGenderFilter("all")}
+                      className={`chip text-xs ${genderFilter === "all" ? "chip-on" : "chip-off"}`}
+                    >
+                      All
+                    </button>
+                    {genderList.map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => setGenderFilter(g)}
+                        className={`chip text-xs ${genderFilter === g ? "chip-on" : "chip-off"}`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {showSize && (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                    Size
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => setSizeFilter("all")}
+                      className={`chip text-xs ${sizeFilter === "all" ? "chip-on" : "chip-off"}`}
+                    >
+                      All
+                    </button>
+                    {sizeList.map((sz) => (
+                      <button
+                        key={sz}
+                        onClick={() => setSizeFilter(sz)}
+                        className={`chip text-xs ${sizeFilter === sz ? "chip-on" : "chip-off"}`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </aside>
+
+        {/* Centre column: the products */}
+        <div className="min-w-0 lg:flex-1">
       {(categoriesPresent.length > 1 || hasGiveaway) && (
-        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
+        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto no-scrollbar px-4 pb-1 lg:hidden">
           <button
             onClick={() => setCatFilter("all")}
             className={`chip shrink-0 ${catFilter === "all" ? "chip-on" : "chip-off"}`}
@@ -598,9 +722,9 @@ export default function ShopClient({
         </p>
       )}
 
-      {/* Sub-category chips */}
+      {/* Sub-category chips (phones; desktop uses the left rail) */}
       {subcatList.length > 0 && (
-        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto no-scrollbar px-4 pb-1">
+        <div className="mb-3 -mx-4 flex gap-2 overflow-x-auto no-scrollbar px-4 pb-1 lg:hidden">
           <button
             onClick={() => setSubcatFilter("all")}
             className={`chip shrink-0 text-xs ${subcatFilter === "all" ? "chip-on" : "chip-off"}`}
@@ -622,7 +746,7 @@ export default function ShopClient({
       {/* Clothing filters — Gender first, Size beneath, grouped in one card so
           they read as a clear, deliberate filter panel. */}
       {(genderList.length > 0 || showSize) && (
-        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-2.5 shadow-sm sm:p-4">
+        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-2.5 shadow-sm sm:p-4 lg:hidden">
           {genderList.length > 0 && (
             <div className="flex items-center gap-2 sm:gap-3">
               <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:w-14 sm:text-[11px]">
@@ -666,7 +790,7 @@ export default function ShopClient({
       )}
 
       {/* Separator between the category filters and the products */}
-      <div className="mb-4 mt-1 border-t border-neutral-200" />
+      <div className="mb-4 mt-1 border-t border-neutral-200 lg:hidden" />
 
       {visible.length === 0 &&
         (catFilter !== "all" ? (
@@ -710,7 +834,7 @@ export default function ShopClient({
           </div>
         ))}
 
-      <div ref={gridRef} className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div ref={gridRef} className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {visible.map((p, i) => {
           const line = cart.find((l) => l.product_id === p.id);
           // The first rows are on screen the moment the page paints. Marking
@@ -815,9 +939,97 @@ export default function ShopClient({
 
       {/* Infinite scroll loader — triggers when scrolled into view */}
       {hasMore && <div ref={loaderRefCb} className="mt-6 h-px" />}
+        </div>
+        {/* End centre column */}
+
+        {/* Desktop only: the cart sits beside the products instead of covering
+            them with a bar, and there is room to show what is actually in it. */}
+        <aside className="hidden lg:sticky lg:top-4 lg:block lg:w-80 lg:shrink-0">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-sm font-semibold text-ink">Your cart</h2>
+              {count > 0 && (
+                <button
+                  onClick={() => setCart([])}
+                  className="text-xs text-neutral-500 underline-offset-2 hover:text-neutral-800 hover:underline"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {count === 0 ? (
+              <p className="mt-3 text-sm leading-relaxed text-neutral-500">
+                Nothing booked yet. Tap Add on anything you like and it will show up here.
+              </p>
+            ) : (
+              <>
+                <ul className="mt-3 max-h-[46vh] space-y-3 overflow-y-auto pr-1">
+                  {cart.map((l) => (
+                    <li key={l.product_id} className="flex gap-2.5">
+                      <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+                        {l.image_url ? (
+                          <Image src={l.image_url} alt={l.name} fill sizes="52px" className="object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-neutral-300">
+                            <BagIcon className="h-5 w-5" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-1 text-[13px] font-medium leading-tight text-ink">{l.name}</p>
+                        <p className="mt-0.5 text-[11px] text-neutral-500">
+                          {[l.size, l.code].filter(Boolean).join(" · ") || " "}
+                        </p>
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 text-sm leading-none hover:bg-neutral-50 active:scale-95"
+                              onClick={() => setQty(l.product_id, l.qty - 1)}
+                              aria-label={`Reduce quantity of ${l.name}`}
+                            >
+                              −
+                            </button>
+                            <span className="min-w-4 text-center text-xs font-semibold tabular-nums">
+                              {l.qty}
+                            </span>
+                            <button
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 text-sm leading-none hover:bg-neutral-50 active:scale-95 disabled:opacity-40"
+                              disabled={l.qty >= l.stock}
+                              onClick={() => setQty(l.product_id, l.qty + 1)}
+                              aria-label={`Increase quantity of ${l.name}`}
+                            >
+                              +
+                            </button>
+                          </div>
+                          <span className="shrink-0 text-[13px] font-semibold text-ink">
+                            {l.price === 0 ? "Free" : rupees(l.price * l.qty)}
+                          </span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-3 border-t border-neutral-100 pt-3">
+                  <FreeDeliveryNudge total={total} threshold={c.freeAbove} />
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm text-neutral-500">{count} item(s)</span>
+                    <span className="text-lg font-semibold text-ink">{rupees(total)}</span>
+                  </div>
+                  <button className="btn-primary mt-3 w-full" onClick={() => setStep("checkout")}>
+                    Checkout
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </aside>
+      </div>
+      {/* End 3-column shell */}
 
       {count > 0 ? (
-        <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur lg:hidden">
           <div className="mx-auto max-w-6xl">
             <FreeDeliveryNudge total={total} threshold={c.freeAbove} />
             <div className="flex items-center justify-between gap-3">
