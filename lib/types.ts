@@ -29,6 +29,30 @@ export type Product = {
   created_at: string;
 };
 
+// Every in-stock product is serialized into the shop page's HTML, so the grid
+// deliberately selects only the columns it actually renders. Leaving out the
+// long `description` and the `images` gallery array (both used on the product
+// detail page, never in the grid) keeps that payload small.
+export type ShopProduct = Pick<
+  Product,
+  | "id"
+  | "name"
+  | "code"
+  | "category"
+  | "subcategory"
+  | "image_url"
+  | "size"
+  | "color"
+  | "gender"
+  | "price"
+  | "mrp"
+  | "giveaway"
+  | "stock"
+>;
+
+export const SHOP_PRODUCT_COLUMNS =
+  "id,name,code,category,subcategory,image_url,size,color,gender,price,mrp,giveaway,stock";
+
 export type PaymentMode = "online" | "cod" | "qr";
 export type PaymentStatus = "pending" | "paid" | "failed";
 export type PaymentMethod = "cash" | "upi" | null;

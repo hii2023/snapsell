@@ -9,7 +9,8 @@ import { T } from "@/lib/db";
 import { useBackClose } from "@/lib/use-back";
 import { rupees, CATEGORY_META, PICKUP_ADDRESS, SIZE_OPTIONS, GENDERS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
-import type { Category, CartLine, Product } from "@/lib/types";
+import type { Category, CartLine, ShopProduct } from "@/lib/types";
+import { SHOP_PRODUCT_COLUMNS } from "@/lib/types";
 
 type Step = "shop" | "checkout" | "done";
 
@@ -59,7 +60,7 @@ export default function ShopClient({
   subcats,
   detail,
 }: {
-  products: Product[];
+  products: ShopProduct[];
   shopName: string;
   cfg?: ShopCfg;
   subcats?: Record<string, string[]>;
@@ -77,7 +78,7 @@ export default function ShopClient({
 
   // Start with server-rendered data, then immediately refresh client-side.
   // This bypasses all Next.js / Vercel CDN caching — always shows live products.
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<ShopProduct[]>(initialProducts);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
   const validCat = (v: unknown): v is Category | "all" | "giveaway" =>
@@ -207,11 +208,11 @@ export default function ShopClient({
     const interval = setInterval(() => {
       supabaseBrowser()
         .from(T.products)
-        .select("*")
+        .select(SHOP_PRODUCT_COLUMNS)
         .gt("stock", 0)
         .eq("is_active", true)
         .order("created_at", { ascending: false })
-        .then(({ data }) => { if (data && data.length > 0) setProducts(data as Product[]); });
+        .then(({ data }) => { if (data && data.length > 0) setProducts(data as unknown as ShopProduct[]); });
     }, 15000);
     return () => clearInterval(interval);
   }, [products.length]);
@@ -241,11 +242,11 @@ export default function ShopClient({
     function refresh() {
       const sb = supabaseBrowser();
       sb.from(T.products)
-        .select("*")
+        .select(SHOP_PRODUCT_COLUMNS)
         .gt("stock", 0)
         .eq("is_active", true)
         .order("created_at", { ascending: false })
-        .then(({ data }) => { if (data) setProducts(data as Product[]); });
+        .then(({ data }) => { if (data) setProducts(data as unknown as ShopProduct[]); });
     }
     function onVis() { if (document.visibilityState === "visible") refresh(); }
     window.addEventListener("focus", refresh);
@@ -349,7 +350,7 @@ export default function ShopClient({
     }`;
 
   const fullyFiltered = (() => {
-    let list: Product[];
+    let list: ShopProduct[];
     if (catFilter === "all") list = products;
     else if (catFilter === "giveaway") list = products.filter((p) => p.giveaway);
     else
@@ -407,7 +408,7 @@ export default function ShopClient({
   );
   const count = useMemo(() => cart.reduce((s, l) => s + l.qty, 0), [cart]);
 
-  function add(p: Product) {
+  function add(p: ShopProduct) {
     setCart((prev) => {
       const existing = prev.find((l) => l.product_id === p.id);
       if (existing) {
@@ -710,8 +711,13 @@ export default function ShopClient({
         ))}
 
       <div ref={gridRef} className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {visible.map((p) => {
+        {visible.map((p, i) => {
           const line = cart.find((l) => l.product_id === p.id);
+          // The first rows are on screen the moment the page paints. Marking
+          // them priority preloads them at high fetch priority instead of
+          // lazy-loading, which otherwise leaves the top of the grid blank
+          // until hydration and layout finish on every refresh.
+          const aboveFold = i < 8;
           const hasDiscount = p.mrp > p.price && !p.giveaway;
           const discountPct = hasDiscount ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
           const detailHref = p.code ? `/p/${p.code}` : null;
@@ -732,6 +738,8 @@ export default function ShopClient({
                       fill
                       sizes="(min-width:1280px) 190px, (min-width:1024px) 220px, (min-width:768px) 25vw, (min-width:640px) 33vw, 50vw"
                       className="object-cover"
+                      priority={aboveFold}
+                      loading={aboveFold ? "eager" : "lazy"}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-neutral-300">

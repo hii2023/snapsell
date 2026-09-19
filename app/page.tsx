@@ -6,7 +6,8 @@ import LogoLink from "@/components/LogoLink";
 import { supabaseServer } from "@/lib/supabase-server";
 import { currentSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
-import type { Product } from "@/lib/types";
+import type { ShopProduct } from "@/lib/types";
+import { SHOP_PRODUCT_COLUMNS } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import StoreContact from "@/components/StoreContact";
 import SellerBar from "@/components/SellerBar";
@@ -32,7 +33,7 @@ export default async function ShopPage() {
   const h = await headers();
   void h; // accessed to mark dynamic; Next.js sees headers() and forces no-cache
   const seller = await currentSeller();
-  let products: Product[] = [];
+  let products: ShopProduct[] = [];
   let subcats: Record<string, string[]> = {};
 
   let cfg = {
@@ -49,13 +50,13 @@ export default async function ShopPage() {
     const [{ data }, { data: row }] = await Promise.all([
       supabase
         .from(T.products)
-        .select("*")
+        .select(SHOP_PRODUCT_COLUMNS)
         .gt("stock", 0)
         .eq("is_active", true)
         .order("created_at", { ascending: false }),
       supabase.from(T.settings).select("*").eq("id", 1).single(),
     ]);
-    products = (data as Product[]) || [];
+    products = (data as unknown as ShopProduct[]) || [];
     if (row) {
       cfg = {
         upiId: row.upi_id || cfg.upiId,
