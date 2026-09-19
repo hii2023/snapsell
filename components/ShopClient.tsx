@@ -303,12 +303,14 @@ export default function ShopClient({
   const hasGiveaway = products.some((p) => p.giveaway);
 
   // Sub-categories available for the currently selected category
+  // Every subcategory the owner defined for this category is shown, even when
+  // nothing is tagged with it yet — same rule as the categories above, so the
+  // filter list reflects the shop's range rather than today's stock. An empty
+  // one lands on the playful sold-out state instead of disappearing.
   const subcatList: string[] =
     catFilter === "all" || catFilter === "giveaway"
       ? []
-      : (subcats?.[catFilter] || []).filter((sc) =>
-          products.some((p) => p.category === catFilter && p.subcategory === sc)
-        );
+      : subcats?.[catFilter] || [];
 
   // Gender + size filters apply when browsing clothing: either the Clothing
   // category is selected, or the whole store is clothing-only (so "All" is
@@ -568,12 +570,12 @@ export default function ShopClient({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 pb-28 lg:max-w-[1600px] lg:pb-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 pb-28 lg:max-w-[1400px] lg:pb-8 xl:max-w-[1700px] 2xl:max-w-none 2xl:px-10">
       <div className="lg:flex lg:items-start lg:gap-6">
         {/* Desktop only: filters live in a quiet left rail so the grid gets the
             middle of the screen and the cart gets the right. Phones keep the
             original scrolling chip rows below. */}
-        <aside className="hidden lg:sticky lg:top-4 lg:block lg:w-52 lg:shrink-0 lg:space-y-3">
+        <aside className="hidden lg:sticky lg:top-[133px] lg:block lg:max-h-[calc(100vh-149px)] lg:w-48 lg:shrink-0 lg:space-y-3 lg:overflow-y-auto lg:pb-2 xl:w-52">
           <nav className="rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
             <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
               Category
@@ -834,7 +836,7 @@ export default function ShopClient({
           </div>
         ))}
 
-      <div ref={gridRef} className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      <div ref={gridRef} className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6">
         {visible.map((p, i) => {
           const line = cart.find((l) => l.product_id === p.id);
           // The first rows are on screen the moment the page paints. Marking
@@ -944,7 +946,7 @@ export default function ShopClient({
 
         {/* Desktop only: the cart sits beside the products instead of covering
             them with a bar, and there is room to show what is actually in it. */}
-        <aside className="hidden lg:sticky lg:top-4 lg:block lg:w-80 lg:shrink-0">
+        <aside className="hidden lg:sticky lg:top-[133px] lg:block lg:max-h-[calc(100vh-149px)] lg:w-72 lg:shrink-0 lg:overflow-y-auto lg:pb-2 xl:w-80">
           <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
             <div className="flex items-baseline justify-between">
               <h2 className="text-sm font-semibold text-ink">Your cart</h2>
