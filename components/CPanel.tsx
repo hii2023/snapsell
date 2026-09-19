@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_META } from "@/lib/constants";
 import { supabaseBrowser } from "@/lib/supabase";
@@ -22,6 +22,17 @@ export default function CPanel({ initial }: { initial: Settings }) {
   const [newCat, setNewCat] = useState("");
   const [newSub, setNewSub] = useState<Record<string, string>>({});
   const router = useRouter();
+
+  // Image optimization job
+  const [optRunning, setOptRunning] = useState(false);
+  const [optStop, setOptStop] = useState(false);
+  // The batch loop closes over its own scope, so the Stop button flips a ref
+  // that the loop can actually see between requests.
+  const optStopRef = useRef(false);
+  const [optMsg, setOptMsg] = useState("");
+  const [optDone, setOptDone] = useState(0);
+  const [optSavedKB, setOptSavedKB] = useState(0);
+  const [optRemaining, setOptRemaining] = useState<number | null>(null);
 
   // Install-as-app (PWA) state
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -97,6 +108,75 @@ export default function CPanel({ initial }: { initial: Settings }) {
   }
   function removeSub(catId: string, sub: string) {
     set("subcats", { ...s.subcats, [catId]: (s.subcats[catId] || []).filter((x) => x !== sub) });
+  }
+
+  async function checkImages() {
+    try {
+      const res = await fetch("/api/products/optimize-images");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Check failed");
+      setOptRemaining(json.remaining);
+      setOptMsg(
+        json.remaining === 0
+          ? "All product photos are already optimized."
+          : `${json.remaining} product photos still full size.`
+      );
+    } catch (e) {
+      setOptMsg(e instanceof Error ? e.message : "Check failed");
+    }
+  }
+
+  // Walks the catalogue a few products at a time so no single request runs
+  // long. Safe to stop and restart; finished products are skipped.
+  async function optimizeImages() {
+    setOptRunning(true);
+    setOptStop(false);
+    optStopRef.current = false;
+    setOptDone(0);
+    setOptSavedKB(0);
+    setOptMsg("Starting...");
+
+    let offset = 0;
+    let done = 0;
+    let saved = 0;
+    let stopped = false;
+
+    try {
+      for (;;) {
+        if (optStopRef.current) {
+          stopped = true;
+          break;
+        }
+        const res = await fetch("/api/products/optimize-images", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 6, offset }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Optimize failed");
+
+        done += json.products || 0;
+        saved += json.savedKB || 0;
+        offset = json.nextOffset ?? offset;
+
+        setOptDone(done);
+        setOptSavedKB(saved);
+        setOptRemaining(json.remaining);
+        setOptMsg(`Optimizing... ${done} done, ${json.remaining} to go`);
+
+        if (!json.scanned) break;
+      }
+      setOptMsg(
+        stopped
+          ? `Stopped. ${done} products optimized, ${(saved / 1024).toFixed(1)} MB saved.`
+          : `Finished. ${done} products optimized, ${(saved / 1024).toFixed(1)} MB saved.`
+      );
+    } catch (e) {
+      setOptMsg(e instanceof Error ? e.message : "Optimize failed");
+    } finally {
+      setOptRunning(false);
+      setOptStop(false);
+    }
   }
 
   async function save() {
@@ -257,6 +337,54 @@ export default function CPanel({ initial }: { initial: Settings }) {
             + Add template
           </button>
         </div>
+      </section>
+
+      <section className="border-t border-neutral-200 pt-6">
+        <h3 className="mb-1 text-lg font-semibold">Product photo optimizer</h3>
+        <p className="mb-3 text-sm text-neutral-500">
+          Photos added before the store started shrinking them are still full
+          size, which makes the shop slow to load. This makes a small copy of
+          each one. Your original photos are kept, nothing is deleted. You can
+          stop it any time and carry on later.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {!optRunning ? (
+            <>
+              <button onClick={optimizeImages} className="btn-primary px-5 py-2.5 text-sm">
+                Optimize photos
+              </button>
+              <button onClick={checkImages} className="btn-ghost px-4 py-2.5 text-sm">
+                Check status
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                optStopRef.current = true;
+                setOptStop(true);
+                setOptMsg("Finishing current batch...");
+              }}
+              disabled={optStop}
+              className="btn-ghost px-5 py-2.5 text-sm disabled:opacity-50"
+            >
+              {optStop ? "Stopping..." : "Stop"}
+            </button>
+          )}
+        </div>
+
+        {(optMsg || optRunning) && (
+          <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+            <div>{optMsg}</div>
+            {optDone > 0 && (
+              <div className="mt-1 text-neutral-500">
+                {optDone} products done
+                {optSavedKB > 0 && ` · ${(optSavedKB / 1024).toFixed(1)} MB saved`}
+                {optRemaining !== null && ` · ${optRemaining} remaining`}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="border-t border-neutral-200 pt-6">
