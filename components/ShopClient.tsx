@@ -1199,8 +1199,14 @@ function Checkout({
     );
   }
 
+  const bookLabel = loading
+    ? "Booking..."
+    : grandTotal === 0
+      ? "Book (Free)"
+      : `Book · pay ${rupees(grandTotal)} by QR`;
+
   return (
-    <div className="mx-auto max-w-md px-4 py-6 pb-28">
+    <div className="mx-auto max-w-md px-4 py-6 pb-28 lg:max-w-5xl lg:pb-10">
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
@@ -1218,6 +1224,11 @@ function Checkout({
       </div>
       <h2 className="mt-3 text-2xl font-semibold">Book your items</h2>
 
+      {/* Desktop splits checkout the way a web store does: details on the
+          left, a sticky order summary on the right. Phones keep the single
+          column with the summary first and the Book bar pinned to the bottom. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8">
+        <div className="lg:order-2 lg:sticky lg:top-6">
       <div className="mt-4 card divide-y divide-neutral-100">
         {cart.map((l) => (
           <div key={l.product_id} className="flex items-center gap-3 p-3 text-sm">
@@ -1257,7 +1268,20 @@ function Checkout({
         </div>
       )}
 
+          {/* On desktop the action lives under the summary instead of in a
+              bar floating over the page. */}
+          <button
+            onClick={requestBook}
+            disabled={loading}
+            className="btn-primary mt-4 hidden w-full text-base disabled:opacity-50 lg:block"
+          >
+            {bookLabel}
+          </button>
+        </div>
+
+        <div className="lg:order-1">
       <div className="mt-5 space-y-4">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 space-y-4">
         <div>
           <label className="label">Your name</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
@@ -1265,6 +1289,7 @@ function Checkout({
         <div>
           <label className="label">Phone</label>
           <input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </div>
         </div>
         <div>
           <label className="label">How do you want it?</label>
@@ -1358,15 +1383,13 @@ function Checkout({
       </p>
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
+        </div>
+      </div>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur lg:hidden">
         <div className="mx-auto max-w-md">
           <button onClick={requestBook} disabled={loading} className="btn-primary w-full text-lg disabled:opacity-50">
-            {loading
-              ? "Booking..."
-              : grandTotal === 0
-                ? "Book (Free)"
-                : `Book · pay ${rupees(grandTotal)} by QR`}
+            {bookLabel}
           </button>
         </div>
       </div>
