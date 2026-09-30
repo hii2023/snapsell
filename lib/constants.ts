@@ -153,8 +153,50 @@ export function hasColorFor(c: string): boolean {
   return HAS_COLOR[builtIn(c)];
 }
 
+// Custom categories have no colour of their own. Rather than leaving them all
+// grey next to the colourful built-in tiles, each one draws a colour from the
+// same palette, chosen by hashing its id: stable for a given category, and
+// spread out so two custom categories rarely land on the same colour.
+const CUSTOM_ACCENT_POOL: Category[] = [
+  "cleaning",
+  "jewellery",
+  "cosmetics",
+  "books",
+  "electronics",
+  "food",
+  "furniture",
+  "apparel",
+];
+
+function customAccentKey(c: string): Category {
+  let h = 0;
+  for (let i = 0; i < c.length; i++) h = (h * 31 + c.charCodeAt(i)) >>> 0;
+  return CUSTOM_ACCENT_POOL[h % CUSTOM_ACCENT_POOL.length];
+}
+
+function accentKey(c: string): Category {
+  return isBuiltInCategory(c) ? (c as Category) : customAccentKey(c);
+}
+
 export function accentFor(c: string): Accent {
-  return ACCENT[builtIn(c)];
+  return ACCENT[accentKey(c)];
+}
+
+// Same palette as ACCENT, as raw hex, for CSS `accent-color` on native inputs.
+export const ACCENT_HEX: Record<Category, string> = {
+  apparel: "#2563eb",
+  food: "#ea580c",
+  electronics: "#7c3aed",
+  furniture: "#d97706",
+  cleaning: "#059669",
+  jewellery: "#e11d48",
+  cosmetics: "#c026d3",
+  books: "#0d9488",
+  more: "#475569",
+};
+
+export function accentHexFor(c: string): string {
+  return ACCENT_HEX[accentKey(c)];
 }
 
 // Custom categories get the free-text size box too: we cannot know in advance
@@ -163,10 +205,14 @@ export function allowsCustomSize(c: string): boolean {
   return !isBuiltInCategory(c) || CUSTOM_SIZE_CATEGORIES.includes(c as Category);
 }
 
-// Built-ins first, then whatever the owner added, so the familiar grid does not
-// reshuffle when a custom category appears.
+// Built-ins first, then whatever the owner added — but "More" is the catch-all,
+// so it is pulled out and pushed to the very end rather than sitting in the
+// middle of the list once custom categories exist.
 export function categoryOptions(extra: ExtraCategory[] = []): { id: string; label: string }[] {
-  return [...CATEGORY_META, ...extra.map((c) => ({ id: c.id, label: c.label }))];
+  const named = CATEGORY_META.filter((c) => c.id !== "more").map((c) => ({ id: c.id, label: c.label }));
+  const custom = extra.map((c) => ({ id: c.id, label: c.label }));
+  const more = CATEGORY_META.filter((c) => c.id === "more").map((c) => ({ id: c.id, label: c.label }));
+  return [...named, ...custom, ...more];
 }
 
 // Optional gender tag for clothing.

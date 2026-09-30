@@ -10,6 +10,7 @@ import {
   ACCENT,
   rupees,
   accentFor,
+  accentHexFor,
   allowsCustomSize,
   categoryLabel,
   categoryOptions,
@@ -28,21 +29,6 @@ const AUTO_CLEAN_CATEGORIES: ReadonlySet<string> = new Set<string>([]);
 type Screen = "wizard" | "saved";
 type Step = 0 | 1 | 2; // category, details, price
 const TITLES = ["What is it?", "Details", "Set a price"];
-
-const ACCENT_HEX: Record<string, string> = {
-  apparel: "#2563eb",
-  food: "#ea580c",
-  electronics: "#7c3aed",
-  furniture: "#d97706",
-  cleaning: "#059669",
-  jewellery: "#e11d48",
-  cosmetics: "#c026d3",
-  books: "#0d9488",
-  more: "#475569",
-};
-
-// Custom categories have no accent of their own, so they borrow the neutral one.
-const DEFAULT_ACCENT_HEX = ACCENT_HEX.more;
 
 export default function SellForm({
   pricePresets,
@@ -123,7 +109,7 @@ export default function SellForm({
   }, [screen, step]);
 
   const accent = category ? accentFor(category) : ACCENT.apparel;
-  const accentHex = (category ? ACCENT_HEX[category] : "#0f766e") ?? DEFAULT_ACCENT_HEX;
+  const accentHex = category ? accentHexFor(category) : "#0f766e";
 
   // Kick off the upload of whichever file we settled on (cleaned or original).
   function beginUpload(f: File) {
