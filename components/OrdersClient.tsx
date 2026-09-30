@@ -4,17 +4,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import * as XLSX from "xlsx";
-import { rupees, CATEGORY_META } from "@/lib/constants";
+import { rupees, categoryOptions } from "@/lib/constants";
 import { CategoryIcon, CheckIcon } from "./icons";
 import ProductEdit from "./ProductEdit";
 import CPanel from "./CPanel";
 import { Footer } from "./Footer";
 import { useBackClose } from "@/lib/use-back";
-import type { Category, Order, Product, Settings, WaTemplate } from "@/lib/types";
+import type { ExtraCategory, Order, Product, Settings, WaTemplate } from "@/lib/types";
 
 type Tab = "overview" | "products" | "orders" | "insight" | "settings";
 type ProdFilter = "instock" | "oos";
-type CatFilter = Category | "all";
+type CatFilter = string;
 type OrderFilter = "all" | "unpaid" | "paid" | "packing" | "booked" | "delivered" | "pickup" | "return" | "cancelled";
 
 // An order leaves the active funnel once it is cancelled or its items have
@@ -63,7 +63,7 @@ export default function OrdersClient({
     setCatFilter("all");
     setTab("products");
   }
-  function openCategory(cat: Category) {
+  function openCategory(cat: string) {
     setCatFilter(cat);
     setProdFilter("instock");
     setTab("products");
@@ -136,6 +136,7 @@ export default function OrdersClient({
               catFilter={catFilter}
               setCatFilter={setCatFilter}
               subcats={settings.subcats}
+              extraCats={settings.extra_categories}
             />
           )}
           {tab === "orders" && (
@@ -155,6 +156,7 @@ export default function OrdersClient({
               orders={orders}
               openProducts={openProducts}
               openCategory={openCategory}
+              extraCats={settings.extra_categories}
             />
           )}
           {tab === "settings" && <CPanel initial={settings} />}
@@ -357,11 +359,13 @@ function Insight({
   orders,
   openProducts,
   openCategory,
+  extraCats,
 }: {
   products: Product[];
   orders: Order[];
   openProducts: (f: ProdFilter) => void;
-  openCategory: (c: Category) => void;
+  openCategory: (c: string) => void;
+  extraCats: ExtraCategory[];
 }) {
   const [drill, setDrill] = useState<InsightDrill>(null);
   const [custQuery, setCustQuery] = useState("");
@@ -377,7 +381,7 @@ function Insight({
     .filter((p) => p.stock > 0)
     .reduce((s, p) => s + p.price * p.stock, 0);
 
-  const perCategory = CATEGORY_META.map((c) => ({
+  const perCategory = categoryOptions(extraCats).map((c) => ({
     ...c,
     count: products.filter((p) => p.category === c.id && p.stock > 0).length,
     units: products.filter((p) => p.category === c.id).reduce((s, p) => s + p.stock, 0),
@@ -835,6 +839,7 @@ function ProductsTab({
   catFilter,
   setCatFilter,
   subcats,
+  extraCats,
 }: {
   products: Product[];
   setProducts: (p: Product[]) => void;
@@ -843,6 +848,7 @@ function ProductsTab({
   catFilter: CatFilter;
   setCatFilter: (c: CatFilter) => void;
   subcats: Record<string, string[]>;
+  extraCats: ExtraCategory[];
 }) {
   const [busy, setBusy] = useState("");
   const [query, setQuery] = useState("");
@@ -875,7 +881,7 @@ function ProductsTab({
       );
   }, [products, filter, catFilter, query]);
 
-  const categoriesPresent = CATEGORY_META.filter((c) =>
+  const categoriesPresent = categoryOptions(extraCats).filter((c) =>
     products.some((p) => p.category === c.id)
   );
   const chosen = products.filter((p) => selected.has(p.id));
@@ -1289,6 +1295,7 @@ function ProductsTab({
         <ProductEdit
           product={editing}
           subcats={subcats}
+          extraCats={extraCats}
           onClose={() => setEditing(null)}
           onSaved={(p) => {
             setProducts(products.map((x) => (x.id === p.id ? p : x)));

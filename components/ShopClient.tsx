@@ -7,9 +7,9 @@ import QRCode from "qrcode";
 import { supabaseBrowser } from "@/lib/supabase";
 import { T } from "@/lib/db";
 import { useBackClose } from "@/lib/use-back";
-import { rupees, CATEGORY_META, PICKUP_ADDRESS, SIZE_OPTIONS, GENDERS } from "@/lib/constants";
+import { rupees, categoryOptions, PICKUP_ADDRESS, SIZE_OPTIONS, GENDERS } from "@/lib/constants";
 import { BagIcon, CheckIcon } from "./icons";
-import type { Category, CartLine, ShopProduct } from "@/lib/types";
+import type { CartLine, ExtraCategory, ShopProduct } from "@/lib/types";
 import { SHOP_PRODUCT_COLUMNS } from "@/lib/types";
 
 type Step = "shop" | "checkout" | "done";
@@ -58,12 +58,15 @@ export default function ShopClient({
   shopName,
   cfg,
   subcats,
+  extraCats,
   detail,
 }: {
   products: ShopProduct[];
   shopName: string;
   cfg?: ShopCfg;
   subcats?: Record<string, string[]>;
+  /** Categories the owner added in the C-Panel, browsable alongside the built-ins. */
+  extraCats?: ExtraCategory[];
   /** Detail mode: hides the product grid/filters and shows a full-width Add to cart button */
   detail?: boolean;
 }) {
@@ -81,12 +84,13 @@ export default function ShopClient({
   const [products, setProducts] = useState<ShopProduct[]>(initialProducts);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [step, setStep] = useState<Step>("shop");
-  const validCat = (v: unknown): v is Category | "all" | "giveaway" =>
-    v === "all" || v === "giveaway" || CATEGORY_META.some((c) => c.id === v);
+  const catOptions = categoryOptions(extraCats);
+  const validCat = (v: unknown): v is string =>
+    v === "all" || v === "giveaway" || catOptions.some((c) => c.id === v);
   // Clothing (apparel) is the store's flagship category, so the shop opens on it
   // by default instead of the recency-sorted "All" view. A returning shopper's
   // last category is still restored from sessionStorage below.
-  const [catFilter, setCatFilter] = useState<Category | "all" | "giveaway">("apparel");
+  const [catFilter, setCatFilter] = useState<string>("apparel");
   const [subcatFilter, setSubcatFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [sizeFilter, setSizeFilter] = useState<string>("all");
@@ -299,7 +303,7 @@ export default function ShopClient({
   // Show EVERY category all the time — even ones with nothing in stock right now
   // — so shoppers always know the full range we carry (e.g. Food). Tapping into
   // an empty one shows a playful "sold out" line instead of a dead end.
-  const categoriesPresent = CATEGORY_META;
+  const categoriesPresent = catOptions;
   const hasGiveaway = products.some((p) => p.giveaway);
 
   // Sub-categories available for the currently selected category

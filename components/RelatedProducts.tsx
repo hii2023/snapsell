@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { rupees, categoryLabel } from "@/lib/constants";
-import type { Product, CartLine, Category } from "@/lib/types";
+import type { Product, CartLine, ExtraCategory } from "@/lib/types";
 import { BagIcon } from "./icons";
 
 const CART_KEY = "ir_cart";
@@ -12,9 +12,11 @@ const CART_KEY = "ir_cart";
 export default function RelatedProducts({
   products,
   category,
+  extraCats = [],
 }: {
   products: Product[];
-  category: Category;
+  category: string;
+  extraCats?: ExtraCategory[];
 }) {
   // Mirror the shop cart (localStorage "ir_cart") so each related product can
   // show its current quantity and a +/- stepper instead of a transient "Added".
@@ -84,7 +86,7 @@ export default function RelatedProducts({
   return (
     <section className="mt-12 border-t border-neutral-200 pt-8">
       <h2 className="mb-4 text-lg font-semibold text-ink">
-        More from {categoryLabel(category)}
+        More from {categoryLabel(category, extraCats)}
       </h2>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
         {products.map((r) => {

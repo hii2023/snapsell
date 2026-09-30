@@ -5,7 +5,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { currentSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
 import { rupees, categoryLabel } from "@/lib/constants";
-import type { Product } from "@/lib/types";
+import type { ExtraCategory, Product } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import ProductTopBar from "@/components/ProductTopBar";
 import ProductGallery from "@/components/ProductGallery";
@@ -96,11 +96,19 @@ export default async function ProductPage({
   const [p, seller] = await Promise.all([getProduct(code), currentSeller()]);
   const related = p ? await getRelated(p.id, p.category, p.size) : [];
 
+  // Settings are read for every visitor, not just the seller: a custom category
+  // needs its label here too, or the "More from …" heading shows the slug id.
   let subcats: Record<string, string[]> = {};
-  if (seller && supabaseConfigured()) {
+  let extraCats: ExtraCategory[] = [];
+  if (supabaseConfigured()) {
     const supabase = await supabaseServer();
-    const { data: row } = await supabase.from("snapsell_settings").select("subcats").eq("id", 1).single();
+    const { data: row } = await supabase
+      .from("snapsell_settings")
+      .select("subcats, extra_categories")
+      .eq("id", 1)
+      .single();
     if (row?.subcats && typeof row.subcats === "object") subcats = row.subcats as Record<string, string[]>;
+    if (Array.isArray(row?.extra_categories)) extraCats = row.extra_categories as ExtraCategory[];
   }
 
   // Product schema so listings can surface with price and availability.
@@ -183,7 +191,7 @@ export default async function ProductPage({
             </div>
           )}
 
-          <RelatedProducts products={related} category={p.category} />
+          <RelatedProducts products={related} category={p.category} extraCats={extraCats} />
         </div>
       )}
 
@@ -191,7 +199,7 @@ export default async function ProductPage({
         <Footer />
       </div>
 
-      {seller && p && <SellerBar product={p} subcats={subcats} />}
+      {seller && p && <SellerBar product={p} subcats={subcats} extraCats={extraCats} />}
     </main>
   );
 }

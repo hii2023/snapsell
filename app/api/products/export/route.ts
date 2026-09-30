@@ -3,7 +3,7 @@ import { currentSeller } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase-server";
 import { T } from "@/lib/db";
 import { categoryLabel } from "@/lib/constants";
-import type { Product } from "@/lib/types";
+import type { ExtraCategory, Product } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,8 +59,8 @@ const HEADERS = [
   "Is Expiry Product Saleable(Yes/No)?",
 ];
 
-function rowFor(p: Product): (string | number)[] {
-  const cat = categoryLabel(p.category);
+function rowFor(p: Product, extraCats: ExtraCategory[]): (string | number)[] {
+  const cat = categoryLabel(p.category, extraCats);
   const mrp = p.mrp > 0 ? p.mrp : p.price;
   const onlinePrice = p.giveaway ? 0 : p.price;
   return [
@@ -119,14 +119,16 @@ export async function GET() {
   if (!seller) return new Response("Unauthorized", { status: 401 });
 
   const supabase = await supabaseServer();
-  // All products — both in-stock and out-of-stock, active or not.
-  const { data: products } = await supabase
-    .from(T.products)
-    .select("*")
-    .order("created_at", { ascending: false });
+  // All products — both in-stock and out-of-stock, active or not. Settings come
+  // along so custom categories export under their label, not their slug id.
+  const [{ data: products }, { data: row }] = await Promise.all([
+    supabase.from(T.products).select("*").order("created_at", { ascending: false }),
+    supabase.from(T.settings).select("extra_categories").eq("id", 1).single(),
+  ]);
 
+  const extraCats = (row?.extra_categories as ExtraCategory[] | null) || [];
   const list = (products as Product[]) || [];
-  const aoa: (string | number)[][] = [HEADERS, ...list.map(rowFor)];
+  const aoa: (string | number)[][] = [HEADERS, ...list.map((p) => rowFor(p, extraCats))];
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const wb = XLSX.utils.book_new();

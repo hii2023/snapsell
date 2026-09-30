@@ -2,21 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { requireSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
-import type { Category } from "@/lib/types";
+import type { ExtraCategory } from "@/lib/types";
+import { CATEGORY_META } from "@/lib/constants";
 
 export const runtime = "nodejs";
 
-const VALID: Category[] = [
-  "apparel",
-  "food",
-  "electronics",
-  "furniture",
-  "cleaning",
-  "jewellery",
-  "cosmetics",
-  "books",
-  "more",
-];
+// The nine built-ins plus whatever the owner added in the C-Panel. Read per
+// request rather than hardcoded, so a category added in Settings is immediately
+// usable here without a deploy. Anything not on this list is rejected, which is
+// what keeps junk out of the column now that the DB no longer constrains it.
+async function allowedCategories(): Promise<Set<string>> {
+  const ids = new Set<string>(CATEGORY_META.map((c) => c.id));
+  try {
+    const supabase = await supabaseServer();
+    const { data } = await supabase
+      .from(T.settings)
+      .select("extra_categories")
+      .eq("id", 1)
+      .single();
+    const extra = (data?.extra_categories as ExtraCategory[] | null) || [];
+    for (const c of extra) if (c?.id) ids.add(c.id);
+  } catch {
+    // Settings unreadable: fall back to the built-ins rather than failing the save.
+  }
+  return ids;
+}
 
 // Create a product (seller-only, via authenticated session + RLS).
 export async function POST(req: NextRequest) {
@@ -27,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json()) as {
     name?: string;
-    category?: Category;
+    category?: string;
     subcategory?: string;
     image_url?: string;
     images?: string[];
@@ -46,9 +56,8 @@ export async function POST(req: NextRequest) {
     ? body.images.filter((u) => typeof u === "string" && u)
     : [];
   const primary = images[0] || body.image_url || "";
-  const category: Category = VALID.includes(body.category as Category)
-    ? (body.category as Category)
-    : "apparel";
+  const allowed = await allowedCategories();
+  const category = body.category && allowed.has(body.category) ? body.category : "apparel";
   const giveaway = Boolean(body.giveaway);
   const price = giveaway ? 0 : Math.round(Number(body.price) || 0);
   const stock = Math.round(Number(body.stock) || 0);
@@ -108,7 +117,7 @@ export async function PATCH(req: NextRequest) {
   const body = (await req.json()) as {
     id?: string;
     name?: string;
-    category?: Category;
+    category?: string;
     subcategory?: string;
     images?: string[];
     description?: string;
@@ -125,7 +134,24 @@ export async function PATCH(req: NextRequest) {
 
   const patch: Record<string, unknown> = {};
   if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
-  if (body.category) patch.category = body.category;
+  if (body.category) {
+    const allowed = await allowedCategories();
+    // A category deleted from Settings leaves its products behind. Editing one of
+    // those must not 400 just because its category is no longer on the list, so an
+    // unchanged value is always accepted — only a MOVE to an unknown one is refused.
+    if (!allowed.has(body.category)) {
+      const supabase = await supabaseServer();
+      const { data: current } = await supabase
+        .from(T.products)
+        .select("category")
+        .eq("id", body.id)
+        .single();
+      if (current?.category !== body.category) {
+        return NextResponse.json({ error: "Unknown category" }, { status: 400 });
+      }
+    }
+    patch.category = body.category;
+  }
   if (typeof body.subcategory === "string") patch.subcategory = body.subcategory.trim();
   if (typeof body.description === "string") patch.description = body.description.trim();
   if (Array.isArray(body.images)) {

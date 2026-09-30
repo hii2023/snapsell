@@ -2,26 +2,36 @@
 
 import { useRef, useState } from "react";
 import { Stepper } from "./ui";
-import { SIZE_OPTIONS, SIZE_LABEL, HAS_COLOR, COLORS, CATEGORY_META, GENDERS } from "@/lib/constants";
-import type { Category, Product } from "@/lib/types";
+import {
+  COLORS,
+  GENDERS,
+  categoryOptions,
+  hasColorFor,
+  sizeLabelFor,
+  sizeOptionsFor,
+} from "@/lib/constants";
+import type { ExtraCategory, Product } from "@/lib/types";
 import { SizeField } from "./SizeField";
 
 export default function ProductEdit({
   product,
   subcats,
+  extraCats = [],
   onClose,
   onSaved,
   onDeleted,
 }: {
   product?: Product;
   subcats: Record<string, string[]>;
+  /** Categories the owner added in the C-Panel, shown after the built-in nine. */
+  extraCats?: ExtraCategory[];
   onClose: () => void;
   onSaved: (p: Product) => void;
   onDeleted: (id: string) => void;
 }) {
   const isNew = !product;
   const [name, setName] = useState(product?.name ?? "");
-  const [category, setCategory] = useState<Category>(product?.category ?? "apparel");
+  const [category, setCategory] = useState<string>(product?.category ?? "apparel");
   const [subcategory, setSubcategory] = useState(product?.subcategory ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [images, setImages] = useState<string[]>(
@@ -42,6 +52,14 @@ export default function ProductEdit({
 
   const fileRef = useRef<HTMLInputElement>(null);
   const subOptions = subcats[category] || [];
+
+  // If this product sits in a category that has since been deleted from Settings,
+  // keep showing it as a chip so it is visible and can be reassigned, rather than
+  // silently rendering nothing as selected.
+  const catOptions = categoryOptions(extraCats);
+  const catChips = catOptions.some((c) => c.id === category)
+    ? catOptions
+    : [...catOptions, { id: category, label: category }];
 
   async function addImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
@@ -84,11 +102,11 @@ export default function ProductEdit({
     }
   }
 
-  function chooseCategory(c: Category) {
+  function chooseCategory(c: string) {
     if (c === category) return; // same category: keep size (incl. custom) as-is
     setCategory(c);
-    if (!SIZE_OPTIONS[c].includes(size)) setSize("");
-    if (!HAS_COLOR[c]) setColor("");
+    if (!sizeOptionsFor(c).includes(size)) setSize("");
+    if (!hasColorFor(c)) setColor("");
     if (c !== "apparel") setGender("");
     if (!(subcats[c] || []).includes(subcategory)) setSubcategory("");
   }
@@ -190,7 +208,7 @@ export default function ProductEdit({
           <div>
             <label className="label">Category</label>
             <div className="flex flex-wrap gap-2">
-              {CATEGORY_META.map((c) => (
+              {catChips.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => chooseCategory(c.id)}
@@ -220,7 +238,7 @@ export default function ProductEdit({
           )}
 
           <div>
-            <label className="label">{SIZE_LABEL[category]}</label>
+            <label className="label">{sizeLabelFor(category)}</label>
             <SizeField
               key={category}
               category={category}
@@ -249,7 +267,7 @@ export default function ProductEdit({
             </div>
           )}
 
-          {HAS_COLOR[category] && (
+          {hasColorFor(category) && (
             <div>
               <label className="label">Colour</label>
               <div className="flex flex-wrap gap-2">

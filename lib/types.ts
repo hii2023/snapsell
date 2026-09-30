@@ -1,3 +1,9 @@
+// The nine built-in categories. These are the only ones with their own icon,
+// accent colour and size presets, so they stay a closed union and key the
+// per-category maps in lib/constants.ts. A PRODUCT's category is a plain string,
+// because the owner can add custom categories in the C-Panel (stored in
+// `snapsell_settings.extra_categories`) and those ids are not known at compile
+// time — use the `…For()` helpers in lib/constants.ts to look anything up by id.
 export type Category =
   | "apparel"
   | "food"
@@ -13,7 +19,8 @@ export type Product = {
   id: string;
   name: string;
   code: string;
-  category: Category;
+  /** A built-in `Category` id, or a custom one from `Settings.extra_categories`. */
+  category: string;
   subcategory: string;
   image_url: string;
   images: string[];

@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import ProductEdit from "./ProductEdit";
-import type { Product } from "@/lib/types";
+import type { ExtraCategory, Product } from "@/lib/types";
 
 export default function SellerBar({
   product,
   subcats,
+  extraCats = [],
 }: {
   product?: Product;
   subcats: Record<string, string[]>;
+  extraCats?: ExtraCategory[];
 }) {
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -40,6 +42,7 @@ export default function SellerBar({
         <ProductEdit
           product={product}
           subcats={subcats}
+          extraCats={extraCats}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); window.location.reload(); }}
           onDeleted={() => { setEditing(false); window.location.href = "/"; }}
@@ -49,6 +52,7 @@ export default function SellerBar({
       {creating && (
         <ProductEdit
           subcats={subcats}
+          extraCats={extraCats}
           onClose={() => setCreating(false)}
           onSaved={() => { setCreating(false); window.location.reload(); }}
           onDeleted={() => setCreating(false)}

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SIZE_OPTIONS, CUSTOM_SIZE_CATEGORIES, CUSTOM_SIZE_UNITS, apparelSizeOptions } from "@/lib/constants";
-import type { Category } from "@/lib/types";
+import { CUSTOM_SIZE_UNITS, allowsCustomSize, apparelSizeOptions, sizeOptionsFor } from "@/lib/constants";
 
 // Split a stored size like "650ml" / "1.5L" into a number + unit for editing.
 function parseCustom(v: string): { num: string; unit: string } | null {
@@ -26,7 +25,7 @@ export function SizeField({
   subcategory,
   name,
 }: {
-  category: Category;
+  category: string;
   value: string;
   onChange: (v: string) => void;
   chipClass: (active: boolean) => string;
@@ -38,8 +37,8 @@ export function SizeField({
   const presets =
     category === "apparel"
       ? apparelSizeOptions(subcategory, name)
-      : SIZE_OPTIONS[category];
-  const allowCustom = CUSTOM_SIZE_CATEGORIES.includes(category);
+      : sizeOptionsFor(category);
+  const allowCustom = allowsCustomSize(category);
   const parsed = parseCustom(value);
   const customValue = allowCustom && value !== "" && !presets.includes(value);
   // For FMCG/food, start with the custom box open (ml selected) since pack sizes

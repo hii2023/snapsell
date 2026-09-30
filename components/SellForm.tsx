@@ -5,29 +5,31 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Stepper } from "./ui";
 import { CheckIcon, ArrowLeftIcon, CategoryIcon } from "./icons";
 import {
-  SIZE_OPTIONS,
-  SIZE_LABEL,
-  HAS_COLOR,
   COLORS,
-  CATEGORY_META,
-  CUSTOM_SIZE_CATEGORIES,
   GENDERS,
   ACCENT,
   rupees,
+  accentFor,
+  allowsCustomSize,
+  categoryLabel,
+  categoryOptions,
+  hasColorFor,
+  sizeLabelFor,
+  sizeOptionsFor,
 } from "@/lib/constants";
-import type { Category, VisionResult } from "@/lib/types";
+import type { ExtraCategory, VisionResult } from "@/lib/types";
 import { polishPhoto } from "@/lib/polish";
 import { SizeField } from "./SizeField";
 
 // Categories that get an automatic clean white background. Disabled for now
 // (empty set) — add "food", "cleaning", "cosmetics" here to turn it back on.
-const AUTO_CLEAN_CATEGORIES: ReadonlySet<Category> = new Set<Category>([]);
+const AUTO_CLEAN_CATEGORIES: ReadonlySet<string> = new Set<string>([]);
 
 type Screen = "wizard" | "saved";
 type Step = 0 | 1 | 2; // category, details, price
 const TITLES = ["What is it?", "Details", "Set a price"];
 
-const ACCENT_HEX: Record<Category, string> = {
+const ACCENT_HEX: Record<string, string> = {
   apparel: "#2563eb",
   food: "#ea580c",
   electronics: "#7c3aed",
@@ -39,6 +41,9 @@ const ACCENT_HEX: Record<Category, string> = {
   more: "#475569",
 };
 
+// Custom categories have no accent of their own, so they borrow the neutral one.
+const DEFAULT_ACCENT_HEX = ACCENT_HEX.more;
+
 export default function SellForm({
   pricePresets,
   initialFile,
@@ -49,6 +54,7 @@ export default function SellForm({
   addedTotal,
   batch = false,
   subcats = {},
+  extraCats = [],
 }: {
   pricePresets: number[];
   initialFile: File;
@@ -60,6 +66,8 @@ export default function SellForm({
   batch?: boolean;
   onBatchChange?: (b: boolean) => void;
   subcats?: Record<string, string[]>;
+  /** Categories the owner added in the C-Panel, shown after the built-in nine. */
+  extraCats?: ExtraCategory[];
 }) {
   const reduce = useReducedMotion();
   const [screen, setScreen] = useState<Screen>("wizard");
@@ -75,8 +83,8 @@ export default function SellForm({
   const [extraImages, setExtraImages] = useState<string[]>([]);
   const [addingPhoto, setAddingPhoto] = useState(false);
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<Category | null>(null);
-  const [aiCategory, setAiCategory] = useState<Category | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [aiCategory, setAiCategory] = useState<string | null>(null);
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
   const [gender, setGender] = useState("");
@@ -114,8 +122,8 @@ export default function SellForm({
     }
   }, [screen, step]);
 
-  const accent = category ? ACCENT[category] : ACCENT.apparel;
-  const accentHex = category ? ACCENT_HEX[category] : "#0f766e";
+  const accent = category ? accentFor(category) : ACCENT.apparel;
+  const accentHex = (category ? ACCENT_HEX[category] : "#0f766e") ?? DEFAULT_ACCENT_HEX;
 
   // Kick off the upload of whichever file we settled on (cleaned or original).
   function beginUpload(f: File) {
@@ -227,12 +235,12 @@ export default function SellForm({
     setStep([next, next > step ? 1 : -1]);
   }
 
-  function pickCategory(c: Category) {
+  function pickCategory(c: string) {
     const changed = c !== category;
     setCategory(c);
     if (changed) {
-      if (!SIZE_OPTIONS[c].includes(size)) setSize("");
-      if (!HAS_COLOR[c]) setColor("");
+      if (!sizeOptionsFor(c).includes(size)) setSize("");
+      if (!hasColorFor(c)) setColor("");
       if (c !== "apparel") setGender("");
       if (!(subcats[c] || []).includes(subcategory)) setSubcategory("");
     }
@@ -323,7 +331,8 @@ export default function SellForm({
   }
 
   // ---- Wizard ----
-  const lastIdx = CATEGORY_META.length - 1;
+  const catOptions = categoryOptions(extraCats);
+  const lastIdx = catOptions.length - 1;
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 pb-6 pt-4">
       <div className="flex items-center gap-3">
@@ -405,10 +414,10 @@ export default function SellForm({
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  {CATEGORY_META.map((c, idx) => {
-                    const a = ACCENT[c.id];
+                  {catOptions.map((c, idx) => {
+                    const a = accentFor(c.id);
                     const suggested = aiCategory === c.id;
-                    const spanFull = idx === lastIdx && CATEGORY_META.length % 2 === 1;
+                    const spanFull = idx === lastIdx && catOptions.length % 2 === 1;
                     return (
                       <button
                         key={c.id}
@@ -451,7 +460,7 @@ export default function SellForm({
                         e.preventDefault();
                         if (!name.trim()) {
                           setError("Add a product name");
-                        } else if (CUSTOM_SIZE_CATEGORIES.includes(category)) {
+                        } else if (allowsCustomSize(category)) {
                           // FMCG/food: jump into the custom quantity box.
                           sizeNumberRef.current?.focus();
                         } else {
@@ -464,7 +473,7 @@ export default function SellForm({
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-base font-semibold">{SIZE_LABEL[category]}</label>
+                  <label className="mb-1.5 block text-base font-semibold">{sizeLabelFor(category)}</label>
                   <SizeField
                     key={category}
                     category={category}
@@ -528,7 +537,7 @@ export default function SellForm({
                   </div>
                 )}
 
-                {HAS_COLOR[category] && (
+                {hasColorFor(category) && (
                   <div>
                     <label className="mb-2 block text-lg font-semibold">Colour</label>
                     <div className="flex flex-wrap gap-2.5">
@@ -706,7 +715,7 @@ export default function SellForm({
                   <span className="font-semibold text-ink">{name || "Product"}</span>
                   <span className="text-neutral-500">
                     {"  "}
-                    {[CATEGORY_META.find((m) => m.id === category)?.label, size, color, `${units} unit${units > 1 ? "s" : ""}`]
+                    {[category ? categoryLabel(category, extraCats) : "", size, color, `${units} unit${units > 1 ? "s" : ""}`]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>

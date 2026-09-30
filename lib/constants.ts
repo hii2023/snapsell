@@ -1,4 +1,4 @@
-import type { Category } from "./types";
+import type { Category, ExtraCategory } from "./types";
 
 // The primary attribute differs per category. For electronics it is the device
 // type (Laptop/Mobile/Other), which replaces a size choice.
@@ -121,6 +121,54 @@ export const CATEGORY_META: { id: Category; label: string }[] = [
 export const CUSTOM_SIZE_CATEGORIES: Category[] = ["food", "cleaning", "cosmetics"];
 export const CUSTOM_SIZE_UNITS = ["ml", "L", "g", "kg", "pc"];
 
+// ---------------------------------------------------------------------------
+// Custom categories
+//
+// A category id is no longer guaranteed to be one of the nine built-ins above:
+// the owner can add their own in the C-Panel, and those are stored in
+// `snapsell_settings.extra_categories`. Every per-category lookup therefore goes
+// through one of these helpers, which fall back to the neutral "more" entry
+// rather than returning undefined for an id the code has never seen.
+// ---------------------------------------------------------------------------
+
+const FALLBACK: Category = "more";
+
+function builtIn(c: string): Category {
+  return (CATEGORY_META.some((m) => m.id === c) ? c : FALLBACK) as Category;
+}
+
+export function isBuiltInCategory(c: string): boolean {
+  return CATEGORY_META.some((m) => m.id === c);
+}
+
+export function sizeOptionsFor(c: string): string[] {
+  return SIZE_OPTIONS[builtIn(c)];
+}
+
+export function sizeLabelFor(c: string): string {
+  return SIZE_LABEL[builtIn(c)];
+}
+
+export function hasColorFor(c: string): boolean {
+  return HAS_COLOR[builtIn(c)];
+}
+
+export function accentFor(c: string): Accent {
+  return ACCENT[builtIn(c)];
+}
+
+// Custom categories get the free-text size box too: we cannot know in advance
+// whether the owner's "Home" or "Bags/Purses" items are sized in ml, cm or pcs.
+export function allowsCustomSize(c: string): boolean {
+  return !isBuiltInCategory(c) || CUSTOM_SIZE_CATEGORIES.includes(c as Category);
+}
+
+// Built-ins first, then whatever the owner added, so the familiar grid does not
+// reshuffle when a custom category appears.
+export function categoryOptions(extra: ExtraCategory[] = []): { id: string; label: string }[] {
+  return [...CATEGORY_META, ...extra.map((c) => ({ id: c.id, label: c.label }))];
+}
+
 // Optional gender tag for clothing.
 export const GENDERS = ["Women", "Men", "Unisex", "Kids"];
 
@@ -146,6 +194,6 @@ export function rupees(n: number): string {
   return "₹" + n.toLocaleString("en-IN");
 }
 
-export function categoryLabel(c: Category): string {
-  return CATEGORY_META.find((m) => m.id === c)?.label ?? c;
+export function categoryLabel(c: string, extra: ExtraCategory[] = []): string {
+  return categoryOptions(extra).find((m) => m.id === c)?.label ?? c;
 }

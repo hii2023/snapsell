@@ -112,6 +112,7 @@ export default function AdminShell({
       {addingManually && (
         <ProductEdit
           subcats={settings.subcats}
+          extraCats={settings.extra_categories}
           onClose={() => setAddingManually(false)}
           onSaved={(p) => {
             setAddingManually(false);
@@ -174,6 +175,7 @@ export default function AdminShell({
                 addedTotal={added}
                 batch={batch}
                 subcats={settings.subcats}
+                extraCats={settings.extra_categories}
               />
             </motion.div>
           </motion.div>

@@ -120,8 +120,9 @@ export function MoreIcon({ className = base }: P) {
   );
 }
 
-import type { Category } from "@/lib/types";
-export function CategoryIcon({ id, className = "h-8 w-8" }: { id: Category; className?: string }) {
+// `id` is a plain string because it can be a custom category the owner added in
+// the C-Panel, which has no icon of its own and falls through to the generic one.
+export function CategoryIcon({ id, className = "h-8 w-8" }: { id: string; className?: string }) {
   if (id === "apparel") return <ShirtIcon className={className} />;
   if (id === "food") return <FoodIcon className={className} />;
   if (id === "electronics") return <ElectronicsIcon className={className} />;
@@ -129,6 +130,6 @@ export function CategoryIcon({ id, className = "h-8 w-8" }: { id: Category; clas
   if (id === "jewellery") return <JewelleryIcon className={className} />;
   if (id === "cosmetics") return <CosmeticsIcon className={className} />;
   if (id === "books") return <BooksIcon className={className} />;
-  if (id === "more") return <MoreIcon className={className} />;
-  return <FurnitureIcon className={className} />;
+  if (id === "furniture") return <FurnitureIcon className={className} />;
+  return <MoreIcon className={className} />;
 }

@@ -6,7 +6,7 @@ import LogoLink from "@/components/LogoLink";
 import { supabaseServer } from "@/lib/supabase-server";
 import { currentSeller } from "@/lib/auth";
 import { T } from "@/lib/db";
-import type { ShopProduct } from "@/lib/types";
+import type { ExtraCategory, ShopProduct } from "@/lib/types";
 import { SHOP_PRODUCT_COLUMNS } from "@/lib/types";
 import ShopClient from "@/components/ShopClient";
 import StoreContact from "@/components/StoreContact";
@@ -35,6 +35,7 @@ export default async function ShopPage() {
   const seller = await currentSeller();
   let products: ShopProduct[] = [];
   let subcats: Record<string, string[]> = {};
+  let extraCats: ExtraCategory[] = [];
 
   let cfg = {
     upiId: process.env.NEXT_PUBLIC_UPI_ID || "",
@@ -68,6 +69,9 @@ export default async function ShopPage() {
       };
       if (row.subcats && typeof row.subcats === "object") {
         subcats = row.subcats as Record<string, string[]>;
+      }
+      if (Array.isArray(row.extra_categories)) {
+        extraCats = row.extra_categories as ExtraCategory[];
       }
     }
   }
@@ -141,12 +145,18 @@ export default async function ShopPage() {
 
       {/* Always render ShopClient — it does its own live client-side fetch on mount.
           Empty-state is handled inside the client so it can refresh without a reload. */}
-      <ShopClient products={products} shopName={shopName} cfg={cfg} subcats={subcats} />
+      <ShopClient
+        products={products}
+        shopName={shopName}
+        cfg={cfg}
+        subcats={subcats}
+        extraCats={extraCats}
+      />
       {!supabaseConfigured() && (
         <p className="mt-6 text-center text-sm text-neutral-400">Connect Supabase to start listing.</p>
       )}
       <StoreContact />
-      {seller && <SellerBar subcats={subcats} />}
+      {seller && <SellerBar subcats={subcats} extraCats={extraCats} />}
 
       {/* Footer */}
       <footer className="mt-10 border-t border-neutral-200 bg-white">
