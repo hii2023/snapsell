@@ -877,11 +877,6 @@ export default function ShopClient({
                       FREE
                     </span>
                   )}
-                  {hasDiscount && (
-                    <span className="absolute left-1.5 top-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
-                      {discountPct}% OFF
-                    </span>
-                  )}
                   {p.code && (
                     <span className="absolute right-1.5 top-1.5 rounded bg-white/85 px-1 py-0.5 font-mono text-[9px] font-medium text-neutral-600 backdrop-blur-sm">
                       {p.code}
@@ -896,14 +891,17 @@ export default function ShopClient({
                 <p className="mt-0.5 line-clamp-1 text-[11px] text-neutral-500">
                   {[p.gender, p.size, p.color].filter(Boolean).join(" · ") || " "}
                 </p>
-                <div className="mt-1.5 flex items-baseline gap-1.5">
+                <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                   {p.giveaway ? (
                     <span className="text-sm font-bold text-emerald-700">Free</span>
                   ) : (
                     <>
                       <span className="text-sm font-bold text-ink">{rupees(p.price)}</span>
                       {hasDiscount && (
-                        <span className="text-[11px] text-neutral-400 line-through">{rupees(p.mrp)}</span>
+                        <>
+                          <span className="text-[11px] text-neutral-400 line-through">{rupees(p.mrp)}</span>
+                          <span className="text-[11px] font-semibold text-amber-600">{discountPct}% OFF</span>
+                        </>
                       )}
                     </>
                   )}
