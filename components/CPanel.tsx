@@ -34,6 +34,15 @@ export default function CPanel({ initial }: { initial: Settings }) {
   const [optSavedKB, setOptSavedKB] = useState(0);
   const [optRemaining, setOptRemaining] = useState<number | null>(null);
 
+  // Free up storage (deletes unused original photos from the store bucket).
+  type CleanScan = { totalFiles: number; totalMB: number; removableFiles: number; removableMB: number; afterMB: number };
+  const [cleanScan, setCleanScan] = useState<CleanScan | null>(null);
+  const [cleanRunning, setCleanRunning] = useState(false);
+  const [cleanStop, setCleanStop] = useState(false);
+  const cleanStopRef = useRef(false);
+  const [cleanMsg, setCleanMsg] = useState("");
+  const [cleanFreedMB, setCleanFreedMB] = useState(0);
+
   // Install-as-app (PWA) state
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
@@ -176,6 +185,80 @@ export default function CPanel({ initial }: { initial: Settings }) {
     } finally {
       setOptRunning(false);
       setOptStop(false);
+    }
+  }
+
+  async function scanStorage() {
+    setCleanMsg("Checking storage...");
+    try {
+      const res = await fetch("/api/storage-cleanup");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Check failed");
+      setCleanScan(json);
+      setCleanMsg(
+        json.removableFiles === 0
+          ? `Nothing to clean. Store photos use ${json.totalMB} MB.`
+          : ""
+      );
+    } catch (e) {
+      setCleanMsg(e instanceof Error ? e.message : "Check failed");
+    }
+  }
+
+  async function freeUpStorage() {
+    if (!cleanScan || cleanScan.removableFiles === 0) return;
+    const ok = window.confirm(
+      `Permanently delete ${cleanScan.removableFiles} unused photo files (${cleanScan.removableMB} MB)?\n\n` +
+        "These are old full-size copies that no product or order uses any more. " +
+        "Every photo shown on the store and in your orders is kept. This cannot be undone."
+    );
+    if (!ok) return;
+
+    setCleanRunning(true);
+    setCleanStop(false);
+    cleanStopRef.current = false;
+    setCleanFreedMB(0);
+    setCleanMsg("Updating old order photos...");
+
+    let freed = 0;
+    let stopped = false;
+    try {
+      const rp = await fetch("/api/storage-cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "repoint" }),
+      });
+      const rpJson = await rp.json();
+      if (!rp.ok) throw new Error(rpJson.error || "Could not update order photos");
+
+      for (;;) {
+        if (cleanStopRef.current) {
+          stopped = true;
+          break;
+        }
+        const res = await fetch("/api/storage-cleanup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", limit: 100 }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Cleanup failed");
+        freed += json.freedMB || 0;
+        setCleanFreedMB(freed);
+        setCleanMsg(`Cleaning... ${json.remaining} files to go`);
+        if (!json.deleted || json.remaining <= 0) break;
+      }
+      setCleanMsg(stopped ? `Stopped. ${freed.toFixed(1)} MB freed so far.` : `Done. ${freed.toFixed(1)} MB freed.`);
+    } catch (e) {
+      setCleanMsg(e instanceof Error ? e.message : "Cleanup failed");
+    } finally {
+      setCleanRunning(false);
+      setCleanStop(false);
+      // Refresh the numbers so the owner sees the new total.
+      fetch("/api/storage-cleanup")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => j && setCleanScan(j))
+        .catch(() => {});
     }
   }
 
@@ -382,6 +465,63 @@ export default function CPanel({ initial }: { initial: Settings }) {
                 {optSavedKB > 0 && ` · ${(optSavedKB / 1024).toFixed(1)} MB saved`}
                 {optRemaining !== null && ` · ${optRemaining} remaining`}
               </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="border-t border-neutral-200 pt-6">
+        <h3 className="mb-1 text-lg font-semibold">Free up storage</h3>
+        <p className="mb-3 text-sm text-neutral-500">
+          Removes old full-size photo copies that nothing uses any more (left
+          behind by the photo optimizer). Every photo on the store, on sold
+          items and in your order history is kept. Only the thrift store&apos;s
+          photos are checked, never the India Recycles website.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {!cleanRunning ? (
+            <>
+              <button onClick={scanStorage} className="btn-ghost px-4 py-2.5 text-sm">
+                Check storage
+              </button>
+              {cleanScan && cleanScan.removableFiles > 0 && (
+                <button onClick={freeUpStorage} className="btn-primary px-5 py-2.5 text-sm">
+                  Free up {cleanScan.removableMB} MB
+                </button>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                cleanStopRef.current = true;
+                setCleanStop(true);
+                setCleanMsg("Finishing current batch...");
+              }}
+              disabled={cleanStop}
+              className="btn-ghost px-5 py-2.5 text-sm disabled:opacity-50"
+            >
+              {cleanStop ? "Stopping..." : "Stop"}
+            </button>
+          )}
+        </div>
+
+        {(cleanScan || cleanMsg) && (
+          <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+            {cleanScan && (
+              <div>
+                Store photos: <span className="font-semibold">{cleanScan.totalMB} MB</span> ({cleanScan.totalFiles} files)
+                {cleanScan.removableFiles > 0 && (
+                  <>
+                    {" "}· unused: <span className="font-semibold">{cleanScan.removableMB} MB</span> ({cleanScan.removableFiles} files)
+                    {" "}· after cleanup: about {cleanScan.afterMB} MB
+                  </>
+                )}
+              </div>
+            )}
+            {cleanMsg && <div className={cleanScan ? "mt-1 text-neutral-500" : ""}>{cleanMsg}</div>}
+            {cleanFreedMB > 0 && cleanRunning && (
+              <div className="mt-1 text-neutral-500">{cleanFreedMB.toFixed(1)} MB freed so far</div>
             )}
           </div>
         )}
